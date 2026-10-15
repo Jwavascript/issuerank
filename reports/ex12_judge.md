@@ -1,0 +1,202 @@
+# ex12 심사 보고 — 배포(Vercel)
+
+2026-10-15 15:10~15:50 KST. 심사 역할(`agent_prompts/3_judge_agent.md`), Claude Code, Android/Termux + proot Ubuntu(`bash scripts/ex12-ubuntu.sh …`). 제품 코드는 고치지 않았다. 기준: `plan/PLAN_backend_ex12.md`, PLAN.md 5절 D10, SPEC, AGENTS.md. 제작 보고 `reports/ex12_build.md`는 참고만 했고, 모든 줄을 심사 스크립트(`ex12/.data/judge-*.mjs`)로 다시 실행했다. 제작 결과(`build-*`)를 심사 결과로 대신 쓰지 않았다.
+
+- 배포 주소: `https://issuerank-kappa.vercel.app` (사용자가 배포, Root `ex12`, GitHub 연동, 292c47b 이후).
+- 외부 호출: newsdata 0 · OpenAI 0. 배포 주소 요청 **66/150**(Node fetch 26 + 브라우저 자동 요청 40), 로컬 요청 **22/100**(3000 18 + 8787 4). Vercel·GitHub 설정 변경 · 재배포 · 커밋 · 푸시 안 함.
+
+**판정: PASS 보류 — 검증 17줄 중 OK 13 / FAIL 0 / SKIP 4(모두 사용자 전달 대기).** 코드 · 테스트 · 빌드 · 에이전트가 직접 볼 수 있는 배포 동작은 모두 통과. 남은 SKIP은 Vercel 대시보드 설정 화면 · 배포 고유 주소 · 사용자 PC/폰 결과 · Vercel Logs이며, 이 넷이 오면 ex12 PASS 여부를 판정한다.
+
+## 1. PLAN 항목별
+
+| 항목 | 판정 | 확인 |
+|---|---|---|
+| 요청 경로 | done | `app/api/[...path]/route.ts`: `runtime='nodejs'` · `dynamic='force-dynamic'`, `createBff(loadApp)` 처리 함수를 GET·POST·DELETE로. `API_URL` 읽기 없음. 배포 `/api/rankings`의 `x-vercel-id` = `icn1::icn1::…`(함수 실행 서울) |
+| 앱 준비 | done | `server/bff.ts` `loadApp`: DATABASE_URL 확인 → `authOptions(process.env)` → `connectDb({max:1})` → `createApp(dbStore, createAuth)`. Promise를 모듈 범위에 저장, 실패 시 지움(테스트 ③④, 로컬 실패 실행에서 요청마다 `API_START_FAILED` 2줄 = 재시도). 빌드 로그 DB 접속 0 |
+| 계약 유지 | done | 응답 헤더 복사 · `getSetCookie()`로 하나씩 다시 붙임 · 개인 경로 no-store(성공·실패·502). 502 문구 그대로, 로그 `API_START_FAILED`만. 배포 개인 응답 19개 모두 no-store · `x-vercel-cache` HIT 0 |
+| DB(서버리스) | done | `connectDb(options={})`, `max` 있을 때만 전달 → 기존 호출 불변 |
+| 로컬 개발 | done | `npm run api`(server/index.ts) 그대로 남음(8787 비교에 사용) |
+| Better Auth | done | `server/auth.ts` 해시 ex09와 같음. 배포에서 정상 Origin 200 · 악성 Origin 403 → 배포 `BETTER_AUTH_URL`이 프로덕션 origin과 맞음 |
+| Vercel 설정 | done | `vercel.json` `{ "regions": ["icn1"] }`, package.json `engines.node 24.x` 한 줄, lockfile ex09와 `cmp` 동일 |
+| 환경 변수(Vercel) | partial(사용자 확인 대기) | 배포 동작으로 DB · 인증 값이 들어간 것은 확인. "Production만 · Secret/Config 종류 · 키 4개 미등록"은 대시보드 화면이 필요 → SKIP 줄 |
+| 하루 실행 | done | `git diff --stat .github/` 빈 출력, daily.ts · steps.ts 해시 ex09와 같음 |
+| 화면 변경 없음 | done | `public/index.html` ex09와 동일(diff 없음) |
+| 구현 순서 0~4 | done | 0 선행 조건(ex09 예약 실행 1줄 보류) 확인, 1~3 완료, 4 배포 줄은 이번 심사가 실행 |
+
+## 2. SPEC 근거 AC
+
+| AC | 판정 |
+|---|---|
+| AC-08-3 | 부분 충족. ① 격리 Chromium 컨텍스트 2개에서 같은 A 계정: 시작 · 저장 후 · 해제 후 목록 id · 폴더(이름·개수) · 폴더 칩 · 배지 · 카드가 같음, B로 바꾼 컨텍스트에 A 카드 0, 다른 컨텍스트는 A 그대로. ② 사용자 PC · 폰 결과 미전달 → SKIP |
+| AC-03-1 · AC-05-1 | 충족. 배포 랭킹 200 · 섹션 6개(pol·eco·soc·cul·wor·it) · `updatedAt` · 화면 갱신 시각 표시 · 화면의 `ranking` 객체가 API 응답과 문자 단위로 같음 · 목록 카드 30 = API 30 |
+| AC-05-2 | 충족. 360×800 모바일에서 map · list · bookmarks 가로 스크롤 0 |
+| AC-06-1 · AC-06-2 | 충족. 가입 200 · 세션 본인 · 로그아웃 뒤 null · 틀린 비밀번호 401 · 정상 로그인 200 |
+| AC-07-1 · 07-2 · 10-1 · 10-2 | 충족. 폴더 201 · 저장 201×2 · 폴더 count · 해제 204, 화면 폴더 선택창으로 저장 · 해제 |
+| AC-07-3 · AC-04-2 | 충족. 비로그인 클릭 → 로그인 안내 · 저장 요청 0. 원문 링크 `target=_blank` · `noopener` · API url과 같음 · 실제 새 탭이 언론사 주소(`www.dailian.co.kr`)로 열리고 원래 탭 유지 |
+| AC-08-1 · 08-2 | 충족. 최근 저장 순, B 빈 목록 `[]` |
+| AC-09-1~3 | 충족. 직전 수집일(2026-10-14) 200 · 2000-01-02 / 2000-01-01 404 "해당 날짜의 랭킹 데이터가 없습니다" · 내일(10-16) 400 · 화면 이전 날 → 날짜 표시 바뀜 → "오늘" 복귀 |
+| AC-10-3 | 참고(PLAN에 배포 검증 줄 없음). 화면 코드 ex09와 동일, 테스트 통과 |
+
+## 3. 범위 밖 변경 · 회귀
+
+- ex09와의 차이(산출물 · .env 제외 `diff -rq`): `.env.example` · `app/api/[...path]/route.ts` · `package.json` · `server/bff.ts`(새) · `server/db/client.ts` · `test/auth-proxy.test.ts` · `vercel.json`(새)뿐 = PLAN 목록과 같음.
+- auth · app · ai · daily · steps 해시 쌍 모두 같음. `git status --short ex09/ ex11/ .github/` 빈 출력(출발점 폴더 불변). 새 패키지 0.
+- PLAN에 없는 추가: 테스트 1개(공개 경로 502에 no-store 없음) — PLAN 규칙을 확인하는 테스트라 문제 없음.
+- 화면 기존 동작(PLAN.md 6절): `public/index.html` 불변, 배포 화면에서 비로그인 안내 · 모바일 · 날짜 · 링크 · 폴더 선택창 · 배지 동작 확인.
+
+## 4. 테스트 · 빌드
+
+- `bash scripts/ex12-ubuntu.sh npm test` → **14파일 115/115 통과**(첫 실행, 24.9초). git 추적 파일 변경 0.
+- `bash scripts/ex12-ubuntu.sh npm run build` → 종료 0. Next.js 16.4.0 Turbopack · TypeScript · `tsc --noEmit`, `ƒ /api/[...path]`. 로그에 `API_START_FAILED` · postgres · 연결 오류 0.
+
+## 5. 검증 방법 줄별
+
+| # | 줄 | 판정 | 결과 |
+|---|---|---|---|
+| 1 | 출발점 · 변경 범위 | OK | 3절과 같음 |
+| 2 | 로컬 회귀 · 빌드 | OK | 4절. lockfile 동일 |
+| 3 | BFF 같은 프로세스(테스트) | OK | `test/auth-proxy.test.ts` 6개가 ①~⑥을 그대로 검사(쿠키 2개 Expires 포함 · Cookie/Origin/본문 · 로더 1번 · 가짜 비밀값 502 뒤 재시도 200 · 앱 throw 502 · rankings no-store 없음 · fetch 0) 하고 통과 |
+| 4 | 로컬 한 서버 | OK(대체 실행) | `npm run api` 없이 3000 하나. `next start`와 `next dev --webpack`(+`WATCHPACK_POLLING=true`) 두 모드 모두: `/` 200 HTML · `/api/rankings` 200 · `date`=SQL 최근 수집일 2026-10-15 · 섹션 6 · updatedAt · no-store 없음 · 2000-01-02/2000-01-01 404 문구 · 어제 200 · 내일 400 · `/api/bookmarks` 401 "로그인이 필요합니다" no-store · 앱 오류 로그 0. 이 기기의 Turbopack `npm run dev`는 파일 감시 한도 환경 문제(PLAN.md 10절)라 대체 |
+| 5 | 앱 준비 실패(로컬) | OK | `next start`, 자식 env `DATABASE_URL=` / 따로 `BETTER_AUTH_SECRET=short`: 둘 다 rankings · get-session 502 "API 서버에 연결할 수 없습니다", auth no-store(rankings는 없음). 서버 로그: Next 시작 문구 5줄 외에는 `API_START_FAILED` 2줄뿐, 인증 성공 0, 누출 false |
+| 6 | 비밀값 누출(빌드 · 저장소) | OK | `.next/static`(9) · `.next/server`(113) · `public/` · `vercel.json` 모두 leak=false. `git check-ignore` → `.gitignore:4:.env` 무시, 추적 `.env` 0건. 코드의 `postgres://` 4건은 테스트용 가짜 값(실제 값 포함 false) |
+| 7a | 배포 설정 — 직접 관찰 | OK | `GET /` 200 · `x-vercel-id` `icn1::…`, `/api/rankings` `icn1::icn1::…` |
+| 7b | 배포 설정 — 대시보드 화면 | SKIP — 사용자 전달 대기 | Root `ex12` · Next.js · Node 24.x · 환경 변수 3개 Production만 · Standard Protection |
+| 8 | 배포 랭킹 · 날짜 | OK | 배포 기본 200(date 2026-10-15) · `?date=2026-10-14` 200 · 2000-01-02 / 2000-01-01 404 같은 문구 · 2026-10-16 400("오늘 이후 날짜는 조회할 수 없습니다"). 로컬 8787 같은 요청과 **앞 둘 본문 문자 단위 동일**, 오류 상태도 같음. 섹션 6 · updatedAt. rankings `x-vercel-cache` MISS |
+| 9a | 배포 가입 · 쿠키 | OK | A 가입 200 · Set-Cookie 1개(세션 토큰) `Secure` · `HttpOnly` · `SameSite=Lax` · `__Secure-` 접두 모두 true · get-session 본인 · 로그아웃 200 → null · 틀린 비밀번호 401 · 정상 로그인 200 · `Origin: https://evil.example` 403(쿠키 0) · B 가입 200 |
+| 9b | 배포 고유 주소 보호 | SKIP — 사용자 전달 대기 | `…-{해시}.vercel.app` 주소는 Deployments 화면에서만 알 수 있음(응답 헤더에 없음) |
+| 10 | 배포 계정별 북마크 | OK | A 폴더 201 → Top 5 이슈 2개 201·201 → 목록 최근 저장 순 · count 2 → 해제 204 · count 1 / B 목록 `[]` · 폴더 `[]` · A 폴더로 POST 404 "폴더를 찾을 수 없습니다". 비로그인 401. 개인 응답 19개 모두 `Cache-Control: no-store` · `x-vercel-cache` HIT 0 |
+| 11a | 두 기기 ①(격리 Chromium 2개) | OK | Termux Chromium 155 headless + CDP, 격리 컨텍스트 2개. AC-08-3 행 참고 |
+| 11b | 두 기기 ②(사용자 PC · 폰) | SKIP — 사용자 전달 대기 | 실행 시점 DB 회원 0 → 사용자 계정 아직 없음 |
+| 12 | 배포 화면 회귀 | OK | 비로그인 북마크 클릭 → "북마크하려면 로그인이 필요합니다" · 쓰기 요청 0 · 360px 가로 스크롤 0(3화면) · 이전 날 → 날짜 표시 바뀜("오늘" 없어짐) → "오늘" 버튼 → 당일 복귀 · 원문 링크 새 탭 언론사 주소 |
+| 13 | 배포 로그 | SKIP — 사용자 전달 대기 | Vercel › Logs(이번 검증 시간대 15:20~15:45 KST) 필요. 예상되는 앱 줄: 악성 Origin 1회의 `AUTH_INTERNAL_ERROR` |
+| 14 | 정리 · 보존 | OK | 임시 계정 2개(`ex12-<uuid>@example.invalid`) finally에서 bookmarks → folders → session → account → user(+verification) 삭제, 남은 행 0. 9개 테이블(articles 443 · issues 235 · collect_runs 72 · bookmarks 0 · folders 0 · user 0 · session 0 · account 0 · verification 0) 건수 · md5 전후 동일. 소유 서버(3000 · 8787) · Chromium 종료: `curl` 3000/8787/9339 = 000, `ps` 대상 0줄, 브라우저 프로필 삭제. 뉴스/OpenAI 0 · 한도 안 |
+
+합계: **OK 13 / FAIL 0 / SKIP 4**.
+
+## 6. 지켜야 할 것
+
+- 기사 본문 저장 · 표시: 없음(화면 · API 코드 ex09와 같음).
+- 코드의 키 · 접속 정보: 없음(빌드 산출물 · 공개 파일 leak=false, 테스트 값은 가짜).
+- `.env` git 제외: 됨. PLAN에 없는 패키지: 없음. D0 밖 출처 수집: 없음(수집 코드 불변, 이번 심사 newsdata 0).
+- AGENTS.md: 비밀값 출력 0(모든 출력은 누출 검사 false 뒤), 소유 서버만 종료, 실제 데이터 보존. 위반 없음.
+
+## 7. 발견한 점(심각도 순)
+
+1. (낮음 · 기록) 제작의 `ex12/.data/build-local-verdict-{start,dev-webpack}.json` status가 FAIL로 남아 있다. 원인은 제작 스크립트의 로그 검사가 의도된 `AUTH_INTERNAL_ERROR`(악성 Origin)와 터미널 제어 문자 `ESC[?25h`, 실패 실행의 Next 시작 문구까지 막은 것. 심사가 독립 실행한 로컬 · 실패 줄은 모두 OK이고 로그에 다른 앱 줄이 없음을 직접 봤으므로 제작 보고의 설명은 맞다. 다만 증거 파일과 보고가 어긋나니 다음 제작 때 검사 기준을 고치면 좋다(제품 영향 없음).
+2. (낮음) 이 기기의 Turbopack `npm run dev`는 API를 컴파일하지 못한다(환경 요인, PLAN.md 10절 기록). PLAN의 `npm run dev` 그대로는 실행 못 했고 `next start` · `next dev --webpack`으로 대신했다.
+3. (참고) `package.json` name이 `issuerank-ex11` 그대로(ex09부터). 동작 영향 없음.
+4. (참고) 공개 랭킹 응답은 Vercel 기본 `Cache-Control: public, max-age=0, must-revalidate` · `x-vercel-cache: MISS` — 캐시로 날짜가 굳는 문제 없음.
+5. (참고, 판정 밖) 사용자 질문 "섹션 1위가 기사 3~4건처럼 적다"는 하루 실행 · 묶기(ex08 계열) 품질 문제이며 ex12 판정에 넣지 않았다. 배포 화면 값은 API · 로컬 8787(같은 DB)과 문자 단위로 같았다.
+
+## 8. 사용자에게 받을 것(남은 SKIP 4)
+
+1. Vercel 설정 화면(캡처나 글): Settings › Build and Deployment(Root Directory `ex12` · Framework Next.js · Node.js 24.x) · Functions(Region icn1) · Environment Variables(이름 3개 `DATABASE_URL` · `BETTER_AUTH_SECRET` · `BETTER_AUTH_URL`, Production만, 값은 보내지 않음, 다른 키 미등록) · Deployment Protection(Standard Protection).
+2. 배포 고유 주소 하나(Deployments › 최신 배포의 `issuerank-kappa-…-….vercel.app`) — 심사가 `GET /` 1회로 보호 화면(401 또는 로그인 이동)인지 확인. 또는 사용자가 비로그인 창으로 열어 결과 전달.
+3. PC · 폰 결과(AC-08-3 ②): 본인 계정으로 PC에서 가입 · 북마크 1개 저장 → 폰에서 같은 계정 로그인 → 북마크 화면의 목록 · 폴더 칩 · 개수가 같은지.
+4. Vercel › Logs: 2026-10-15 15:20~15:45 KST 로그(비밀값 · 쿠키 · SQL 인수 없음, 오류는 안전 코드만인지).
+
+넷 모두 문제없으면 SKIP 줄만 다시 판정해 PASS로 바꾼다(추가 배포 요청은 고유 주소 1회 정도, 남은 한도 84).
+
+## 9. 증거 파일(git 무시)
+
+- `ex12/.data/judge-local.mjs` · `judge-local-verdict.json`: 로컬 줄 4 · 5.
+- `ex12/.data/judge-deploy.mjs` · `judge-deploy-verdict.json`: 배포 줄 7a · 8 · 9a · 10 · 11a · 12 · 14. 이 실행의 `linkOpenedNewTab` false는 스크립트가 사용자 제스처 없이 `click()`해 Chromium 팝업 차단에 걸린 것 → `judge-link.mjs` · `judge-link-verdict.json`에서 `userGesture`로 다시 실행해 새 탭 · 언론사 주소 확인(제품 문제 아님).
+- `ex12/.data/judge-lib.mjs`(공용) · 요청 카운터 `judge-deploy-request-count.json`(66) · `judge-local-request-count.json`(22).
+
+## 10. 2026-10-15 KST — D19 · D19-2 검색어 보완 2차 · 사진 접두 제외 독립 심사
+
+대상: 미커밋 작업 트리의 ex12 · ex09 `server/ai.ts` · `test/ai.test.ts`. 기준: `plan/PLAN_backend_ex12.md` 마지막 두 절, PLAN.md D13 · D18 · D19 · D19-2, AGENTS.md. 제작 보고 10 · 11절은 참고만 하고 아래는 모두 심사가 다시 실행한 결과다. 코드 수정 · 커밋 · 푸시 없음.
+
+**판정: 이번 변경 PASS 보류** — 실행한 14줄 모두 OK, FAIL 0. 남은 SKIP 1은 PLAN상 푸시 뒤 첫 예약 실행(10-17) 분포 줄이라 지금 실행할 수 없음. 실제 검증 확정 기준(D19 · D19-2)은 이번 실행으로 **통과**.
+
+### 10.1 계획 항목
+| 항목 | 판정 | 근거 |
+|---|---|---|
+| terms 지시: 띄어쓰기 없는 한 낱말 · 그룹1 고유 명사 · 그룹2 핵심 행동/대상 한 낱말 · 표기 변형 동의어 1~3 · 美·中·日 약칭 허용(옛 "한자 약칭 대신 한글" 삭제) · 흔한 말만 금지 · 수치/지명 상세/가운뎃점 금지 · 원인/결과 동의어 금지 유지 | done | diff는 METADATA_SYSTEM 4절 검색어 문단만 바뀜. 1차 "1~2낱말" · "가장 구체적인 표현 하나" 문장 없음 |
+| 사진 접두(`[사진]` · `[포토]` · `[화보]`) 코드 제외 | done | `PHOTO_PREFIX = /^\S+ \[[a-z]+\] \[(사진\|포토\|화보)\]/`(제목 시작만, 중간 `[사진]` 제외 안 함). 배정 입력 · 배정 스키마 · 후보 힌트(`assignInput(rest)` → `candidateGroups(rest)`) · 메타 입력(`byNumber`가 rest 기준)에서 빠지고 excluded 앞에 들어감. 중복 · 형식 번호 검사는 전체 줄, 대표 검사는 남은 번호 기준 → 묶음+제외 = 전체 번호. 전부 사진이면 `{issues: [], excluded}`로 호출 0 |
+| 테스트 | done | 지시문 문구 1개 수정 + 사진 접두 제외(입력 · 스키마 · 메타 입력 · excluded · 번호 완전성) 1개 + 전부 사진이면 fetch 0회 1개 |
+| 유지: 스키마 2×(1~3) · 모델 gpt-6-luna · effort(배정 medium · 메타 low) · ASSIGN_SYSTEM · 섹션/importance 지시 · buildQuery · grouping.ts · D13 · 저장 · 순위 | done | 해당 줄 diff 없음. ex09 · ex12 `grouping.ts` 둘 다 `f085810c…` |
+| ex09 해시 일치 복사 | done | ai.ts 둘 다 `8c41162a740254dd…`, ai.test.ts 둘 다 `8b939bbf944512d1…` |
+| ex08 · ex11 보존 | done | ai.ts 둘 다 `07e10b1e7746…`, ai.test.ts 둘 다 `95e7b3d1…` |
+
+### 10.2 범위 밖 변경
+- `git diff --stat -- ex08 ex09 ex11 ex12` = ex09 · ex12의 `server/ai.ts` · `test/ai.test.ts` 4파일만. ex09 · ex12 아래 추적 안 된 새 파일 0(`.data`는 git 무시). package.json · lockfile 변경 0 → 새 패키지 0.
+- 문서 변경(별도): HANDOFF.md · PLAN.md · `plan/PLAN_backend_ex12.md` · `reports/ex12_build.md` · `reports/ex12_judge.md`.
+
+### 10.3 테스트 · 빌드(심사 재실행)
+| 명령 | 결과 |
+|---|---|
+| `bash scripts/ex12-ubuntu.sh npm test` | 14파일 **118/118** |
+| `bash scripts/ex12-ubuntu.sh npm run build` | 성공(`/_not-found` · `/api/[...path]`) |
+| `bash scripts/ex09-ubuntu.sh npm test` | 14파일 **114/114**(첫 실행 출력 끝부분에 합계가 잘려 한 번 더 실행해 확인, 둘 다 실패 0) |
+| `bash scripts/ex09-ubuntu.sh npm run build` | 성공 |
+
+vitest · 빌드 전후 `git status --short` 같음(되돌린 파일 없음).
+
+### 10.4 독립 실제 검증(로컬, 2026-10-15 16:27:11 KST 시작 · group 16:27:18~16:28:42)
+- 스크립트: 제작 `ex12/.data/verify-terms2.ts`를 읽고 검토(OpenAI 외 주소 차단 · 횟수 상한 · 읽기 전용 트랜잭션 load · save 기록만 · `wx` 저장 · 누출 검사 · 직전 크레딧 70 미만 중단)한 뒤 `ex12/.data/judge-terms.ts`로 복사. 바꾼 것: 출력 폴더 `judge-terms-20261015`, 독립 사진 판정(제품 정규식이 아니라 DB 원래 제목에서 앞 공백 · 전각 괄호까지 허용해 판단) · 제목 어디든 사진 낱말 목록 · 다중 묶음/제외 전체 목록(`review.json`). 가짜 응답 모드(외부 호출 0, DB 읽기만)로 먼저 돌려 후처리를 확인하고 그 폴더를 지운 뒤 실제 1회. `safe-run` 출력 `leak:false`, 재시도 0, 서버 띄우지 않음.
+- 입력: 158줄, sha256 `7526497bea54c3989a8030f03c1407ab0a06ac23e41c998f512a9f3a49547ed5` = 기대값.
+- AI 정리: ok · 묶음 132 · 제외 15(사진 접두 5 + AI 10) · 빠진 0 · 고침 모두 0. 배정 입력 153줄.
+- 사진 접두: 제품 판정 5건(a098 · a099 · a109 · a110 · a144) = 심사 독립 판정 5건, **전부 excluded**, 배정 · 메타 요청 input에 번호 없음. 제목 중간에 사진 낱말이 있는 2건(a027 `관광사진 공모전` · a084 `청사진`)은 제외 안 됨(맞음).
+
+| 섹션 | 대표 제목 | 검색어 | n | 묶음 | totalResults | 1쪽 | p | 제작 n | 판단 |
+|---|---|---|---|---|---|---|---|---|---|
+| pol | 김지용 청문회서 부각된 여권 분열… | `김지용 AND 청문회` | **34** | 3 | 43 | 10 | 0.8 | 35 | 1쪽 10건 모두 김지용 중수청장 후보자 청문회 → OK · n>묶음 |
+| eco | 트럼프 "韓의 알래스카 500억불 투자, 나와의 무역·투자 합의" | `트럼프 AND 알래스카` | **45** | 2 | 50 | 10 | 0.9 | (제작은 CPI 23 — 첫 후보 다름) | 1쪽 10건 모두 알래스카 LNG 투자 주장(1건은 대만 구매분, 같은 발언) → OK · n>묶음 |
+| soc | 흉기 난동범 "병원 무좀 치료 불만…" | `인천 AND 흉기난동` | **58** | 3 | 115 | 10 | 0.5 | 58 | 1쪽 10건 모두 인천 구월동 흉기난동(영장 · 진술 · 신상공개 + 후속 반응) → OK · n>묶음 |
+| cul | '흥이·나유'와 '꿈돌이' 만났다…협업 굿즈 첫선 | `꿈돌이 AND 굿즈` | 1 | 1 | 1 | 1 | 1 | 1 | 1쪽 = 같은 기사 → OK · n=묶음 |
+| wor | 트럼프 "그린란드서 대규모 석유 탐사 예정"…그린란드 반박 | `그린란드 AND 탐사` | **6** | 4 | 6 | 6 | 1 | 6 | 1쪽 6건 모두 같은 사건(`석유·가스 탐사` 표기도 잡힘) → OK · n>묶음 |
+| it | AI해킹, 금융사 16곳서 개인정보 10만건 유출 | `금융사 AND 해킹` | **20** | 2 | 20 | 10 | 1 | 20 | 1쪽 10건 모두 금융사 16곳 해킹 · 10만건 유출 → OK · n>묶음 |
+
+- 확정 기준: n>묶음 **5/6**(기준 4 이상) · 모든 n<1,000(최대 58) · p 6개 기록(스크립트 재계산이 6개 모두 n과 일치, buildQuery 재현 6개 일치) · 사람 검토 OK · 접두 사진 전부 excluded → **통과**.
+- 기록만: 132이슈 264말 중 공백 포함 **0** · 3낱말 이상 0 · 숫자 포함 1(`오우라링5`) · 가운뎃점 0 · **동의어 사용 0**(제작 9).
+
+### 10.5 추가 사람 검토(이번 실행 전체)
+- 다중 묶음 7개 전부: pol 김지용 청문회 3 · eco 트럼프 알래스카 2 · eco 메타 주가 1000달러 2(같은 월가 목표가 보도, 1건은 wor 태그) · wor 그린란드 탐사 4 · wor 레오14세 폐 수술 회복 2 · soc 인천 흉기난동 3 · it 금융사 해킹 2(a136 `"금융망 취약점, AI는 1시간 만에 찾아 대처"` — 설명문이 같은 AI 연쇄 해킹 사태 속 우리은행 방어 → 같은 사건의 후속으로 봄). **오병합 0.**
+- 제외 15개 전부: 사진 접두 5(a144 `[사진] 버넘 英 총리의 약속…`은 발언 내용이 있는 기사 → **규칙대로**), AI 제외 10 = 자동 주식 · 실적 기사 6(칼투라 임원 매도 · Beyond Air 자사주 · Havas · State Street · JD.com 목표가 · GreenMobility — D15 "자동 주가 기사"), 레서판다 장면 사진 · 빌리 츠키 숏폼 · 변우석 장면(사진성), 부음 1. **잘못된 제외 0.**
+- 참고(판정 밖): 병합 누락 3곳 — 美 9월 CPI 3건(a080 · a149 · a153) 단독, 충남학 강좌 2건(a019 · a028) 단독, 김지용 `결격 사유 없어`(a087)는 청문회 묶음과 별도. 어학 칼럼 `[신문으로 배우는 실용한자]`(a129)가 제외되지 않고 soc 하위 이슈(1건)로 남음.
+
+### 10.6 제작 결과와의 차이(같은 입력, AI 결과가 달라짐)
+| 항목 | 제작(11절) | 심사 |
+|---|---|---|
+| 묶음 · 제외 | 134 · 10(AI 제외 5: 실용한자 포함) | 132 · 15(AI 제외 10: 자동 주식 기사 6 포함, 실용한자 미제외) |
+| eco 첫 후보 | 美 CPI 3건 → 23 | CPI 3건이 단독으로 흩어짐, 첫 후보 트럼프 알래스카(제작에선 wor 묶음) → 45 |
+| pol | `김지용 AND 청문회` 35(tr 44) | 같은 검색어 34(tr 43) — 4시간 사이 1건 차이 |
+| cul 검색어 | `(흥이 OR 나유 OR 꿈돌이) AND 굿즈` | `꿈돌이 AND 굿즈`(n 둘 다 1) |
+| it 묶음 | 1 | 2(a136 합류), n 20 같음 |
+| 공백 포함 말 · 동의어 | 5 · 9 | 0 · 0 |
+| 판정 | PASS(5/6) | 통과(5/6) |
+
+동의어 지시(표기 변형 OR)가 이번 실행에서는 한 번도 쓰이지 않았다. 판정 기준 밖이지만 D19-2의 핵심 변경 중 하나라 매일 결과로 계속 볼 항목.
+
+### 10.7 점검 줄 합계
+| # | 줄 | 결과 |
+|---|---|---|
+| 1 | 변경 범위 · 해시(ex09 · ex12 4파일, ai 해시 일치, ex08 · ex11 07e10b1e…, grouping f085810c…) | [OK] |
+| 2 | 지시문 문구 테스트 | [OK] |
+| 3 | 사진 접두 테스트(제외 · 번호 완전성 · 호출 0) | [OK] |
+| 4 | ex12 `npm test` 118/118 | [OK] |
+| 5 | ex12 `npm run build` | [OK] |
+| 6 | ex09 `npm test` 114/114 | [OK] |
+| 7 | ex09 `npm run build` | [OK] |
+| 8 | vitest가 추적 파일 바꿈 없음 | [OK] |
+| 9 | 실제 정리(입력 해시 일치 · 형식 통과 · 빠진 0 · OpenAI 2) | [OK] |
+| 10 | 실제 검색 기준(5/6 · 최대 58 · 사람 검토 · 오병합 0) | [OK] |
+| 11 | 접두 사진 5건 전부 excluded(제품 = 심사 독립 판정, 배정 · 메타 입력에 없음) | [OK] |
+| 12 | DB 쓰기 0 · 9테이블 건수 · md5 전후 같음(articles 443 · issues 235 · collect_runs 72 · 나머지 0, 제작 실행 직후 값과도 같음) | [OK] |
+| 13 | 호출 한도 · 크레딧(newsdata 8/8 · OpenAI 2/2, 직전 89 ≥ 70) | [OK] |
+| 14 | 위반 없음(누출 false · 코드 속 키 없음(테스트 더미 키만) · 새 패키지 0 · DB 쓰기 0 · 실제 데이터 변경 0) | [OK] |
+| 15 | 다음 날 분포(푸시 뒤 첫 예약 실행) | [SKIP — PLAN상 10-16 확인 · 푸시 뒤] |
+
+**합계: OK 14 · FAIL 0 · SKIP 1.**
+
+### 10.8 발견한 점(심각도 순)
+1. (참고 · 중) 같은 입력에서 AI 묶음이 실행마다 달라짐: 이번엔 CPI 3건 · 충남학 2건 병합 누락, 동의어 0. 첫 후보 기준은 통과했지만 동의어 효과는 재현되지 않았다 → 10-17 이후 매일 분포로 확인.
+2. (참고 · 하) 어학 칼럼(실용한자) 미제외 1건(하위 순위, 첫 후보 아님).
+3. (참고 · 하) `PHOTO_PREFIX`는 `[섹션] ` 바로 뒤 반각 `[사진]`만 잡는다(앞 공백 · 전각 괄호 · `[ 사진 ]`은 안 잡음). 이번 데이터엔 해당 없음(독립 판정과 일치). PLAN에 없는 경계라 참고만.
+4. (기록) a144처럼 접두 사진 + 발언 기사도 제외 — 승인 규칙대로.
+
+### 10.9 호출 · 크레딧 · 증거
+- newsdata **8/8**: 직전 확인 1(200 · 남은 **89** = 제작 직후 90 − 이 확인 1) + 검색 6(group 마지막 83) + 직후 확인 1(200 · 남은 **82**). 내일 예약 실행 몫(최대 54) 남음.
+- OpenAI **2/2**: 배정 입력 16,478(캐시 16,475) · 출력 3,209(추론 2,276) / 메타 입력 22,951 · 출력 3,434(추론 50) → 약 0.007달러(D18 단가 기준).
+- 증거(`ex12/.data/judge-terms-20261015/`, git 무시, `check-files` leak=false): `input-lines.txt` `7526497b…` · `openai-responses.json` `6b77ce47…` · `group-result.json` `38cf16f2…` · `newsdata-page1.json` `278d8f48…` · `result.json` `63f81ced…` · `review.json` `0fc3c5e0…`. 스크립트 `ex12/.data/judge-terms.ts` `0ceb3b1a…`(leak=false).

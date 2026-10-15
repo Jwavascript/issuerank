@@ -15,6 +15,8 @@ const MetadataSchema = z.strictObject({
   terms: z.array(z.array(z.string().trim().min(1)).min(1).max(3)).length(2),
 });
 const EXCLUSIONS = new Set(['#photo', '#market', '#obituary', '#personnel', '#language']);
+// 입력 줄 `a000 [섹션] 제목 | 설명문`에서 제목이 사진 접두로 시작하는지(D19-2)
+const PHOTO_PREFIX = /^\S+ \[[a-z]+\] \[(사진|포토|화보)\]/;
 
 const SummarySchema = z.object({ line1: z.string(), line2: z.string(), line3: z.string() });
 
@@ -44,11 +46,11 @@ const METADATA_SYSTEM = `당신은 한국어 뉴스 편집자입니다. 코드�
 - 주민의 교통요금·교육·안전 등 생활 서비스 변경 자체, 사건·사고가 중심이면 soc입니다. 행정기관이 발표했다거나 정책이라는 단어가 있다는 이유만으로 pol로 분류하지 않습니다. 같은 사안이라도 정치권의 공방이 중심인 보도와 주민 서비스 변경을 설명하는 보도는 핵심 주제로 구분합니다.
 
 4. 검색어와 중요도
-- terms는 정확히 2개 그룹입니다. 두 그룹은 모두 같은 한 사건을 식별해야 합니다(예: [["누리호"],["발사"]]). 각 그룹은 기본적으로 가장 구체적인 표현 하나만 씁니다. 같은 대상·행동의 동의어 또는 같은 명칭임이 확실할 때만 2~3개까지 추가합니다. 수를 채우기 위해 관련 단어를 더하지 않습니다.
-- 원인과 결과, 앞뒤로 이어지는 행동은 동의어가 아닙니다. 예를 들어 "판매 감소"와 "영업손실", "구조"와 "병원 이송"을 같은 그룹에 넣지 않습니다. 각각 필요한 표현 하나만 선택합니다. "3% 상승"처럼 대상이 빠진 숫자 표현도 사건 명칭의 동의어로 추가하지 않습니다.
-- 서로 다른 사건의 단어들을 한 그룹의 동의어처럼 나열하거나 두 사건을 각각 한 그룹에 넣지 않습니다. 한 그룹은 주체/대상, 다른 그룹은 해당 사건의 구체적인 행동/핵심 대상으로 고릅니다.
-- 실제 제목에 쓰이는 짧은 명칭이나 행동 구절을 고릅니다. 여러 관련 단어를 새 긴 구절로 이어 붙이지 않습니다. 예를 들어 "부상 구조 이송" 대신 "구조", "관객 감소 손실 전망" 대신 "관객 감소"를 고르고, 다른 그룹의 주체/대상과 함께 사건을 식별합니다.
-- 말은 한 낱말이나 띄어쓰기 있는 구절입니다. 한자 약칭(美·中·日) 대신 한글(미국·중국·일본)을 쓰고, 검색 문법(AND·OR·괄호·따옴표)을 넣지 않습니다. AI·정부 같은 흔한 말만으로 사건을 식별하지 않습니다.
+- terms는 정확히 2개 그룹이며 qInTitle 제목 검색에 쓰입니다. 두 그룹은 모두 같은 한 사건을 식별해야 합니다. 그룹 1은 사건의 주체/대상인 고유 명사(인물·기관·제품·지역 이름), 그룹 2는 그 사건의 핵심 행동/대상 한 낱말입니다(예: [["누리호"],["발사"]], [["한국은행"],["기준금리"]], [["부산시"],["청약"]]).
+- 모든 말은 띄어쓰기 없는 한 낱말입니다. 띄어쓰기가 있으면 제목에 그 구절이 그대로 있어야만 검색되므로 구절을 만들지 않습니다. 수치(40곳·A2블록), 지명 상세(동·블록·지구 이름), 수식어, 가운뎃점(·)으로 붙인 말을 넣지 않습니다. 예를 들어 "○○구 △△지구 B3블록" 대신 "○○구", "아파트 입주자 모집 청약 접수" 대신 "청약"을 고릅니다.
+- 각 그룹에는 실제 기사 제목에 쓰인 표기 변형을 동의어(OR 검색)로 1~3개 씁니다. 묶음 제목들에 같은 대상·행동이 다른 표기로 나오면 그 표기를 모두 넣습니다(예: ["미국","美"], ["중국","中"], ["일본","日"], ["반도체","칩"]). 美·中·日 같은 약칭도 제목에 쓰였으면 그대로 씁니다. 수를 채우기 위해 관련 단어를 더하지 않습니다.
+- 원인과 결과, 앞뒤로 이어지는 행동은 동의어가 아닙니다. 예를 들어 "판매감소"와 "영업손실", "구조"와 "이송"을 같은 그룹에 넣지 않습니다. 서로 다른 사건의 단어들을 한 그룹의 동의어처럼 나열하거나 두 사건을 각각 한 그룹에 넣지 않습니다.
+- AI·정부·대통령처럼 흔한 말만으로 된 그룹끼리 짝짓지 않습니다. 두 그룹 중 하나는 그 사건의 고유 명사여야 합니다. 검색 문법(AND·OR·괄호·따옴표)을 넣지 않습니다.
 - importance는 오늘 한국 독자에게 미치는 사건의 영향에 따라 1~5 정수로 씁니다(5 = 전국적 큰 사건, 1 = 작은 지역·업계 소식). 묶음 기사 수가 많다는 이유로 높이지 않습니다.
 
 `;
@@ -121,22 +123,26 @@ export function aiClient(apiKey: string): { organize: Organize; summarize: Summa
       if (new Set(numbers).size !== numbers.length || numbers.some(n => !/^a\d{3,}$/.test(n))) {
         return { refusal: false, output: null };
       }
-      const schema = z.strictObject({ assignments: z.strictObject(Object.fromEntries(numbers.map(n => [n, z.string()]))) });
-      const first = await ask(client, schema, 'assign_articles', ASSIGN_SYSTEM, assignInput(lines), 16000, 'medium');
+      // D19-2: 제목이 [사진]·[포토]·[화보]로 시작하는 기사는 AI에 보내지 않고 #photo로 제외한다.
+      const excluded = lines.filter(line => PHOTO_PREFIX.test(line)).map(line => line.split(' ')[0]);
+      const rest = lines.filter(line => !PHOTO_PREFIX.test(line));
+      if (rest.length === 0) return { refusal: false, output: { issues: [], excluded } };
+      const restNumbers = rest.map(line => line.split(' ')[0]);
+      const schema = z.strictObject({ assignments: z.strictObject(Object.fromEntries(restNumbers.map(n => [n, z.string()]))) });
+      const first = await ask(client, schema, 'assign_articles', ASSIGN_SYSTEM, assignInput(rest), 16000, 'medium');
       if (first.refusal || !first.output) return first;
       const assignment = first.output.assignments;
       const groups = new Map<string, string[]>();
-      const excluded: string[] = [];
-      for (const n of numbers) {
+      for (const n of restNumbers) {
         const target = assignment[n];
         if (EXCLUSIONS.has(target)) { excluded.push(n); continue; }
-        if (!numbers.includes(target) || assignment[target] !== target) return { refusal: false, output: null };
+        if (!restNumbers.includes(target) || assignment[target] !== target) return { refusal: false, output: null };
         groups.set(target, [...(groups.get(target) ?? []), n]);
       }
       if (!groups.size) return { refusal: false, output: { issues: [], excluded } };
       const roots = [...groups.keys()];
       const metadata = z.strictObject({ events: z.strictObject(Object.fromEntries(roots.map(n => [n, MetadataSchema]))) });
-      const byNumber = new Map(numbers.map((n, i) => [n, lines[i]]));
+      const byNumber = new Map(restNumbers.map((n, i) => [n, rest[i]]));
       const content = roots.map(n => `사건 ${n}\n${groups.get(n)!.map(id => byNumber.get(id)).join('\n')}`).join('\n\n');
       const second = await ask(client, metadata, 'describe_events', METADATA_SYSTEM, content, 16000);
       if (second.refusal || !second.output) return second;

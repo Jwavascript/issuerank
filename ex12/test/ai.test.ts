@@ -43,6 +43,52 @@ describe('OpenAI Responses 어댑터', () => {
     expect(second).toMatchObject({ max_output_tokens: 4000, reasoning: { effort: 'low' }, input: '1. 제목: 제목\n   설명문: 설명', text: { format: { name: 'summary' } } });
   });
 
+  it('메타데이터 지시문은 terms를 한 낱말 · 표기 변형 동의어로 요구한다(D19 · D19-2)', async () => {
+    const net = mockHttp(response(JSON.stringify(assigned)));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(assigned))), { headers: { 'content-type': 'application/json' } }));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(described))), { headers: { 'content-type': 'application/json' } }));
+    await aiClient(KEY).organize([LINE]);
+    const { instructions } = JSON.parse(String(net.mock.calls[1][1]?.body));
+    expect(instructions).toContain('띄어쓰기 없는 한 낱말');
+    expect(instructions).toContain('고유 명사');
+    expect(instructions).toContain('핵심 행동/대상 한 낱말');
+    expect(instructions).toContain('표기 변형을 동의어');
+    expect(instructions).toContain('["미국","美"]');
+    expect(instructions).toContain('美·中·日 같은 약칭도');
+    expect(instructions).toContain('흔한 말만으로 된 그룹');
+    expect(instructions).not.toContain('한자 약칭(美·中·日) 대신 한글');
+    expect(instructions).not.toContain('1~2낱말');
+    expect(instructions).not.toContain('가장 구체적인 표현 하나');
+  });
+
+  it('제목이 [사진]·[포토]·[화보]로 시작하는 기사는 AI에 보내지 않고 제외한다(D19-2)', async () => {
+    const lines = ['a000 [it] 누리호 발사', 'a001 [cul] [사진]가수 공연 | 장면', 'a002 [it] 누리호 발사 성공', 'a003 [soc] [포토] 행사 장면', 'a004 [wor] [화보] 풍경', 'a005 [cul] 공연 [사진] 전시'];
+    const assign = { assignments: { a000: 'a000', a002: 'a000', a005: 'a005' } };
+    const meta = { events: { a000: described.events.a000, a005: { section: 'cul', importance: 1, terms: [['공연'], ['전시']] } } };
+    const net = mockHttp(response(JSON.stringify(assign)));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(assign))), { headers: { 'content-type': 'application/json' } }));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(meta))), { headers: { 'content-type': 'application/json' } }));
+    const result = await aiClient(KEY).organize(lines);
+    expect(net).toHaveBeenCalledTimes(2);
+    const first = JSON.parse(String(net.mock.calls[0][1]?.body));
+    for (const n of ['a001', 'a003', 'a004']) {
+      expect(first.input).not.toContain(n);
+      expect(first.text.format.schema.properties.assignments.properties).not.toHaveProperty(n);
+    }
+    expect(first.input.startsWith('a000 [it] 누리호 발사\na002 [it] 누리호 발사 성공\na005 [cul] 공연 [사진] 전시')).toBe(true);
+    expect(JSON.parse(String(net.mock.calls[1][1]?.body)).input).not.toContain('[사진]가수');
+    expect(result.refusal).toBe(false);
+    const output = (result as { output: { issues: { articles: string[] }[]; excluded: string[] } }).output;
+    expect(output.excluded).toEqual(['a001', 'a003', 'a004']);
+    expect([...output.issues.flatMap(i => i.articles), ...output.excluded].sort()).toEqual(lines.map(l => l.split(' ')[0]));
+  });
+
+  it('모든 기사가 사진 접두면 AI를 호출하지 않는다(D19-2)', async () => {
+    const net = mockHttp(response(JSON.stringify(assigned)));
+    expect(await aiClient(KEY).organize(['a000 [cul] [사진]장면', 'a001 [soc] [포토]장면'])).toEqual({ refusal: false, output: { issues: [], excluded: ['a000', 'a001'] } });
+    expect(net).not.toHaveBeenCalled();
+  });
+
   it('refusal은 거절로 전달한다', async () => {
     mockHttp({ status: 'completed', output: [{ type: 'message', content: [{ type: 'refusal', refusal: '거절' }] }] });
     expect(await aiClient(KEY).organize([LINE])).toEqual({ refusal: true });
