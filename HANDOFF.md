@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-15 · ex09 독립 심사 PASS 보류(예약 실행 확인 대기, `reports/ex09_judge.md` OK11/FAIL0/SKIP1). 수동 실행 run 38683426817 success, newsdata 잔여 106. ex12 배포 계획 확정(plan/PLAN_backend_ex12.md, D10 Vercel·icn1), 제작은 ex09 PASS 뒤. ex08·ex10·ex11 PASS
+최종 갱신: 2026-10-15 · ex09 독립 심사 PASS 보류(예약 실행 확인 대기, `reports/ex09_judge.md` OK11/FAIL0/SKIP1). 수동 실행 run 38683426817 success, newsdata 잔여 106. ex12 제작 로컬 완료(`reports/ex12_build.md`, 테스트115·빌드·로컬 OK, 배포 줄은 사용자 Vercel 배포 대기). 명령은 `bash scripts/ex12-ubuntu.sh ...`. ex08·ex10·ex11 PASS
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
@@ -75,6 +75,7 @@ bash scripts/ex08-ubuntu.sh npm run db:migrate
 |---|---|
 | ex01~ex06 | 완료 · 커밋 |
 | ex07 | 완료. 2차 PASS 31/31, 이슈맵 로그 비율 보완 PASS(커밋 `5cb2a7a` · `7d62470`) |
+| ex12 배포(Vercel) | 제작 로컬 완료(2026-10-15): ex09 복사, `server/bff.ts`(같은 프로세스 app.fetch)·route·`connectDb({max})`·`vercel.json` icn1·engines 24.x·.env.example 주석·BFF 테스트6. 테스트115/115·빌드, 로컬 `next start`/`next dev --webpack` 한 서버·인증·북마크·앱 준비 실패 502 OK(3000 요청60/100, 임시계정2 정리, 9테이블 해시 불변, 뉴스/OpenAI0). 배포 줄7 SKIP(사용자 배포 대기) |
 | ex09 하루 1회 자동 실행 | 제작 완료(2026-10-15): `npm run daily`·`.github/workflows/daily.yml`(06:17 KST). 테스트111/111·빌드, 로컬 실제 하루 종료0(뉴스18/20·OpenAI5/5, 잔여161). 푸시·Secrets3·수동 실행 success(기사158·이슈133·요약29). 독립 심사 PASS 보류: 예약 실행 · 실행 요약 화면 확인 대기 |
 | ex11 계정별 북마크·폴더 | 완료. 0006 적용. 독립 심사 PASS(2026-10-15): 테스트96/96·빌드·API/BFF/Chromium 80요청, OK11/FAIL0/SKIP0 |
 | ex10 이메일·비밀번호 로그인 | 완료. Better Auth 1.7.7, 0005 인증 테이블 적용. 독립 심사 PASS: 테스트85/85·빌드·API18·Chromium UI7, OK11/FAIL0/SKIP0 |
@@ -90,7 +91,8 @@ ex08 요약:
 
 - **ex09 제작(2026-10-15)**: `reports/ex09_build.md`. ex11 복사·`scripts/ex09-ubuntu.sh`, 명령은 `bash scripts/ex09-ubuntu.sh ...`. 새 파일 `server/steps.ts`·`server/daily.ts`·`test/daily.test.ts`·package.json `daily`, 루트 `.github/workflows/daily.yml`(cron `17 21 * * *`·수동, checkout@v7·setup-node@v7). ai.ts 해시 `07e10b1e…` 유지. 테스트111/111·빌드 통과. 실제: 잘못된 키 줄(확인행6 삭제·해시 불변), 로컬 하루 `--pages 1 --search 1 --max 3` 종료0(기사108·이슈92·요약3), newsdata 18크레딧·OpenAI 5회, 잔여 161. 품질 첫 줄 `reports/ex09_daily.md`.
 - **ex09 심사(2026-10-15)**: `reports/ex09_judge.md` OK11/FAIL0/SKIP1(예약 실행)·해당 없음1. 테스트111/111(첫 실행 통과)·빌드, 잘못된 키 줄 확인행6 삭제·해시 불변, 로그 누출 false, Secrets 이름3. newsdata 1(잔여106)·OpenAI0. 수동 실행 품질 줄을 `reports/ex09_daily.md`에 추가.
-- **다음 작업**: 2026-10-16 06:17 KST 이후 예약 실행 줄만 다시 심사(`reports/ex09_judge.md` 8절 방법, newsdata 최대1·OpenAI0) + Actions 실행 화면 Summary에 daily 출력이 붙었는지 브라우저로 확인 → 모두 OK면 ex09 PASS → ex12 제작. 7일째까지 `reports/ex09_daily.md` 기록.
+- **ex12 제작(2026-10-15)**: `reports/ex12_build.md`. 사용자가 할 일(6절): main 푸시 → 배포용 BETTER_AUTH_SECRET 직접 생성 → Vercel Add New › Project › `Jwavascript/capstone` Import, Root Directory `ex12`·Next.js → Production 환경 변수 3개(DATABASE_URL·BETTER_AUTH_SECRET Secret, BETTER_AUTH_URL Config) → Deploy → 주소가 다르면 BETTER_AUTH_URL 고치고 Redeploy → 설정 화면·주소 전달 → PC·폰 같은 계정 결과 전달. 이후 배포 줄 실행(제작 이어서 또는 심사, 배포 요청 최대150·newsdata/OpenAI 0). 이 기기에서 `npm run dev`(Turbopack)는 파일 감시 한도로 API 실패 → `WATCHPACK_POLLING=true npm run dev -- --webpack --hostname 127.0.0.1` 사용.
+- **다음 작업**: (ex09) 2026-10-16 06:17 KST 이후 예약 실행 줄만 다시 심사(`reports/ex09_judge.md` 8절 방법, newsdata 최대1·OpenAI0) + Actions 실행 화면 Summary에 daily 출력이 붙었는지 브라우저로 확인 → 모두 OK면 ex09 PASS(문제가 나오면 ex09·ex12 함께 수정). (ex12) 사용자 배포 후 배포 줄 → ex12 심사 → PASS 뒤 워크플로 2줄 ex12로. 7일째까지 `reports/ex09_daily.md` 기록.
 - (완료) 이전 사용자 단계: 커밋 → main 푸시 → GitHub Settings › Secrets and variables › Actions에 `DATABASE_URL`(풀러)·`NEWSDATA_API_KEY`·`OPENAI_API_KEY` 등록 → Actions › daily › Run workflow 1회. 그다음 ex09 독립 심사(새 세션, `reports/ex09_judge.md`, 심사 newsdata 1·OpenAI 0), 다음 날 06:17 KST 이후 예약 실행 확인, 7일째까지 `reports/ex09_daily.md` 기록.
 
 - ex11 제작 검증 완료: `reports/ex11_build.md`, 테스트13파일96개·빌드 통과, 실제 API/BFF·브라우저 합계74/250요청·임시계정2개. 0006 적용·재실행 불변, 계정 분리·재시작·과거 기사 저장·두 브라우저 계정 전환·세션 만료 통과. 임시 행 정리·기존 내용 해시 보존·뉴스/OpenAI0. 독립 심사 PASS: `reports/ex11_judge.md`, OK11/FAIL0/SKIP0·심사 80/250요청·임시계정2개 정리·기존 내용 해시 불변·뉴스/OpenAI0. 실제 검증은 Codex 세션이 실행했고 보고·테스트/빌드 재실행·남은 브라우저 프로필 정리는 Claude Code 세션이 이어서 했다.
