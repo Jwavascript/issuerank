@@ -1,4 +1,4 @@
-// npm run summarize [-- --max N]: 그날(KST 오늘) Top 5 중 요약 없는 이슈만 Claude로 3줄 요약을 issues.summary에(D6, US-04)
+// npm run summarize [-- --max N]: 그날(KST 오늘) Top 5 중 요약 없는 이슈만 OpenAI로 3줄 요약을 issues.summary에(D6, US-04)
 // 검사(옵션 → N ≥ 1이면 키 → DB에서 그날 이슈 읽기)를 통과해야 요청. 오류는 문구만 찍음(오류 객체 · 환경 변수 금지)
 // 종료 코드: 0 실패 없음 · 1 실패 있음 · 2 검사 · DB 오류
 import { aiClient } from './ai';
@@ -16,9 +16,9 @@ async function main(): Promise<number> {
     console.log('--max는 0~30입니다');
     return 2;
   }
-  const key = process.env.ANTHROPIC_API_KEY ?? '';
+  const key = process.env.OPENAI_API_KEY ?? '';
   if (max >= 1 && !key) {
-    console.log('ANTHROPIC_API_KEY가 없습니다');
+    console.log('OPENAI_API_KEY가 없습니다');
     return 2;
   }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "issues" ADD COLUMN "importance" integer DEFAULT 0 NOT NULL;

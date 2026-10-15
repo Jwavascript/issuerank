@@ -2,7 +2,7 @@
 // 시각은 setup.ts가 2026-10-07 12:00 KST로 고정
 import { describe, expect, it } from 'vitest';
 import type { AiReply } from '../server/grouping';
-import type { SectionKey } from '../server/ranking';
+import { buildRanking, type SectionKey } from '../server/ranking';
 import { summarizeDay, type Summarize, type SummaryArticle, type SummaryIssue, type SummaryStore } from '../server/summary';
 
 const AI_KEY = 'test-ant-456';
@@ -15,7 +15,7 @@ function memoryStore() {
   const articles: (SummaryArticle & { issueId: string })[] = [];
   const add = (date: string, section: SectionKey, n: number, articleCount: number, summary: string[] | null = null) => {
     const id = `${date}-${section}-${n}`;
-    issues.push({ id, date, section, articleCount, latestPublishedAt: `${YESTERDAY}T12:00:00.000Z`, summary });
+    issues.push({ id, date, section, articleCount, importance: 0, latestPublishedAt: `${YESTERDAY}T12:00:00.000Z`, summary });
     articles.push(
       { issueId: id, title: `${id} 앞 기사`, description: `${id} 설명문`, link: `https://example.com/${id}/a`, publishedAt: `${YESTERDAY}T10:00:00.000Z` },
       { issueId: id, title: `${id} 뒤 기사`, description: null, link: `https://example.com/${id}/b`, publishedAt: `${YESTERDAY}T11:00:00.000Z` },
@@ -129,4 +129,21 @@ describe('summarize (US-04 · AC-04-3, D6)', () => {
     expect(two.results.map(r => [r.id, r.skipped])).toEqual([[pol(1), false], [pol(3), true], [pol(4), false]]);
     expect(two).toMatchObject({ requests: 2, noDescription: 1, code: 0 });
   });
+});
+
+
+it('D16: 중요도를 반영한 화면 Top 5와 같은 순서로 요약하고 기존 요약은 유지한다', async () => {
+  const mem = memoryStore();
+  for (const issue of mem.issues.filter(i => i.section === 'pol')) {
+    issue.articleCount = 10;
+    issue.importance = issue.id === pol(6) ? 5 : 0;
+  }
+  const rows = mem.issues.filter(i => i.date === TODAY).map(i => ({ ...i, title: i.id, url: `https://example.com/${i.id}` }));
+  const ranking = buildRanking(TODAY, rows)!;
+  const ids = ranking.sections.flatMap(s => s.issues.filter(i => i.summary === null).map(i => i.id));
+  expect(ids).toEqual([pol(6), pol(1), pol(3), pol(4), ECO]);
+  const result = await run(mem, fakeAi(normal).summarize);
+  expect(result.empty ? [] : result.results.map(r => r.id)).toEqual(ids);
+  expect(summaryOf(mem, pol(5))).toBeNull();
+  expect(summaryOf(mem, pol(2))).toEqual(['요약 1', '요약 2', '요약 3']);
 });

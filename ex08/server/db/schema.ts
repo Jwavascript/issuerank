@@ -11,6 +11,7 @@ export const issues = pgTable('issues', {
   title: text('title').notNull(),
   url: text('url').notNull(),
   articleCount: integer('article_count').notNull(),
+  importance: integer('importance').notNull().default(0), // AI 1~5, 기존·규칙·빠진 기사 0(D16)
   latestPublishedAt: timestamp('latest_published_at', { withTimezone: true }).notNull(),
   summary: text('summary').array(),
 }).enableRLS();

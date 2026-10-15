@@ -90,7 +90,7 @@ function rowsFor(date: string): IssueRow[] {
       return {
         id: `${date}-${key}-${n}`, date, section: key, title,
         summary: `${key}-${n}` === NULL_SUMMARY ? null : summary,
-        articleCount: counts[i], url: 'https://news.naver.com/',
+        articleCount: counts[i], importance: 0, url: 'https://news.naver.com/',
         latestPublishedAt: `${date}T${hh}:${mm}:00+09:00`,
       };
     });

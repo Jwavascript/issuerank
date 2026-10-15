@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRanking, rankIssues, type IssueRow, type SectionKey } from '../server/ranking';
+import { buildRanking, findCard, rankIssues, type IssueRow, type SectionKey } from '../server/ranking';
 
 const AT_03 = '2026-10-07T03:00:00+09:00';
 
@@ -53,7 +53,7 @@ describe('rankIssues', () => {
 
 // 이슈 행 하나(랭킹 후보)
 const row = (date: string, section: SectionKey, n: number, articleCount: number): IssueRow => ({
-  id: `${date}-${section}-${n}`, date, section, title: `${section} ${n}`, summary: null, articleCount,
+  id: `${date}-${section}-${n}`, date, section, title: `${section} ${n}`, summary: null, articleCount, importance: 0,
   url: `https://example.com/${date}-${section}-${n}`, latestPublishedAt: `${date}T03:00:00+09:00`,
 });
 const KEYS: SectionKey[] = ['pol', 'eco', 'soc', 'cul', 'wor', 'it'];
@@ -87,5 +87,38 @@ describe('buildRanking (D8 · AC-05-1)', () => {
     expect(buildRanking('2026-10-07', ROWS, runs)!.updatedAt).toBe('2026-10-07T06:03:05+09:00');
     expect(buildRanking('2026-10-07', ROWS, runs.filter(r => r.status === 'failed'))!.updatedAt).toBe('2026-10-07T06:00:00+09:00');
     expect(buildRanking('2026-10-07', ROWS)!.updatedAt).toBe('2026-10-07T06:00:00+09:00');
+  });
+});
+
+
+describe('D16 중요도 동점 순위', () => {
+  it('건수 → 중요도 → 시각 → id 자연 순서, 입력 순서와 무관하고 원본을 보존한다', () => {
+    const candidates = [
+      { id: 'count', articleCount: 11, importance: 0, latestPublishedAt: AT_03 },
+      { id: 'issue-10', articleCount: 10, importance: 5, latestPublishedAt: AT_03 },
+      { id: 'issue-9', articleCount: 10, importance: 5, latestPublishedAt: AT_03 },
+      { id: 'newer', articleCount: 10, importance: 5, latestPublishedAt: '2026-10-06T21:00:00Z' },
+      { id: 'lower', articleCount: 10, importance: 1, latestPublishedAt: '2026-10-07T12:00:00+09:00' },
+      { id: 'legacy', articleCount: 10, latestPublishedAt: AT_03 },
+    ];
+    for (const input of [candidates, [...candidates].reverse()]) {
+      const before = structuredClone(input);
+      expect(rankIssues(input).map(x => x.id)).toEqual(['count', 'newer', 'issue-9', 'issue-10', 'lower']);
+      expect(input).toEqual(before);
+    }
+    const legacy = candidates[5];
+    expect(rankIssues([{ ...legacy, id: 'issue-10', importance: 0 }, { ...legacy, id: 'issue-9' }]).map(x => x.id))
+      .toEqual(['issue-9', 'issue-10']);
+  });
+
+  it('화면과 북마크 카드의 순위가 같고 importance는 API 카드에 노출하지 않는다', () => {
+    const rows = [1, 2, 3, 4, 5, 6].map(n => ({ ...row('2026-10-07', 'pol', n, 10), importance: n === 6 ? 5 : 0 }));
+    const cards = buildRanking('2026-10-07', rows)!.sections[0].issues;
+    expect(cards.map(x => x.id)).toEqual([6, 1, 2, 3, 4].map(n => `2026-10-07-pol-${n}`));
+    for (const card of cards) {
+      expect(findCard(card.id, rows)).toEqual(card);
+      expect(card).not.toHaveProperty('importance');
+      expect(card).not.toHaveProperty('latestPublishedAt');
+    }
   });
 });

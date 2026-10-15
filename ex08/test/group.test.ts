@@ -416,6 +416,26 @@ describe('group (AC-02-1 · AC-02-2, D11 · D13)', () => {
     return { refusal: false, output: o };
   };
 
+  it('D16: AI 중요도 저장·재묶기 갱신, 빠진 기사·규칙 경로 0, 북마크 보호', async () => {
+    const mem = memoryStore(DAY());
+    await runAi(fakeNet(), mem, 0, sixAi().organize);
+    expect(issue(mem, id('it', 1))!.importance).toBe(5);
+    expect(issue(mem, id('soc', 1))!.importance).toBe(2);
+    expect(issue(mem, id('pol', 1))!.importance).toBe(4);
+    expect(mem.issues.filter(i => i.section === 'pol' && i.id !== id('pol', 1)).every(i => i.importance === 0)).toBe(true);
+    const summary = ['첫째', '둘째', '셋째'];
+    issue(mem, id('it', 1))!.summary = summary;
+    await runAi(fakeNet(), mem, 0, fakeAi(edit(o => { o.issues[0].importance = 2; })).organize);
+    expect(issue(mem, id('it', 1))).toMatchObject({ importance: 2, summary });
+    mem.bookmarks.push(id('it', 1));
+    await runAi(fakeNet(), mem, 0, sixAi().organize);
+    expect(issue(mem, id('it', 1))).toMatchObject({ importance: 2, summary });
+    const rule = memoryStore(DAY());
+    await run(fakeNet(), rule, 0);
+    expect(rule.issues.length).toBeGreaterThan(0);
+    expect(rule.issues.every(i => i.importance === 0)).toBe(true);
+  });
+
   it('⑦ (가) 대체: 거절 · 모양이 다름 · 섹션 xx · 모든 번호가 없는 번호(묶음 없음) · 호출 실패 → --ai 0과 같은 결과 · 종료 코드 1', async () => {
     // AI 없이(--ai 0) 돌린 결과
     const plain = memoryStore(DAY());

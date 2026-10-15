@@ -1,13 +1,13 @@
 # plan_helper — PLAN_backend_exXX.md 쓰는 법 (이슈랭크 캡스톤)
 
 - SPEC.md의 사용자 스토리(US) · 인수 기준(AC)을 보고 `plan/PLAN_backend_exXX.md`를 짧게 쓰는 방법
-- 직접 써도 되고, Claude에게 "plan_helper.md대로 exXX PLAN 써 줘"라고 시켜도 됨
+- 직접 써도 되고, Codex에게 "plan_helper.md대로 exXX PLAN 써 줘"라고 시켜도 됨
 
 ## 1. 쓰기 전에 볼 것
 
 1. 2절 표에서 이번 단계 줄과 그 줄의 SPEC 근거(US · AC)
 2. 바로 앞 PLAN(`PLAN_backend_ex(XX-1).md`). ex01이면 `SPEC.md` + `frontend/index.html`(가짜 데이터로 도는 화면)
-3. 이번 단계에 외부 계정 · 키가 필요한지(예: Supabase · Anthropic API 키 · 배포/스케줄러). 필요하면 쓰기 전에 요청
+3. 이번 단계에 외부 계정 · 키가 필요한지(예: Supabase · OpenAI API 키 · 배포/스케줄러). 필요한 이름과 준비 방법을 적고 실제 실행에 없으면 해당 부분만 알림. 비밀값을 채팅으로 요청하지 않음
 4. `PLAN.md` 3절 이번 단계 줄 · 5절 결정 · 10절 단계 메모. 이번 단계에 필요한 결정이 "대기"면 PLAN을 쓰지 않고 먼저 정함
 
 ## 2. 주제에서 디테일 유추하기

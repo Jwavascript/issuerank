@@ -6,6 +6,5 @@ dist/
 !.env.example
 *.log
 .next/
-AGENTS.md
 next-env.d.ts
 *.tsbuildinfo

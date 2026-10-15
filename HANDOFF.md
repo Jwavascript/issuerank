@@ -1,58 +1,115 @@
-# HANDOFF — 이슈랭크 캡스톤 (2026-10-08 기준)
+# HANDOFF — 이슈랭크 캡스톤
 
-다른 PC · 새 Claude 세션에서 이어 갈 때 이 파일을 가장 먼저 읽게 한다.
+최종 갱신: 2026-10-15 · ex11 계정별 북마크·폴더 독립 심사 PASS, ex10 PASS·ex08 품질 FAIL·ex09 자동화 보류
 
-## 1. 새 PC에서 시작하기
-1. `git clone https://github.com/Jwavascript/capstone.git` → `cd capstone/ex08` → `npm.cmd install`
-2. `ex08/.env`를 손으로 만든다. git에는 없다. 값은 메신저 · 채팅 · 커밋으로 옮기지 말 것.
-   - `DATABASE_URL`: Supabase Transaction pooler 6543. 비밀번호는 2026-10-08에 교체됨
-   - `NEWSDATA_API_KEY`
-   - `ANTHROPIC_API_KEY`
-   - 값은 큰따옴표로 감쌈. 이름 목록은 `ex08/.env.example`
-3. 확인: `npm.cmd test`(51개 통과) · `npm.cmd run build`
-4. 화면: 터미널 둘에서 `npm.cmd run api`(8787) · `npm.cmd run dev`(3000)
-5. 새 Claude에게 처음 보낼 말(예):
-   > HANDOFF.md, CLAUDE.md, PLAN.md(5절 결정 · 10절 메모), plan/PLAN_backend_ex08.md, reports/ex08_judge.md를 읽고 지금 상태와 남은 결정을 정리해 줘. 코드는 아직 고치지 마.
+다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
-## 2. 진행 방식 (사용자가 정한 것)
-- `plan_helper.md` 순서대로 단계 exXX를 진행한다. 각 단계는 서브에이전트 3개를 **순서대로**, 각각 **opus 모델**로 돌린다.
+## 1. Codex에서 시작하기
+
+1. 저장소 루트에서 AGENTS.md를 읽는다. ex10 이메일·비밀번호 로그인은 PASS했다. 사용자 승인으로 ex08 품질 FAIL과 ex09 자동화는 보류했다.
+2. ex10 근거는 `plan/PLAN_backend_ex10.md`, `reports/ex10_build.md`, `reports/ex10_judge.md`다. ex11 계정별 북마크·폴더도 계획·제작·심사 PASS(`reports/ex11_build.md`, `reports/ex11_judge.md`). 다음 단계는 사용자와 정한다.
+3. 현재 Termux에서는 `bash scripts/ex11-ubuntu.sh npm test`와 `bash scripts/ex11-ubuntu.sh npm run build`를 쓴다. 의존성 복원은 같은 래퍼의 `npm ci --no-audit --no-fund`다.
+4. 현재 실행 설정은 ex11/.env에만 둔다. 기존 DB 연결과 새 BETTER_AUTH_SECRET, BETTER_AUTH_URL을 준비했다. 값은 출력하지 않는다. Google OAuth·SMTP는 이번 범위에 없다.
+5. 서버는 별도 터미널에서 `bash scripts/ex11-ubuntu.sh npm run api`(8787), `bash scripts/ex11-ubuntu.sh npm run dev -- --hostname 127.0.0.1`(3000). 실제 검증은 단계 PLAN의 안전 실행과 호출 한도를 따른다.
+6. 새 세션 요청 예: “AGENTS.md와 HANDOFF.md를 읽어 줘. ex10 로그인은 PASS했고 ex08 품질과 ex09 자동화는 보류 상태야. ex11 계정별 북마크·폴더도 PASS했어. 다음 단계를 정하자.”
+
+### 현재 실행 환경 주의
+
+- Termux/proot에서는 Next.js의 LAN 주소 자동 탐지가 `ERR_SYSTEM_ERROR`·`uv_interface_addresses`로 실패할 수 있다. dev/start에 `--hostname 127.0.0.1`을 지정한다. 권한 설정 변경은 필요 없다. 브라우저는 BETTER_AUTH_URL과 같은 `http://localhost:3000`으로 접속한다.
+
+### 현재 환경 확인 (2026-10-13)
+
+- Android/Termux에 Node.js 24.18.0 · npm 11.20.0 설치 완료. Termux 직접 실행은 테스트 51개 통과했지만 Next.js Turbopack과 TypeScript 7의 Android 네이티브 실행 파일이 없어 전체 빌드 불가. 기존 proot Ubuntu에 공식 Linux ARM64 Node.js 24.18.0을 SHA-256 확인 후 `/opt/node-v24.18.0-linux-arm64`에 설치했다.
+- ex08은 Ubuntu에서 실행한다. 아래 래퍼를 사용하며, Termux Node와 Ubuntu Node 사이에서 같은 node_modules를 번갈아 설치하지 않는다. OS가 바뀌면 대상 환경에서 `npm ci`로 복원한다.
+- Ubuntu 검증 완료: Node.js 24.18.0 · npm 11.16.0, `npm ci` 성공, 테스트 6파일 51개 통과, 기본 `npm run build`(Turbopack + 타입 검사) 성공. 재개 기록은 `reports/ex08_resume.md`.
+- `ex08/.env`의 필수 값 입력과 DB 비밀번호 재설정 후 실제 DB·newsdata·OpenAI 연결 확인 완료. 실제 값은 이 파일에만 두고 .env.example은 이름·설명만 보관한다.
+- 샌드박스 실행이 `bwrap: Can't read /proc/sys/kernel/overflowuid: Permission denied`로 실패했다. 이번 파일 작업은 명시적 실행 승인 후 진행했다. 제품 코드 오류와 별개이며 권한 설정을 임의로 바꾸지 않는다.
+- 초기 Codex 전환 후, 사용자 승인에 따라 ex08 중요도 순위와 OpenAI SDK 전환까지 구현했다. 이후 실제 검증에서 newsdata 19회·OpenAI 4회를 사용했다. 프롬프트 보강 작업 자체는 추가 유료 호출 0회다.
+
+### 현재 기기에서 실행하는 명령
+
+저장소 루트의 Termux 터미널에서:
+
+```bash
+bash scripts/ex08-ubuntu.sh node --version
+bash scripts/ex08-ubuntu.sh npm ci --no-audit --no-fund
+bash scripts/ex08-ubuntu.sh npm test
+bash scripts/ex08-ubuntu.sh npm run build
+```
+
+화면·API는 `.env`를 로컬에서 준비한 뒤 별도 터미널 두 곳에서:
+
+```bash
+bash scripts/ex08-ubuntu.sh npm run api
+bash scripts/ex08-ubuntu.sh npm run dev
+```
+
+래퍼는 기존 Ubuntu에 저장소를 `/workspace/capstone`으로 연결하고 ex08 폴더에서 실행한다. 인수 없이 실행하면 그 환경의 셸이 열린다. 일반 Linux/Windows PC에서는 래퍼 없이 ex08에서 npm 명령을 사용한다.
+
+ex08 당시에는 0004까지 적용했고, 현재 공유 DB에는 ex11의 0006까지 적용됐다. 다른 DB를 준비할 때만 이전 적용 기록을 확인한 뒤 아래 마이그레이션 명령을 사용한다:
+
+```bash
+bash scripts/ex08-ubuntu.sh npm run db:migrate
+```
+
+실제 실행은 PLAN의 안전 실행 절차를 따른다. 기존 DB의 이전 마이그레이션 적용 여부를 먼저 확인하고, 실제 키·접속 문자열을 출력하지 않는다. OpenAI 키는 OpenAI Platform에서 발급하며 ChatGPT 구독과 API 과금은 별도다.
+
+- 기본 모델: `gpt-4.1-mini-2025-04-14`, 정리·요약 공통. 정리 지시문은 사건 단위 기준과 반례를 보강했다. 요약 지시문은 유지했으며, 1차 지시문은 합성 입력에서 제외·섹션·검색어 의미 FAIL. 이후 2차 보완 완료, 2차 지시문은 합성 재검증에서 불필요한 제외·섹션 기준 FAIL. 이후 3차 보완을 완료했고 단일 정리 구조에서 발생한 대량 누락·중복을 해결하기 위해 2단계 배정 구조로 변경했다. 최신 합성 검증은 번호 완전성 통과·사진 제외 FAIL이다.
+- [OpenAI 키 준비](https://platform.openai.com/api-keys) · [모델/단가](https://developers.openai.com/api/docs/models/gpt-4.1-mini) · [구독과 API 요금 구분](https://learn.chatgpt.com/docs/pricing)
+- 최초 검토안은 `reports/ex08_resume.md`, 최신 제작·심사는 각 보고의 2026-10-13 절을 따른다.
+
+## 2. 진행 방식
+
+- `AGENTS.md`를 공통 규칙으로 사용한다. `plan_helper.md`에 따라 단계 exXX를 진행하고 계획 → 제작 → 심사 순서를 유지한다.
   - `agent_prompts/1_plan_agent.md`: 계획 → `plan/PLAN_backend_exXX.md`
   - `agent_prompts/2_build_agent.md`: 제작 → `exXX/` · `reports/exXX_build.md`
   - `agent_prompts/3_judge_agent.md`: 심사 → `reports/exXX_judge.md`
+- 이전 Claude Code의 Opus 서브에이전트 지정은 Codex의 역할별 순차 작업으로 옮겼다. 독립 심사는 새 세션에서 하고, 서브에이전트는 별도 요청 시에만 쓴다.
+- 이미 승인한 범위는 계속 진행하되 미결정에 대한 응답을 임의로 "예"로 간주하지 않는다.
 - 커밋은 사용자가 원할 때만. `web/` · `plan/PLAN_web.md`는 사용자의 별도 작업이라 건드리지 않는다.
-- 결정 기록은 `PLAN.md` 5절(D0~D15), 단계에서 실제로 문제가 된 것은 10절에 한 줄씩 적는다.
-- 답은 한국어로, 쉬운 말로.
+- 결정 기록은 `PLAN.md` 5절(D0~D15), 단계에서 실제로 문제가 된 것은 10절에 적는다.
+- 답은 한국어로, 쉬운 말로. 제품 AI는 사용자 요청에 따라 OpenAI Responses API로 전환했다.
 
 ## 3. 지금 상태
 | 단계 | 상태 |
 |---|---|
 | ex01~ex06 | 완료 · 커밋 |
 | ex07 | 완료. 2차 PASS 31/31, 이슈맵 로그 비율 보완 PASS(커밋 `5cb2a7a` · `7d62470`) |
-| ex08 AI 이슈 정리 · 3줄 요약 | 제작 4차까지 끝, **심사 FAIL 1줄**(OK 33 · FAIL 1 · SKIP 6, 브라우저 줄). 사용자 커밋 `f1e0b23` · `2f2b954` |
+| ex11 계정별 북마크·폴더 | 완료. 0006 적용. 독립 심사 PASS(2026-10-15): 테스트96/96·빌드·API/BFF/Chromium 80요청, OK11/FAIL0/SKIP0 |
+| ex10 이메일·비밀번호 로그인 | 완료. Better Auth 1.7.7, 0005 인증 테이블 적용. 독립 심사 PASS: 테스트85/85·빌드·API18·Chromium UI7, OK11/FAIL0/SKIP0 |
+| ex08 AI 이슈 정리 · 3줄 요약 | 중요도 순위·OpenAI 전환 구현, 로컬 64/64·빌드 통과. 이전 FAIL 기대값 수정. 실제 DB·API 연결 확인, AI 정리 품질 FAIL 후 프롬프트 보강. 합성 재검증에서 제외·섹션·검색어 의미 FAIL, 실제 116기사 및 브라우저 미확인으로 전체 PASS 보류. 2026-10-08 심사 기록은 보존 |
 
 ex08 요약:
-- `npm run group`: Claude(Haiku 4.5)가 그날 기사를 묶고, 섹션 · 제외 · `terms`(검색 핵심어 2묶음) · `importance`(1~5)를 정한다. 실패하면 ex07 규칙으로 묶는다.
-- 연관기사 수: `qInTitle` 검색 + 1쪽 검증(D13).
+- `npm run group`: OpenAI(`gpt-4.1-mini-2025-04-14`)가 그날 기사를 묶고, 섹션 · 제외 · `terms`(검색 핵심어 2묶음) · `importance`(1~5)를 정한다. 실패하면 ex07 규칙으로 묶는다.
+- 연관기사 수: `qInTitle` 검색 + 1쪽 검증(D13). 순위: 건수 ↓ → importance ↓ → 시각 ↓ → id 자연 순서(D16). importance는 DB에 저장하고 기존 행·규칙·빠진 기사는 0이다.
 - `npm run summarize`: Top 5 중 요약이 없는 이슈를 3줄로 요약한다. 설명문이 없으면 건너뛴다.
 - 하루 실행 순서: `collect` → `group` → `summarize`(ex09가 자동화할 예정)
 
-## 4. 남은 결정 (다음 세션에서 사용자에게 먼저 물을 것)
-1. **ex08 FAIL 1줄**(`오늘 랭킹(DB)`): 연관기사 수가 같으면 화면 순위가 발행 시각순이 되어 "1위 = 첫 후보" 기대가 깨진다.
-   - 추천: `importance`를 `issues`에 저장(마이그레이션 0004)하고, 순위를 연관기사 수 ↓ → importance ↓ → 시각 ↓ 순으로 매긴다.
-   - 다른 길: PLAN 기대값만 고친다.
-2. **AI 정리 품질**(Haiku의 한계, `reports/ex08_judge.md` 품질 절):
-   - 다른 사건을 한 묶음으로 묶는다(eco 1위 6건이 서로 다른 사건).
-   - 검색어가 너무 구체적이어서 결과가 0건이 된다(첫 후보 6개 중 3개).
-   - 잘못 제외하거나 섹션을 잘못 정한다.
-   - 실행마다 결과가 크게 흔들린다.
-   - 추천: 정리만 `claude-sonnet-5-5`로 바꾸고 요약은 Haiku로 둔다. 하루 약 $0.15에서 약 $0.3이 된다.
-   - 사용자는 원래 "비용 최소화"를 골랐으므로, 바꾸려면 다시 확인받는다.
-   - 다른 길: Haiku를 유지하고 지시문을 고친다(짧은 핵심어 등). 검색 결과가 0건이면 넓은 검색어로 한 번 더 찾는다.
-3. **정리할 것**
-   - `ex08/.vitest/`를 `.gitignore`에 넣고 저장소에서 뺀다(`git rm -r --cached ex08/.vitest`).
-   - DB의 eco-49 요약(3차에 생긴 것, 입력에 없는 내용)을 null로 바꾼다.
-   - PLAN 테스트 ⑦(나)④ 문구("513자 → ex07 낱말")를 검색어 조립 규칙("512자 넘으면 첫 말만")에 맞춘다.
-4. ex08 PASS 뒤 커밋 메시지 예: `ex08: AI 이슈 정리 · 3줄 요약`. 그다음은 ex09(하루 1회 자동 실행, GitHub Actions)이다. 상세 창의 "수집 오전 6:00" 고정 문구도 ex09에서 맞춘다.
+## 4. 다음 작업
+
+- ex11 제작 검증 완료: `reports/ex11_build.md`, 테스트13파일96개·빌드 통과, 실제 API/BFF·브라우저 합계74/250요청·임시계정2개. 0006 적용·재실행 불변, 계정 분리·재시작·과거 기사 저장·두 브라우저 계정 전환·세션 만료 통과. 임시 행 정리·기존 내용 해시 보존·뉴스/OpenAI0. 독립 심사 PASS: `reports/ex11_judge.md`, OK11/FAIL0/SKIP0·심사 80/250요청·임시계정2개 정리·기존 내용 해시 불변·뉴스/OpenAI0. 실제 검증은 Codex 세션이 실행했고 보고·테스트/빌드 재실행·남은 브라우저 프로필 정리는 Claude Code 세션이 이어서 했다.
+- 현재 공유 DB에는 0006까지 적용됐다. ex10 소스는 보존하지만 무소유 저장 쓰기는 호환되지 않으므로 실행은 ex11 래퍼를 사용한다.
+
+- ex11 준비 중 proot Ubuntu가 자동 이동되어 기존 네이티브 도구의 절대 링크가 끊어졌다. 현재 Ubuntu에서 ex11 npm ci를 재실행했고 esbuild 실제 변환을 확인했다. 의존성 버전·권한 설정 변경은 없다. 이전 단계에서 같은 문제가 나면 해당 단계 lockfile로 같은 환경에서 복원한다.
+
+- 최신 요청: ex10을 보존하고 ex11 계정별 북마크·폴더 저장을 계획 → 제작 → 심사한다. ex11 복사본·로컬 env·Ubuntu 래퍼를 준비했다. 명령은 `bash scripts/ex11-ubuntu.sh ...`.
+- ex11 계획 전 현재 DB 읽기 확인: 북마크0·폴더0·회원0. 0006 적용 직전 다시 확인하고 기존 무소유 행이 생겼다면 삭제나 임의 귀속 없이 적용을 멈춘다.
+
+- ex10 제작: `reports/ex10_build.md`. 테스트11파일85개·빌드/타입 통과, 실제 인증18요청 PASS(제작 누계 보수20/30). `ex10/.data/build-auth-verdict.json`에 결과. 임시계정 삭제·소유 서버 종료·기존 데이터 보존 확인. 뉴스/OpenAI0.
+- 0005 인증4테이블·RLS 적용 완료. 기존 기사285·이슈102·북마크0·폴더0·수집기록54의 내용 불변. 기존 마이그레이션을 다시 적용하거나 기록을 복구할 필요 없다.
+- ex10 독립 심사: `reports/ex10_judge.md`. OK11/FAIL0/SKIP0, API18·실제 Chromium UI7 통과. 가입 자동로그인·새로고침 세션·로그아웃·오류·정상 로그인·360px 모바일·기존 화면을 확인했다. 심사 임시계정2개와 소유 서버/브라우저를 정리했고 기존 데이터 내용 해시는 불변이다.
+
+- 최신 사용자 승인에 따른 ex10 선행 구현은 계획·제작·독립 심사까지 PASS했다. ex09 자동화는 계속 보류하며 아래 ex08 과제도 후속으로 유지한다. ex11 계정별 북마크·폴더도 PASS했다. 다음 후보(ex08 품질 재검증 → ex09, 또는 ex12 배포)는 사용자 결정이 필요하다.
+- ex10의 당시 실행 기록은 ex10 보고에 보존한다. 현재 실행 대상은 ex11이며 ex11/.env와 ex11 Ubuntu 래퍼를 사용한다.
+
+
+
+1. 현재 정리는 최대2회: 기사 번호별 required 배정 → 코드의 묶음 조립 → 사건별 required 메타데이터. 모델·최종 반환 형식·DB 저장은 유지. PLAN 마지막 절 참고.
+2. 이번 실제 합성 13기사 검증: 8사건 병합·번호 완전성·보정0은 통과, 사진 a003 미제외로 9묶음·제외1 FAIL. 실제116·요약은 중간 실패로 SKIP. 남은 과제는 제외 판단의 안정성 및 실제 대량 의미 검증이다.
+3. 이번 OpenAI2/최대6·뉴스0·DB 접속/변경0. 증거 ex08/.data/recheck-assignment/synthetic-result.json·synthetic-verdict.json. 중단 후 추가 호출 없음.
+4. 이전 116기사 실패/스냅샷은 ex08/.data/recheck-20261014-v3/real-input.json·real-result.json·resumed-verdict.json. 당시9누락·3중복·104단독은 이전 단일 정리 구조의 결과다. 입력 외부 전송은 사용자 승인됨.
+5. 현재 코드 로컬 테스트9파일76개·빌드/타입 통과. 제품 API/DB 데이터는 변경하지 않았고 기존 기사·이슈·요약·북마크는 보존. 기사 본문·비밀값·링크는 AI 입력으로 보내지 않음.
+6. 실제 의미 품질 및 브라우저·Next BFF·재시작·북마크 CRUD 등이 남아 ex08 PASS 보류, ex09 자동화는 보류. ex10 로그인은 별도 사용자 승인으로 먼저 진행한다.
 
 ## 5. 꼭 지킬 것 (실제로 사고가 났던 곳)
 - **비밀값 누출**:
@@ -63,9 +120,9 @@ ex08 요약:
   - 하루 200이고, 2026-10-08 끝에 46이 남았다(날마다 초기화).
   - 수집 1번 = 12~18, 묶기 검색 = 섹션당 1~6.
   - 실제 호출은 PLAN 검증표가 정한 만큼만, 나머지는 fixture로 한다.
-- **Claude 호출**: 확인용은 몇 번만. 실제 응답 원문은 `research/anthropic/`과 `ex08/test/fixtures/ai/`에 있다.
+- **AI 호출**: 확인용은 PLAN 한도만. 과거 Claude 응답 원문은 `research/anthropic/`과 `ex08/test/fixtures/ai/`에 있다.
 - **DB**: 확인용 행은 끝나면 지우고, 실제 수집 기사 · 이슈 · 요약은 남긴다. 샘플 데이터는 실제 DB에 넣지 않는다(D14).
-- **환경**: Windows, Python 없음. `npm.cmd` · `npx.cmd`를 쓴다. 3000 · 8787 서버는 끝나면 끈다. 단, 사용자가 띄운 서버는 끄지 않는다.
+- **환경**: 이전 PC는 Windows였다. 현재 명령은 AGENTS.md의 OS별 규칙을 따른다. 3000 · 8787 서버는 끝나면 끈다. 단, 사용자가 띄운 서버는 끄지 않는다.
 
 ## 6. 왜 이렇게 됐나 (짧은 역사)
 - **출처**: 네이버는 robots.txt와 약관 때문에 제외 → newsdata.io 무료 플랜(D0).

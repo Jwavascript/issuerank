@@ -6,7 +6,7 @@ export type Issue = {
 };
 export type Ranking = { date: string; updatedAt: string; sections: { key: SectionKey; name: string; issues: Issue[] }[] };
 // 저장된 이슈 한 행(랭킹 후보). rank는 저장하지 않고 조회 때 계산
-export type IssueRow = Omit<Issue, 'rank'> & { latestPublishedAt: string };
+export type IssueRow = Omit<Issue, 'rank'> & { latestPublishedAt: string; importance: number };
 
 export const SECTIONS: { key: SectionKey; name: string }[] = [
   { key: 'pol', name: '정치' },
@@ -17,13 +17,14 @@ export const SECTIONS: { key: SectionKey; name: string }[] = [
   { key: 'it', name: 'IT·과학' },
 ];
 
-export type Candidate = { id: string; articleCount: number; latestPublishedAt: string };
+export type Candidate = { id: string; articleCount: number; importance?: number; latestPublishedAt: string };
 
-// 연관기사 수 ↓ → 최근 발행 시각 ↓ → id 자연 순서(숫자 부분은 수로, …-pol-9 < …-pol-10), 앞 5개에 rank 1~5
+// 연관기사 수 ↓ → importance ↓(없는 값은 0) → 최근 발행 시각 ↓ → id 자연 순서(숫자 부분은 수로, …-pol-9 < …-pol-10), 앞 5개에 rank 1~5
 export function rankIssues<T extends Candidate>(candidates: T[]): (T & { rank: number })[] {
   return [...candidates]
     .sort((a, b) =>
       b.articleCount - a.articleCount
+      || (b.importance ?? 0) - (a.importance ?? 0)
       || Date.parse(b.latestPublishedAt) - Date.parse(a.latestPublishedAt)
       || a.id.localeCompare(b.id, 'en', { numeric: true }))
     .slice(0, 5)

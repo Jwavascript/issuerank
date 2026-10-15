@@ -6,7 +6,7 @@ import { kstToday } from './sample';
 
 // 요약 함수(ai.ts가 만듦, 테스트는 가짜): 묶인 기사 제목 · 설명문(최대 10건) → { line1, line2, line3 }
 export type Summarize = (articles: { title: string; description: string | null }[]) => Promise<AiReply<unknown>>;
-export type SummaryIssue = { id: string; section: SectionKey; articleCount: number; latestPublishedAt: string; summary: string[] | null };
+export type SummaryIssue = { id: string; section: SectionKey; articleCount: number; importance: number; latestPublishedAt: string; summary: string[] | null };
 export type SummaryArticle = { title: string; description: string | null; link: string; publishedAt: string };
 
 // 저장소: DB 구현은 db/store.ts의 summaryStore, 테스트는 메모리 구현
@@ -29,7 +29,7 @@ export function checkSummary(output: unknown): string[] | null {
   return trimmed.every(l => l.length > 0 && [...l].length <= MAX_LINE) ? trimmed : null;
 }
 
-// 한 번 요약: 날짜 = KST 오늘. 대상 = 그날 이슈로 섹션마다 매긴 Top 5(ex04 순위 규칙, 이전 날짜 이슈는 아님) 중 summary null,
+// 한 번 요약: 날짜 = KST 오늘. 대상 = 그날 이슈로 섹션마다 매긴 Top 5(D16: 건수 → 중요도 → 시각 → id, 이전 날짜 이슈는 아님) 중 summary null,
 // 순서 섹션 pol→it · rank 1→5, 앞 max개만 하나씩 요청. 입력 = 묶인 기사 발행 시각 ↓ 최대 10건의 제목 · 설명문
 // 입력 기사에 설명문이 하나도 없으면 요청하지 않고 건너뜀(summary null 그대로, 실패 아님, 요청 수 max에 들지 않음)
 // 거절 · 형식 오류 · 호출 실패는 summary null 그대로(다음 실행에서 다시). 실패 문구의 key는 ***

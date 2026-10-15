@@ -127,7 +127,7 @@ export function groupStore(db: Db): GroupStore {
               target: issues.id,
               set: {
                 title: sql`excluded.title`, url: sql`excluded.url`,
-                articleCount: sql`excluded.article_count`, latestPublishedAt: sql`excluded.latest_published_at`,
+                articleCount: sql`excluded.article_count`, importance: sql`excluded.importance`, latestPublishedAt: sql`excluded.latest_published_at`,
               },
             });
         }
@@ -147,7 +147,7 @@ export function summaryStore(db: Db): SummaryStore {
     // 그날 issues(id · 섹션 · 연관기사 수 · 최신 발행 시각 · summary)
     issues: async date =>
       (await db.select({
-        id: issues.id, section: issues.section, articleCount: issues.articleCount,
+        id: issues.id, section: issues.section, articleCount: issues.articleCount, importance: issues.importance,
         latestPublishedAt: issues.latestPublishedAt, summary: issues.summary,
       }).from(issues).where(eq(issues.date, date)))
         .map(r => ({ ...r, latestPublishedAt: r.latestPublishedAt.toISOString() })),

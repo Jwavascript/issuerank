@@ -11,6 +11,7 @@ describe('seedRows', () => {
 
   it('issues: 45일 × 섹션 6 × 5 = 1350, id 중복 없음, 날짜마다 soc에 summary null 1개', () => {
     expect(rows.issues).toHaveLength(1350);
+    expect(rows.issues.every(r => r.importance === 0)).toBe(true);
     expect(new Set(rows.issues.map(r => r.id)).size).toBe(1350);
 
     const dates = [...new Set(rows.issues.map(r => r.date))].sort();

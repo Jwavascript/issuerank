@@ -4,7 +4,7 @@ export function hide(text: string) {
   const password = /^[^:]+:\/\/[^:@/]*:(.*)@/.exec(url)?.[1] ?? '';
   let decoded = '';
   try { decoded = decodeURIComponent(password); } catch {}
-  return [url, password, decoded, process.env.NEWSDATA_API_KEY ?? '', process.env.ANTHROPIC_API_KEY ?? '']
+  return [url, password, decoded, process.env.NEWSDATA_API_KEY ?? '', process.env.OPENAI_API_KEY ?? '']
     .filter(Boolean)
     .reduce((t, secret) => t.replaceAll(secret, '***'), text);
 }

@@ -1,18 +1,18 @@
 # PLAN_backend_ex08 — AI 이슈 정리 · 3줄 요약
 
-> 이유: ex07 제목 낱말 규칙은 뜻을 몰라 newsdata `category` 태그가 틀린 기사(정치로 온 범죄 · 사고)를 그대로 두고, 같은 사건을 섹션 사이에서 가르며(노벨화학상 it · wor), 같은 사건을 다른 낱말로 쓴 기사를 덜 셈(`장기금리` 2 vs 동의어 OR 72). 카드 요약도 모두 "요약을 준비 중입니다"임. 그래서 `npm run group`이 하루 한 번 그날 기사 제목 · 설명문을 Claude에 보내 구조화 출력으로 묶음 · 섹션 · 제외 · 검색어를 받고(실패하면 ex07 규칙), 새 명령 `npm run summarize`가 Top 5 중 요약 없는 이슈만 Claude로 3줄 요약을 채움(테스트는 가짜 AI로 네트워크 없이).
+> 이유: ex07 제목 낱말 규칙은 뜻을 몰라 newsdata `category` 태그가 틀린 기사(정치로 온 범죄 · 사고)를 그대로 두고, 같은 사건을 섹션 사이에서 가르며(노벨화학상 it · wor), 같은 사건을 다른 낱말로 쓴 기사를 덜 셈(`장기금리` 2 vs 동의어 OR 72). 카드 요약도 모두 "요약을 준비 중입니다"임. 그래서 `npm run group`이 하루 한 번 그날 기사 제목 · 설명문을 OpenAI에 보내 구조화 출력으로 묶음 · 섹션 · 제외 · 검색어를 받고(실패하면 ex07 규칙), 새 명령 `npm run summarize`가 Top 5 중 요약 없는 이슈만 OpenAI로 3줄 요약을 채움(테스트는 가짜 AI로 네트워크 없이).
 > 코드 폴더: `ex08/` (`ex07/` 복사)
-> SPEC 근거: US-02 · US-04 · AC-02-1 · AC-02-2 · AC-04-1 · AC-04-3
+> SPEC 근거: US-02 · US-04 · AC-02-1 · AC-02-2 · AC-03-2 · AC-04-1 · AC-04-3
 
 ## 이번 범위
-- `group`에 AI 이슈 정리(D15)와 그 대체 경로 · 새 명령 `summarize`(요약 없는 Top 5만, D6). 연관기사 수 검색 · 1쪽 검증(D13) · 이슈 id · 다시 묶기 · 북마크 보호 · 후보 6개 · 크레딧 규칙 · 수집 · 조회 · API · 계약 · DB 테이블 · 화면은 ex07 그대로(ex07 "묶기 · 연관기사 수 규칙" 표는 대체 경로로 그대로 씀)
-- 새 패키지: `@anthropic-ai/sdk`(구조화 출력 스키마는 이미 있는 `zod`로)
-- 하지 않음: `daily` 명령 · 자동 실행(ex09) · 로그인 · `user_id`(ex10 · ex11) · 기사 본문 저장 · 표시(범위 밖) · AI가 쓴 이슈 제목 · AI 결과 칸 저장(묶음 · 검색어는 저장 안 함) · 거절 시 다른 모델로 다시(`fallbacks`) · `thinking` · effort · 요약 다시 쓰기(요약 있는 이슈) · 지난 날짜 정리 · 요약 · Batches · 스트리밍 · 새 마이그레이션 · 화면 · 계약 변경
+- `group`에 AI 이슈 정리(D15)와 그 대체 경로 · 새 명령 `summarize`(요약 없는 Top 5만, D6). 연관기사 수 검색 · 1쪽 검증(D13) · 이슈 id · 다시 묶기 · 북마크 보호 · 후보 6개 · 크레딧 규칙 · 수집 · 조회 · API · 계약 · 화면은 ex07 그대로(DB에 importance 추가)(ex07 "묶기 · 연관기사 수 규칙" 표는 대체 경로로 그대로 씀)
+- 새 패키지: `openai`(구조화 출력 스키마는 기존 `zod` 사용). `@anthropic-ai/sdk` 제거(사용자 요청 2026-10-13)
+- 하지 않음: `daily` 명령 · 자동 실행(ex09) · 로그인 · `user_id`(ex10 · ex11) · 기사 본문 저장 · 표시(범위 밖) · AI가 쓴 이슈 제목 · importance 외 AI 결과 칸 저장(묶음 · 검색어는 저장 안 함) · 거절 시 다른 모델로 다시(`fallbacks`) · `thinking` · effort · 요약 다시 쓰기(요약 있는 이슈) · 지난 날짜 정리 · 요약 · Batches · 스트리밍 · 화면 · 계약 변경
 
 ## AI 이슈 정리 · 요약 규칙
 | 항목 | 규칙 |
 |---|---|
-| 호출 공통(D6) | `@anthropic-ai/sdk`의 `messages.parse` + `output_config.format`(zod 스키마, 구조화 출력), 모델 `claude-haiku-4-5-20251001`(구조화 출력을 지원하는 가장 싼 모델, 입력 $1 · 출력 $5 / 1M 토큰), `max_tokens` 정리 8000 · 요약 1000, 스트리밍 없음, `thinking` · effort는 보내지 않음(이 모델은 effort를 받지 않고, thinking을 빼면 생각 없이 답해 출력 토큰이 늘지 않음). 키는 명령이 `ANTHROPIC_API_KEY`를 읽어 넘김. SDK를 부르는 곳은 `server/ai.ts` 한 곳, 규칙 쪽은 정리 · 요약 함수를 받기만 함(테스트는 가짜). 결과: `stop_reason` `refusal` → 거절, 그 밖은 `parsed_output`(없거나 `max_tokens`로 끊기면 null → 형식 오류), SDK가 던지면 호출 실패 |
+| 호출 공통(D6) | OpenAI 공식 `openai` SDK의 Responses API `responses.create` + `text.format: zodTextFormat`, 기본 모델 `gpt-4.1-mini-2025-04-14`. instructions = 배정/메타데이터별 한국어 system(마지막 절), input = 기존 기사 입력 및 확정 묶음, max_output_tokens 정리 단계당 8000 · 요약 1000, store false, 스트리밍·reasoning·자동 재시도 없음(maxRetries 0). SDK는 server/ai.ts만. OPENAI_API_KEY는 명령에서 읽어 전달. content의 refusal → 거절, completed 이외 상태·빈 응답·JSON/스키마 파싱 실패 → null(형식 오류), HTTP/네트워크 예외 → 호출 실패. 완성 상태를 먼저 검사하고 JSON.parse + zod.safeParse로 기존 AiReply 인터페이스를 유지 |
 | 정리 입력 | 묶기 입력 기사(아래 북마크 보호)를 발행 시각 ↓ → `link` ↑로 세워 번호 `a000`부터(3자리). 한 줄에 `a000 [수집 섹션 키] 제목 \| 설명문 앞 120자(코드 포인트, null이면 ` \| ` 없이 제목만)`. 지시문(system, 한국어)에 적을 것: ① 같은 사건(같은 일 · 발표 · 사고)을 다룬 기사끼리 한 묶음, 수집 섹션이 달라도 묶고, 낱말만 겹치는 다른 사건은 따로, 한 건짜리 묶음 가능 ② 묶음 섹션은 내용으로 6개 키 중 하나(pol 정치 · eco 경제 · soc 사회 · cul 생활·문화 · wor 세계 · it IT·과학, 수집 섹션 태그는 틀릴 수 있음) ③ 이슈가 아닌 기사는 제외: 사진 · 포토 기사, 자동 생성 주가 · 목표주가 · 시세 기사, 부음 · 인사 · 어학 칼럼 ④ 검색용 `terms` = 사건 핵심어 2묶음, 묶음마다 같은 뜻 말 1~3개(예 `[["장기금리","국채 금리","10년물"],["미국"]]`), 한자 약칭(美 · 中 · 日) 대신 한글, 검색 문법(AND · OR · 괄호 · 따옴표)은 쓰지 않음, 흔한 낱말 하나(예 `AI`, `정부`)만으로 된 묶음은 피함 ⑥ `importance` 1~5 ⑤ 모든 번호를 묶음이나 제외 중 한 곳에 한 번씩 |
 | 정리 출력 칸 | **고침(제작 실측 2차: 검색어 문자열을 `낱말 낱말 낱말`처럼 띄어 써서 `X AND Y`를 안 따름 → 연관기사 수가 거의 묶음 크기, 묶음이 거의 1건이라 후보가 시각순)**: `{ issues: [{ section: "pol"\|…\|"it", articles: ["a000", …], importance: 1~5 정수, terms: [[말, …], [말, …]] }], excluded: ["a005", …] }`. `terms` = 정확히 2개 묶음, 묶음마다 1~3개 = 그 사건의 핵심어와 같은 뜻 말(한글, 한 낱말 또는 띄어쓰기 있는 구절). `importance` = 오늘 한국 독자에게 얼마나 큰 뉴스인가(5 = 전국적 큰 사건, 1 = 작은 지역 · 업계 소식) |
 | 검색어 조립(코드) | 묶음마다 `(A1 OR A2) AND (B1 OR B2)`: 각 말은 앞뒤 공백을 빼고, 띄어쓰기가 있으면 `"…"`로 감쌈, 묶음에 말이 하나면 괄호 없이. 512자 넘으면 각 묶음의 첫 말만으로(`A1 AND B1`), `terms`가 1묶음뿐이면 그 묶음만(`A1 OR A2`, 말이 하나면 그 말), 0묶음(모두 빈 말)이면 ex07 대표 낱말 `낱말1 AND 낱말2`(2개 미만이면 검색 안 함). 1쪽 검증의 "검색어와 같은 낱말" = `terms`의 말을 ex07 낱말 규칙으로 뽑은 것. 후보 줄 검색어 칸 = 조립한 검색어 |
@@ -21,67 +21,77 @@
 | 묶음 → 이슈 | AI 묶음 하나 = 이슈 하나, 섹션 = AI 섹션(기사의 `articles.section`은 수집 섹션 그대로). 대표 기사 · `title` · `url` · `latest_published_at` · 이슈 id · 다시 묶기(같은 섹션에 `url`이 같은 이슈가 있으면 id · `summary` 유지) · 후보(섹션마다 크기 ↓ → `importance` ↓ → 시각 ↓ → 대표 `link` ↑로 앞 6개, 규칙 경로 · 빠진 기사 단독 이슈의 `importance`는 0) · `--search N`은 ex07 그대로. 제외 기사 = `issue_id` null |
 | 검색 · 연관기사 수(D13) | 요청은 ex07 그대로에서 `qInTitle={encodeURIComponent(AI 검색어 앞뒤 공백 뺀 것)}`만 다름. 1쪽 검증의 "검색어와 같은 낱말" = 검색어를 ex07 낱말 규칙으로 뽑은 것에서 `and` · `or` · `not`을 뺀 낱말 → `max(round(totalResults × p), 묶음 크기)`, 실패 · 크레딧 부족 · 후보 밖 처리 ex07 그대로 |
 | 북마크 보호 | ex07 그대로(그날 북마크가 가리키는 이슈의 섹션 = 건너뜀, 그 섹션 이슈 · 묶인 기사 그대로 · 검색 안 함). 묶기 입력(AI · 규칙 둘 다) = 그날 기사 중 건너뛴 섹션 이슈에 묶인 기사를 뺀 것. 결과에서 건너뛴 섹션으로 간 묶음은 버림(그 기사 `issue_id` null) |
-| 저장 | ex07 한 트랜잭션에서 두 곳만 다름: 저장 섹션 = AI 경로는 건너뛴 섹션을 뺀 모든 섹션(이슈 0개 섹션은 그날 이슈를 지움 → 조회는 D8), 규칙 경로는 ex07 그대로 / 기사 `issue_id`는 섹션 조건 없이 그날 `link`로, 묶기 입력 기사 중 이슈가 없는 것은 null |
-| 명령(group) | `npm run group [-- --search N] [--ai 0\|1]`(`--ai` 기본 1). 검사 순서: 옵션(`--search는 0~6입니다` · `--ai는 0 또는 1입니다`) → N ≥ 1이면 `NEWSDATA_API_KEY가 없습니다` → `--ai 1`이면 `ANTHROPIC_API_KEY가 없습니다` → DB 읽기. 둘째 줄(첫 줄 뒤): `AI 정리 · 묶음 {b} · 제외 {x} · 빠진 기사 {m}` / `AI 정리 실패: {거절 \| 형식 오류: {이유} \| 호출 실패: {문구}} → 규칙으로 묶음` / `AI 정리 안 함(--ai 0)`. AI 경로의 섹션 줄은 늘 `{섹션} 기사 {그 섹션 이슈에 묶인 기사 수} · 이슈 {i}`(0이어도), 후보 줄 검색어 칸 = AI 검색어 그대로(빠진 기사 · 규칙 경로는 ex07 `낱말1+낱말2`). 종료 코드 1 = 검색 실패 · 크레딧 부족 · AI 정리 실패 중 하나라도 있음, 나머지 ex07 그대로 |
-| 요약 대상 | `npm run summarize [-- --max N]`(= `tsx --env-file-if-exists=.env server/summarize.ts`, N 0~30 기본 30), 날짜 = 시작 때 KST 오늘. 대상 = 그날 이슈로 섹션마다 매긴 Top 5(ex04 순위 규칙, D8로 빌려 온 이전 날짜 이슈는 아님) 중 `summary` null, 순서 섹션 pol→it · rank 1→5, 앞 N개만 요청(하나씩). 이미 요약한 이슈는 다시 하지 않음. **묶인 기사에 설명문이 하나도 없으면 요청하지 않고 `summary` null 그대로**(출력 `  {id} 건너뜀: 설명문 없음`, 끝 줄에 ` · 설명문 없음 {n}`, 실패로 세지 않음. 사람 실측: 제목만 준 eco-49에서 2 · 3줄을 지어냄) |
+| 저장 | issues.importance도 저장·충돌 갱신(AI 보정값 1~5, 규칙·빠진 기사 0). ex07 한 트랜잭션에서 다음이 다름: 저장 섹션 = AI 경로는 건너뛴 섹션을 뺀 모든 섹션(이슈 0개 섹션은 그날 이슈를 지움 → 조회는 D8), 규칙 경로는 ex07 그대로 / 기사 `issue_id`는 섹션 조건 없이 그날 `link`로, 묶기 입력 기사 중 이슈가 없는 것은 null |
+| 명령(group) | `npm run group [-- --search N] [--ai 0\|1]`(`--ai` 기본 1). 검사 순서: 옵션(`--search는 0~6입니다` · `--ai는 0 또는 1입니다`) → N ≥ 1이면 `NEWSDATA_API_KEY가 없습니다` → `--ai 1`이면 `OPENAI_API_KEY가 없습니다` → DB 읽기. 둘째 줄(첫 줄 뒤): `AI 정리 · 묶음 {b} · 제외 {x} · 빠진 기사 {m}` / `AI 정리 실패: {거절 \| 형식 오류: {이유} \| 호출 실패: {문구}} → 규칙으로 묶음` / `AI 정리 안 함(--ai 0)`. AI 경로의 섹션 줄은 늘 `{섹션} 기사 {그 섹션 이슈에 묶인 기사 수} · 이슈 {i}`(0이어도), 후보 줄 검색어 칸 = AI 검색어 그대로(빠진 기사 · 규칙 경로는 ex07 `낱말1+낱말2`). 종료 코드 1 = 검색 실패 · 크레딧 부족 · AI 정리 실패 중 하나라도 있음, 나머지 ex07 그대로 |
+| 요약 대상 | `npm run summarize [-- --max N]`(= `tsx --env-file-if-exists=.env server/summarize.ts`, N 0~30 기본 30), 날짜 = 시작 때 KST 오늘. 대상 = 그날 이슈로 섹션마다 매긴 Top 5(연관기사 수 ↓ → importance ↓ → 시각 ↓ → id 자연 순서, D8로 빌려 온 이전 날짜 이슈는 아님) 중 `summary` null, 순서 섹션 pol→it · rank 1→5, 앞 N개만 요청(하나씩). 이미 요약한 이슈는 다시 하지 않음. **묶인 기사에 설명문이 하나도 없으면 요청하지 않고 `summary` null 그대로**(출력 `  {id} 건너뜀: 설명문 없음`, 끝 줄에 ` · 설명문 없음 {n}`, 실패로 세지 않음. 사람 실측: 제목만 준 eco-49에서 2 · 3줄을 지어냄) |
 | 요약 입력 · 출력 | 입력 = 그 이슈에 묶인 기사(`issue_id`) 발행 시각 ↓ 최대 10건의 제목 · 설명문(null이면 제목만, 본문 없음). 지시문: 한국어 3줄, 줄마다 한 문장, 제목 · 설명문에 있는 사실만, 추측 · 평가 · 해석(예: "부적절한 태도를 지적했다"처럼 입력에 없는 판단) · 기사 문장 그대로 옮기기 금지, 입력이 짧으면 짧은 사실을 나눠 쓰고 덧붙이지 않음(제작 실측 pol-53에서 입력에 없는 평가가 나옴). 출력 칸 `{ line1, line2, line3 }`(문자열) → 저장 `summary` = 세 줄(앞뒤 공백 뺌). 한 줄이라도 비었거나 100자(코드 포인트) 넘으면 형식 오류. 거절 · 형식 오류 · 호출 실패는 `summary` null 그대로(화면 "요약을 준비 중입니다", AC-04-3, 다음 실행에서 다시) |
-| 명령(summarize) 출력 · 종료 코드 | 검사: `--max는 0~30입니다` → N ≥ 1이면 `ANTHROPIC_API_KEY가 없습니다` → DB(그날 이슈가 없으면 `{date} 이슈가 없습니다`). 첫 줄 `요약 {date} · 최대 {N}개`, 요청마다 `  {id} ok` 또는 `  {id} 실패: {거절 \| 형식 오류 \| 호출 실패: {문구}}`, 끝 줄 `대상 {t} · 요청 {r}번 · 성공 {s} · 실패 {f} · 이미 요약 {k}`. 종료 코드 0 = 실패 없음 · 1 = 실패 있음 · 2 = 검사 · DB 오류. 문구의 키 · `DATABASE_URL`은 `***`(`server/hide.ts`에 `ANTHROPIC_API_KEY` 더함) |
-| 순서 · 비용 | 매일 `collect` → `group` → `summarize`(ex09가 이어 부름, 앞이 1이어도 다음은 돎). newsdata 크레딧은 ex07 그대로(하루 54). Claude 호출 하루 = 정리 1(입력 약 2만 토큰 · 출력 약 4천 → 약 $0.04) + 요약 최대 30(이튿날부터 새 이슈만, 각 입력 약 2천 · 출력 약 200 → 약 $0.003) → Haiku 4.5 $1 · $5 / 1M 토큰 기준 하루 최대 약 $0.15 |
+| 명령(summarize) 출력 · 종료 코드 | 검사: `--max는 0~30입니다` → N ≥ 1이면 `OPENAI_API_KEY가 없습니다` → DB(그날 이슈가 없으면 `{date} 이슈가 없습니다`). 첫 줄 `요약 {date} · 최대 {N}개`, 요청마다 `  {id} ok` 또는 `  {id} 실패: {거절 \| 형식 오류 \| 호출 실패: {문구}}`, 끝 줄 `대상 {t} · 요청 {r}번 · 성공 {s} · 실패 {f} · 이미 요약 {k}`. 종료 코드 0 = 실패 없음 · 1 = 실패 있음 · 2 = 검사 · DB 오류. 문구의 키 · `DATABASE_URL`은 `***`(`server/hide.ts`에 `OPENAI_API_KEY` 더함) |
+| 순서 · 비용 | 매일 collect → group → summarize. newsdata 한도 그대로. OpenAI 기본 모델 입력 $0.40 · 출력 $1.60 / 1M 토큰(2026-10-13 공식 모델 문서). 과거 추정 입력량(정리 2만 + 요약 30×2천)·출력량(4천 + 30×200) 기준 약 $0.048/일, 실제 청구·품질 보장 아님. ChatGPT 구독과 별도. 호출 한도는 정리 1 + 요약 최대 30, 오류 시 SDK 자동 재시도 0 |
 
 - 코드: `server/ai.ts`(SDK · 모델 · 지시문 · zod 스키마, 정리 · 요약 함수) / `server/grouping.ts`(입력 줄 · 정리 검사 · 대체 · AI 묶음 → 이슈 · 검색어 낱말, 그 밖 ex07 그대로) / `server/group.ts`(`--ai` · 키 확인 · 둘째 줄) / `server/summary.ts`(대상 · 입력 · 검사 · 저장 규칙, `process.env` · DB를 직접 읽지 않음) / `server/summarize.ts`(명령) / `server/db/store.ts`(`groupStore.load`에 설명문, `save`의 `issue_id`를 `link`로, 새 `summaryStore`: 그날 이슈 · 묶인 기사 읽기 · `summary` 쓰기)
 - 테스트(시각 고정 · 네트워크 없음, 가짜 정리 · 요약 함수는 받은 입력으로 응답을 만듦, 가짜 키 `test-ant-456`):
   - `test/group.test.ts` ①~⑤ 그대로(AI 없이). ⑥ AI 정상: 그날 기사 = ①~⑤와 같음, 가짜 정리 = it `누리호` 9건(주요일정 뺀 q_nuri, 검색어 `누리호 AND 우주`) · soc 차량 훔친 10대 pol 기사 1건(`(차량 OR 승용차) AND 훔친`) · pol 제청 2건(`제청 AND 대법관`) · 제외 주요일정 · 나머지 pol 17건은 빼먹음, 검색 1 → 요청 3번(pol → soc → it, soc 쿼리 `qInTitle`이 그 검색어의 `encodeURIComponent`) → 이슈 20(pol 18 · soc 1 · it 1), it-1 224 · pol-1 30 · soc-1 1, 주요일정 기사 `issue_id` null, 둘째 줄 `AI 정리 · 묶음 3 · 제외 1 · 빠진 기사 17`, 종료 코드 0. 같은 가짜로 한 번 더 → id 20개 그대로(it-1에 넣은 summary 유지). pol-1에 북마크 → pol 건너뜀 · 정리 입력 11건(pol 이슈에 묶인 19건 빠짐) · 요청 2번
-  - ⑦ 대체 · 고쳐 쓰기: ⑥과 같은 기사 · 검색 0에서 (가) 대체 — 가짜 정리가 거절 / `{ issues: "x" }` / 섹션 `xx` / 모든 번호가 없는 번호(`a999`만) / `test-ant-456`이 든 오류를 던짐 → 각각 이슈 · `issue_id`가 AI 없이(`--ai 0`) 돌린 결과와 같음, 둘째 줄 `AI 정리 실패: 거절 → 규칙으로 묶음` · `형식 오류: 모양이 다름` · `형식 오류: 섹션 xx` · `형식 오류: 묶음 없음` · `호출 실패: …***…`(키 없음), 종료 코드 모두 1 (나) 고쳐 쓰기 — ⑥ 정상 응답에 ① 없는 번호 `a999`를 한 묶음에 더함 ② 첫 묶음의 번호 하나를 다른 묶음 · 제외에도 넣음 ③ 한 건짜리 묶음의 번호를 앞 묶음에도 넣어 뒤 묶음이 비게 함 ④ 한 묶음 검색어 `""` · 다른 묶음 513자 → 각각 AI 경로 그대로(둘째 줄 `AI 정리 · …`에 ` · 고침 …` 붙음, 실패 아님), ①은 ⑥과 이슈 같음 · ②는 처음 나온 묶음에만 묶임 · ③은 빈 묶음이 사라져 이슈 하나 적음 · ④는 그 묶음 후보 줄 검색어가 ex07 `낱말1+낱말2`, 종료 코드 0
+  - ⑦ 대체 · 고쳐 쓰기: ⑥과 같은 기사 · 검색 0에서 (가) 대체 — 가짜 정리가 거절 / `{ issues: "x" }` / 섹션 `xx` / 모든 번호가 없는 번호(`a999`만) / `test-ant-456`이 든 오류를 던짐 → 각각 이슈 · `issue_id`가 AI 없이(`--ai 0`) 돌린 결과와 같음, 둘째 줄 `AI 정리 실패: 거절 → 규칙으로 묶음` · `형식 오류: 모양이 다름` · `형식 오류: 섹션 xx` · `형식 오류: 묶음 없음` · `호출 실패: …***…`(키 없음), 종료 코드 모두 1 (나) 고쳐 쓰기 — ⑥ 정상 응답에 ① 없는 번호 `a999`를 한 묶음에 더함 ② 첫 묶음의 번호 하나를 다른 묶음 · 제외에도 넣음 ③ 한 건짜리 묶음의 번호를 앞 묶음에도 넣어 뒤 묶음이 비게 함 ④ 한 묶음 검색어 `""` · 다른 묶음 513자 → 각각 AI 경로 그대로(둘째 줄 `AI 정리 · …`에 ` · 고침 …` 붙음, 실패 아님), ①은 ⑥과 이슈 같음 · ②는 처음 나온 묶음에만 묶임 · ③은 빈 묶음이 사라져 이슈 하나 적음 · ④는 빈 검색어만 ex07 대표 낱말로 대체, 512자 초과 검색어는 각 묶음 첫 말만 사용, 종료 코드 0
   - ⑧ 실제 117건(ex07 ④와 같은 기사 · 번호 a000~a116 = t000~t116): 가짜 정리 = 손으로 쓴 `test/fixtures/ai/organize_117.json`(출력 칸 모양, 80묶음 · 빠진 번호 없음): 여러 건 묶음 cul 김지원 t000~t003 · eco 마이크론 파업 t022 · t116 · eco 美 국채금리 t108 · t114(`(국채금리 OR 장기금리) AND 미국`) · it 노벨화학상 t038 · t039 · t040 · t048 · t099 · t107 · it 누리호 t041 · t042 · pol 병역특례 t061 · t072 · soc 을지로 불 t070 · t077 · t078 · soc 여고생 살해 t057 · t058 · soc 인구감소지역 t013 · t069 · t076 · soc 김병기 t079 · t080 / 섹션 바뀐 단독 t010 → pol · t067 → soc · t109 → pol / 제외 19건 t005~t009 · t014 · t017 · t023~t026 · t028 · t035 · t043 · t045 · t049 · t050 · t082 · t085 / 나머지는 수집 섹션 단독(t097 · t098 따로), 검색 0 → 이슈 80(pol 15 · eco 13 · soc 19 · cul 8 · wor 14 · it 11, ex07 규칙은 108) · 을지로 이슈 대표 t070 · section soc · 묶인 기사 3 · 제외 19건 `issue_id` null · 요청 0번 · 종료 코드 0
   - 새 `test/summarize.test.ts`(메모리 저장소): 그날 pol 7이슈(article_count 70 · 60 … 10, 둘째에 summary 3줄) · eco 1이슈 · 하루 전 soc 1이슈, 이슈마다 기사 2건(하나는 설명문 null). ① 정상 → 요청 5번(pol 1 · 3 · 4 · 5위 → eco), 입력은 그 이슈 기사 제목 · 설명문뿐, 저장 3줄(앞뒤 공백 뺌), 끝 줄 `대상 5 · 요청 5번 · 성공 5 · 실패 0 · 이미 요약 1`, 종료 코드 0 ② 거절 · 빈 줄 · 101자 줄 · 키가 든 오류 · 정상(이 순서) → eco만 저장, 실패 줄 `거절` · `형식 오류` ×2 · `호출 실패: …***…`, 종료 코드 1 → 정상 가짜로 다시 → 요청 4번(eco 안 함) ③ `--max 2` → 요청 2번(pol 1 · 3위) · `--max 0` → 0번 · 종료 코드 0, 그날 이슈 없음 → 이슈 없음 결과
+
+## 2026-10-13 승인 변경 · 검증
+- 동점 기준(D16): importance를 저장하고 화면·북마크·요약 대상에 같은 정렬 사용. 기존 행·규칙 경로·빠진 기사 0, AI 보정값 1~5. 카드 응답 칸 유지. SPEC AC-03-2도 갱신.
+- 0004_add_importance 마이그레이션과 snapshot 생성(이전 단계·이전 SQL 보존). 키가 없으면 실제 DB 적용은 SKIP.
+- 회귀 테스트: 건수 > 중요도 > 시각 > id, 과거/샘플 기본 0, AI 점수 저장·재묶기 갱신·북마크 보호, 화면·북마크·요약 Top 5 일치.
+- SDK 경계 테스트: 요청의 모델·키·strict schema·출력 한도·store false, 정상 정리/요약, 거절, incomplete, 빈 출력, 잘못된 JSON/스키마, HTTP 오류 무재시도와 키 마스킹. 가짜 HTTP만 사용.
+- 기존 한국어 정리·요약 지시문은 보존하여 공급자 전환과 프롬프트 품질 개선을 구분. Haiku 기록은 역사 자료이며 OpenAI 품질 증거가 아님.
+- 공식 근거: https://developers.openai.com/api/docs/models/gpt-4.1-mini · https://developers.openai.com/api/docs/guides/structured-outputs
 
 ## 화면 변경
 - 없음(요약 3줄 · "요약을 준비 중입니다"는 지금 `public/index.html`이 이미 그림)
 
 ## 구현 순서
-1. `ex07/` → `ex08/` 복사(`node_modules` · `.next` · `dist` · `.data` · `tsconfig.tsbuildinfo` · `next-env.d.ts` 제외, `.env`는 열지 않고 복사), `package.json` 이름 `issuerank-ex08` · 스크립트 `summarize` 추가, `ex08/`에서 `npm.cmd install` → `npm.cmd install @anthropic-ai/sdk`
+1. 기존 `ex08/`에서 수정(재복사 없음). `@anthropic-ai/sdk` 제거 후 `openai` 설치, lockfile 갱신. 과거 최초 복사는 완료된 기록
 2. `server/hide.ts` · `server/ai.ts` · `server/grouping.ts` · `server/group.ts` · `server/db/store.ts` → `test/group.test.ts` ⑥~⑧ · `test/fixtures/ai/organize_117.json`
 3. `server/summary.ts` · `server/summarize.ts` · `summaryStore` → `test/summarize.test.ts` ①~③
 마지막. `npm run build` · `npm test` · 실제 호출은 검증표 `수집(실제)` · `묶기(실제)` · `요약(실제)` 세 줄만 · 확인 행은 `원상복구` 줄로 지움(실제 기사 · 이슈 · 요약은 남김)
 
 ## 검증 방법
+
+주의: 아래 과거 검증표의 정리 1회·AI 4회 한도는 1단계 구현 당시 기준이다. 현재 2단계 구조의 실제 검증은 마지막 「대량 입력 배정·메타데이터 분리」 절의 최대 6회·실패 중단 기준을 적용한다.
 - 테스트 · 계약 줄은 서버 · DB 없이. DB 줄은 `ex08/`에서 표 순서대로(마이그레이션 `0002` · `0003`은 ex07에서 적용됨), 화면 · 중계 · API 줄은 두 터미널에서 `ex08/`의 `npm.cmd run api` · `npm.cmd run dev`를 띄운 상태로, 요청은 node fetch로 `http://localhost:3000`에. SQL은 `ex08/`에서 `node --env-file=.env`로 `postgres`(`prepare: false`)를 불러 실행하고 접속 주소는 출력하지 않음. 날짜(<오늘> · <어제>)는 KST 기준. 확인 행 = 날짜 `2000-01-03` · `2000-01-04` 이슈 · 링크가 `https://example.com/ex07-`로 시작 · 폴더 `유지확인` · `화면확인`, 표 마지막 줄(원상복구)에서 지움
-- 실제 newsdata.io 호출은 제작 · 심사 각각 19번(19크레딧) 이하: `수집(실제)` 수집 1번(섹션 6 × (top 1 + 전체 1) = 12) + `묶기(실제)` 검색(섹션당 1개, 최대 6) + 크레딧 확인 1번. 실제 Claude 호출은 제작 · 심사 각각 4번 이하: `묶기(실제)` 정리 1번 + `요약(실제)` 3번(각각 약 $0.05, 합 약 $0.1). 잘못된 키(401)는 크레딧 · 비용이 안 듦. 실패해도 다시 돌리지 않고 보고. 나머지 줄은 fixture · 가짜 키 · 키 없음 · `--search 0` · `--ai 0`으로만
-- 안전 실행 = `ex08/`에서 `node --env-file=.env -e`로 `child_process.spawnSync(명령, { shell: true, encoding: 'utf8', env })`(env는 `process.env`에서 그 줄에 적은 값만 바꿈)를 돌려, 종료 코드와 "출력(stdout + stderr)에 `.env`의 `NEWSDATA_API_KEY` · `ANTHROPIC_API_KEY` · `DATABASE_URL` 값이나 그 줄의 가짜 값이 있는가"(누출 true/false)를 먼저 찍고, 모두 false일 때만 출력을 찍음. 크레딧 확인 = `node --env-file=.env -e`로 `https://newsdata.io/api/1/latest?country=kr&language=ko&category=politics&prioritydomain=top`을 헤더 `X-ACCESS-KEY`만 붙여 fetch하고 상태 코드와 `x-api-limit-remaining`만 찍음
+- 실제 newsdata.io 호출은 제작 · 심사 각각 19번(19크레딧) 이하: `수집(실제)` 수집 1번(섹션 6 × (top 1 + 전체 1) = 12) + `묶기(실제)` 검색(섹션당 1개, 최대 6) + 크레딧 확인 1번. 실제 OpenAI 호출은 제작 · 심사 각각 4번 이하: `묶기(실제)` 정리 1번 + `요약(실제)` 3번(각각 약 $0.05, 합 약 $0.1). 잘못된 키(401)는 크레딧 · 비용이 안 듦. 실패해도 다시 돌리지 않고 보고. 나머지 줄은 fixture · 가짜 키 · 키 없음 · `--search 0` · `--ai 0`으로만
+- 안전 실행 = `ex08/`에서 `node --env-file=.env -e`로 `child_process.spawnSync(명령, { shell: true, encoding: 'utf8', env })`(env는 `process.env`에서 그 줄에 적은 값만 바꿈)를 돌려, 종료 코드와 "출력(stdout + stderr)에 `.env`의 `NEWSDATA_API_KEY` · `OPENAI_API_KEY` · `DATABASE_URL` 값이나 그 줄의 가짜 값이 있는가"(누출 true/false)를 먼저 찍고, 모두 false일 때만 출력을 찍음. 크레딧 확인 = `node --env-file=.env -e`로 `https://newsdata.io/api/1/latest?country=kr&language=ko&category=politics&prioritydomain=top`을 헤더 `X-ACCESS-KEY`만 붙여 fetch하고 상태 코드와 `x-api-limit-remaining`만 찍음
 
 | 확인 | 방법 | 기대 결과 |
 |---|---|---|
 | 계약 그대로 | `git diff --no-index ex07/openapi.yaml ex08/openapi.yaml` · `npx @redocly/cli lint ex08/openapi.yaml`(설치 없이 npx) | 차이 없음(ex05에서 확인한 엔드포인트 · 상태 코드 · 실패 메시지 · 이슈 칸 · 섹션 키 · 폴더 이름 · 이슈 id 규칙 그대로) · 오류 0개(경고는 참고) |
-| 출발점 · fixture 그대로 | `git status frontend/ ex01/ ex02/ ex03/ ex04/ ex05/ ex06/ ex07/` · `git diff --no-index research/newsdata ex08/test/fixtures/newsdata` | 변경 없음(` M ex07/.env.example` 한 줄 말고: ex07 뒤 `ANTHROPIC_API_KEY=` 이름만 더한 것, ex08 커밋에 함께 넣음) · 차이 없음(7개 파일) |
+| 출발점 · fixture 그대로 | `git status frontend/ ex01/ ex02/ ex03/ ex04/ ex05/ ex06/ ex07/` · `git diff --no-index research/newsdata ex08/test/fixtures/newsdata` | 변경 없음(` M ex07/.env.example` 한 줄 말고: ex07 뒤 `OPENAI_API_KEY=` 이름만 더한 것, ex08 커밋에 함께 넣음) · 차이 없음(7개 파일) |
 | 빌드 | `npm.cmd run build` | 성공 |
 | 테스트 | `npm.cmd test` | 테스트 파일 6개 모두 통과, 실패 0 |
 | 테스트 범위 | 테스트 이름 · 내용을 `plan/PLAN_backend_ex04.md` 테스트 표 + `plan/PLAN_backend_ex05.md` "새 테스트" 줄 + `plan/PLAN_backend_ex06.md` "새 테스트" ①~⑥(`plan/PLAN_backend_ex07.md`에서 고친 대로) + `plan/PLAN_backend_ex07.md` `group.test.ts` ①~⑤ · `ranking.test.ts` ⑦ ⑧ + 위 `group.test.ts` ⑥~⑧ · `summarize.test.ts` ①~③과 비교 | 15개 묶음 + 3개 + 6개 + 5개 + 2개 + 3개 + 3개가 각각 테스트로 있음(AC-03-1 · 03-2 · 07-1 · 07-2 · 08-1 · 08-2 · 09-1 · 09-3 · 09-4 · 10-1 · 10-2 · 10-4 · D3 · AC-01-1 · AC-01-2 · AC-02-1 · AC-02-2 · AC-05-1 · D8 · D15 · AC-04-3) |
-| 서버 · DB 없이 | api · dev 서버를 모두 끄고 PowerShell `$env:DATABASE_URL='postgres://u:p@127.0.0.1:9/x'; npm.cmd test`, `test/`에서 `\bfetch\(` · `localhost` · `8787` · `NEWSDATA_API_KEY` · `ANTHROPIC_API_KEY` · `@anthropic-ai/sdk` · `server/ai` 검색 | 통과, 0건 |
+| 서버 · DB 없이 | npm test(현재 기기는 Ubuntu 래퍼), test/의 외부 연결 확인 | 모두 통과. 기존 규칙 테스트는 네트워크·DB 없음. ai.test.ts는 가짜 HTTP 응답으로 실제 SDK 요청·파싱만 검증하고 실제 API 호출 없음 |
 | 시계 고정 | PowerShell `$env:TZ='America/Los_Angeles'; npm.cmd test`, `test/`에서 `new Date\(\)` · `Date\.now\(` 검색 | 통과, 0건 |
 | 순서 무관 | `npx vitest run --sequence.shuffle` | 통과 |
 | 테스트가 잡는가 | `server/ranking.ts`의 발행 시각 비교 방향을 뒤집고 `npm.cmd test` → 되돌림. `server/newsdata.ts`에서 failed 섹션의 그날 행도 지우게 바꾸고 → 되돌림. `server/grouping.ts`에서 대표 제목 대신 묶음 안 아무 기사와 비교하게(줄줄이 잇기) → 되돌림. `server/grouping.ts`의 합치기를 끄고 → 되돌림. `server/grouping.ts`의 1쪽 검증 p를 늘 1로 → 되돌림. `server/ranking.ts`에서 D8 대체를 끄고(그날 행만) → 되돌림. `server/grouping.ts`의 없는 번호 검사를 끄고 → 되돌림. AI 섹션 대신 수집 섹션을 쓰게 → 되돌림. `server/summary.ts`에서 요약 있는 이슈도 대상으로 → 되돌리고 다시 | 동점 테스트 실패 · ④ ⑥ 실패 · group ①(줄줄이 잇기: 누리호+군집위성 3건도 한 묶음) 실패 · group ① ② ③(합치기 끔: it 3묶음) 실패 · group ② ⑤ 실패 · ⑦ 실패 · group ⑦(`a999`) 실패 · group ⑥ ⑧ 실패 · summarize ① ② 실패 → 모두 통과 |
 | 화면 그대로 | `git diff --no-index ex07/public/index.html ex08/public/index.html` | 차이 없음(ex07의 화면 문구 · 화면 보완 검증 결과 그대로) |
-| 테이블만 | `git diff --no-index ex07/drizzle ex08/drizzle` · `server/db/schema.ts`도 같은 방법, `git status ex08/drizzle` | 차이 없음 · 차이 없음, 커밋 대상으로 보임(무시 안 됨) |
-| 마이그레이션 | `npm.cmd run db:migrate` 한 번 더 → SQL로 public 테이블 · `drizzle.__drizzle_migrations` 행 수 · `issues.summary` 칸 | 성공(바뀐 것 없음), 5개 그대로, 기록 4행, `summary` text[] · null 가능 |
-| 연결 설정 | `server/db/`에서 `prepare:\s*false`, `server/`에서 `\bapikey\b`(대소문자 구분) · `x-access-key`(대소문자 무시) · `claude-haiku-4-5-20251001` · `@anthropic-ai/sdk` 검색, `ex08/.env.example`, `git check-ignore ex08/.env` | 1건 이상 · 0건 · 1건 이상 · 1건 이상 · `server/ai.ts`에만, `DATABASE_URL=` · `NEWSDATA_API_KEY=` · `ANTHROPIC_API_KEY=` 이름만(값 없음), `.env`는 무시됨 |
-| 저장소 나눔 | `server/app.ts` · `server/routes/` · `server/newsdata.ts` · `server/grouping.ts` · `server/summary.ts` · `server/ai.ts` · `test/`에서 `\bpostgres\b` · `drizzle-orm` · `db/client` · `process\.env` 검색 | 0건(DB 연결은 `index.ts` · `server/collect.ts` · `server/group.ts` · `server/summarize.ts`만) |
+| 테이블만 | 새 SQL · snapshot · journal · schema.ts 비교 | 0004에 issues.importance integer NOT NULL DEFAULT 0만 추가. 기존 테이블·행 삭제 없음 |
+| 마이그레이션 | 키 준비 후 db:migrate → public 테이블·drizzle.__drizzle_migrations·issues.importance 확인 → 한 번 더 | 테이블 5개, 마이그레이션 기록 5행, importance integer NOT NULL DEFAULT 0, 기존 행 0, 재실행해도 5행. 키 없으면 SKIP |
+| 연결 설정 | prepare false · X-ACCESS-KEY · OpenAI 모델 · SDK import · .env.example · git check-ignore ex08/.env | DB prepare false 유지, newsdata 키 헤더 유지, OpenAI SDK는 ai.ts만, DATABASE_URL · NEWSDATA_API_KEY · OPENAI_API_KEY 이름(비밀값 없음), .env 무시 |
+| 저장소 나눔 | `server/app.ts` · `server/routes/` · `server/newsdata.ts` · `server/grouping.ts` · `server/summary.ts` · `server/ai.ts` · 기존 규칙 테스트(ai.test.ts의 SDK/HTTP 모의, hide.test.ts의 가짜 env 검증은 예외)에서 `\bpostgres\b` · `drizzle-orm` · `db/client` · `process\.env` 검색 | 0건(DB 연결은 `index.ts` · `server/collect.ts` · `server/group.ts` · `server/summarize.ts`만) |
 | 샘플 없음(D14) | SQL: `url` = `https://news.naver.com/`인 issues · (id, 이름)이 샘플 3개인 folders · 그 둘을 가리키는 bookmarks 행 수 → `npm.cmd run seed` → `ex08/server/db/seed.ts` 있는지, `server/`에서 `\bseedRows\b` · `\bmemoryStore\b` 검색 → `GET /api/bookmarks` · `GET /api/folders` | 0 · 0 · 0 → 종료 코드 0 아님 · `Missing script: "seed"` → 없음, `server/sample.ts`에만 → 샘플 이슈 · 폴더 없음(사용자가 만든 것이 없으면 `[]` · `[]`, AC-08-2) |
 | 지난 날짜 · 대체 섹션(D8) | SQL로 확인 행: issues `2000-01-03-{섹션}-1` 6행(article_count 10) · `2000-01-04-pol-1`~`-6`(60 · 50 · 40 · 30 · 20 · 10), 링크 `https://example.com/ex07-{id}`, latest_published_at 그 전날 `12:00Z`, summary null / collect_runs `2000-01-04` pol `ok` `2000-01-03T21:03:05Z` · pol `failed` `2000-01-03T22:00:00Z` → `GET /api/rankings?date=2000-01-04` · `?date=2000-01-03` · `?date=2000-01-05` · `?date=2000-01-02` | 200 `updatedAt` `2000-01-04T06:03:05+09:00` · pol 5개(`-1`~`-5`, rank 1~5, 60~20) · 나머지 5섹션은 `2000-01-03-{섹션}-1` 하나씩 · `date` `2000-01-03`(AC-01-2, D8) · 200 `updatedAt` `2000-01-03T06:00:00+09:00`(ok 실행 없음) · 404 · 404 "해당 날짜의 랭킹 데이터가 없습니다"(AC-09-1 · AC-09-3) |
 | 다시 켜도 유지 | `POST /api/folders` `{ name: "유지확인" }` → 그 id로 `2000-01-04-pol-1` POST → api 서버를 끄고 다시 `npm.cmd run api` → 두 목록 | 201 `{ id: "f{n}", name: "유지확인", count: 0 }`(n = 있던 폴더 번호 최대 + 1, 없으면 1) → 201 → 재시작 뒤 북마크 맨 앞이 그 이슈(`rank` 1 · `folderId` 그 폴더) · 폴더 목록 끝에 유지확인 count 1(US-09 · US-10 · AC-09-5 · AC-10-2 · AC-08-1) |
 | 폴더 하나 · 해제(DB) | 같은 이슈로 다시 POST → `{ issueId: "2000-01-04-pol-6", folderId: 그 id }`(Top 5 밖) · `{ issueId: "2000-01-01-pol-0", folderId: 그 id }` · `{ issueId: "2000-01-04-pol-1", folderId: "f999" }` POST → 그 이슈 DELETE 두 번 → 폴더 목록 | 409 "이미 북마크한 이슈입니다" → 404 "이슈를 찾을 수 없습니다" · 같음 · "폴더를 찾을 수 없습니다" → 204 · 404 "북마크를 찾을 수 없습니다" → 유지확인 count 0(AC-10-4 · AC-07-2) |
-| 수집 · 묶기 · 요약 전 거절 | `ex08/`의 PowerShell에서 `Remove-Item Env:NEWSDATA_API_KEY, Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue` 뒤 `npx.cmd tsx server/collect.ts --pages 3` · `--pages x` · `--pages 0`, `npx.cmd tsx server/group.ts --search 7` · `--search 1` · `--ai 2` · `--search 0`, `npx.cmd tsx server/summarize.ts --max 31` · `--max 1`(`.env`를 안 읽어 키 없음), 각각 `$LASTEXITCODE` | 모두 2, 출력은 `--pages는 0~2입니다` · 같음 · `NEWSDATA_API_KEY가 없습니다` · `--search는 0~6입니다` · `NEWSDATA_API_KEY가 없습니다` · `--ai는 0 또는 1입니다` · `ANTHROPIC_API_KEY가 없습니다` · `--max는 0~30입니다` · `ANTHROPIC_API_KEY가 없습니다` 한 줄씩(섹션 · 요청 줄 없음 = 요청 0번) |
-| DB 오류 | 안전 실행으로 `npm.cmd run collect -- --pages 1` · `npm.cmd run group -- --search 1` · `npm.cmd run summarize -- --max 1`을 각각 두 번: 자식 env `NEWSDATA_API_KEY=wrong-key-0000` · `ANTHROPIC_API_KEY=wrong-ant-0000`, `DATABASE_URL`은 `postgres://u:SECRETPW@[bad/x` 한 번 · `postgres://u:SECRETPW@127.0.0.1:9/x` 한 번 | 여섯 다 누출 false(`SECRETPW` · `wrong-key-0000` · `wrong-ant-0000` 포함) · 종료 코드 2 · `DB 오류: `로 시작하는 줄이 있고 섹션 · AI · 요약 줄(`pol ok` · `pol 기사` · `AI 정리` · `  … ok` 등) 없음(요청 전에 멈춤) |
+| 수집 · 묶기 · 요약 전 거절 | `ex08/`의 PowerShell에서 `Remove-Item Env:NEWSDATA_API_KEY, Env:OPENAI_API_KEY -ErrorAction SilentlyContinue` 뒤 `npx.cmd tsx server/collect.ts --pages 3` · `--pages x` · `--pages 0`, `npx.cmd tsx server/group.ts --search 7` · `--search 1` · `--ai 2` · `--search 0`, `npx.cmd tsx server/summarize.ts --max 31` · `--max 1`(`.env`를 안 읽어 키 없음), 각각 `$LASTEXITCODE` | 모두 2, 출력은 `--pages는 0~2입니다` · 같음 · `NEWSDATA_API_KEY가 없습니다` · `--search는 0~6입니다` · `NEWSDATA_API_KEY가 없습니다` · `--ai는 0 또는 1입니다` · `OPENAI_API_KEY가 없습니다` · `--max는 0~30입니다` · `OPENAI_API_KEY가 없습니다` 한 줄씩(섹션 · 요청 줄 없음 = 요청 0번) |
+| DB 오류 | 안전 실행으로 `npm.cmd run collect -- --pages 1` · `npm.cmd run group -- --search 1` · `npm.cmd run summarize -- --max 1`을 각각 두 번: 자식 env `NEWSDATA_API_KEY=wrong-key-0000` · `OPENAI_API_KEY=wrong-ant-0000`, `DATABASE_URL`은 `postgres://u:SECRETPW@[bad/x` 한 번 · `postgres://u:SECRETPW@127.0.0.1:9/x` 한 번 | 여섯 다 누출 false(`SECRETPW` · `wrong-key-0000` · `wrong-ant-0000` 포함) · 종료 코드 2 · `DB 오류: `로 시작하는 줄이 있고 섹션 · AI · 요약 줄(`pol ok` · `pol 기사` · `AI 정리` · `  … ok` 등) 없음(요청 전에 멈춤) |
 | 수집(실제) | SQL로 확인 행 2개(section pol, 링크 · date는 `https://example.com/ex07-today` · <오늘>과 `https://example.com/ex07-yesterday` · <어제>, 나머지 칸은 아무 값)를 넣고 → 안전 실행 `npm.cmd run collect -- --pages 1`(실제 호출 12번) | 누출 false · 종료 코드 0 · `수집 <오늘> · 섹션당 top 1페이지 + 전체 최대 1페이지` 뒤 pol→eco→soc→cul→wor→it 6줄 `ok` · 끝 줄 `ok 6 · failed 0 · 기사 {n}건 · 요청 12번 · 남은 크레딧 {숫자}`(이 숫자를 R1로 적음). 실제 응답 탓 failed 줄이 있으면 종료 코드 1 · 메시지가 실패 규칙 형식(원인을 보고) |
 | 수집 결과(DB) | SQL: <오늘> `collect_runs` 마지막 6행 · <오늘> `articles` 섹션별 행 수 · `source_id` 종류 수 · `(date, link)` 중복 수 · `published_at` > `finished_at`인 행 수 · 확인 행 2개 | 6행 `finished_at` 같음 · ok 섹션마다 `message` null · `article_count` = 그 섹션 행 수(1~20), `source_id` 6종 이상(D12), 중복 0 · 0행, `ex07-today` 없음(pol ok일 때) · `ex07-yesterday` 그대로(AC-01-1) |
 | 잘못된 키(수집) | SQL로 `collect_runs` 최대 id를 M으로 적음 → 안전 실행(자식 env `NEWSDATA_API_KEY=wrong-key-0000`) `npm.cmd run collect -- --pages 1` → SQL: `id > M` 행 · <오늘> `articles` 섹션별 행 수 · `message`에 실제 키나 `wrong-key-0000`이 든 행 수 | 누출 false · 종료 코드 2 · 6줄 모두 `failed`(메시지에 `HTTP {코드}`, 보통 401) · 끝 줄에 `요청 6번` → 6행 모두 failed · `article_count` 0, 섹션별 행 수는 `수집 결과(DB)`와 같음(AC-01-2: 실패 섹션은 그날 기사 유지), 0행 |
 | 묶기(검색 없이) | 안전 실행 `npm.cmd run group -- --search 0 --ai 0` → SQL: <오늘> 기사 중 `issue_id` null 행 수 · 이슈마다 묶인 기사 수 · `article_count` · `url`이 묶인 기사 `link` 중 하나인지 · id 꼴 | 누출 false · 종료 코드 0 · 첫 줄 `묶기 <오늘> · 섹션당 검색 최대 0개` · 둘째 줄 `AI 정리 안 함(--ai 0)`, 섹션마다 `{섹션} 기사 {a} · 이슈 {i}`(a = `수집 결과(DB)` 행 수) + 후보 줄 최대 6개(` 검색 안 함`) · 끝 줄 `이슈 {n} · 검색 0번 · 실패 0 · 남은 크레딧 ?` → 0행, 묶인 기사 수 = 출력의 묶음 = `article_count`(단독 이슈는 1, AC-02-2), 모두 예, `<오늘>-{섹션}-{n}`이고 겹치지 않음(AC-02-1) |
 | 다시 묶기(id 유지 · 북마크) | SQL로 <오늘> issues의 (id, url, article_count) 목록을 적음 → `GET /api/rankings`에서 <오늘> 이슈가 있는 첫 섹션 S의 1위를 `유지확인` 폴더로 POST → 안전 실행 `npm.cmd run group -- --search 0 --ai 0` → SQL 목록 → 그 북마크 DELETE | 201 → 종료 코드 0 · `{S} 건너뜀: 북마크 있음` · 다른 섹션 줄은 앞과 같음 → 목록이 앞과 똑같음(같은 기사 → 같은 대표 → 같은 id, 중복 없음) → 204 |
 | 잘못된 키(묶기) | 안전 실행(자식 env `NEWSDATA_API_KEY=wrong-key-0000`) `npm.cmd run group -- --search 1 --ai 0` → SQL 목록 | 누출 false · 종료 코드 1 · 섹션마다 첫 후보 줄에 ` 검색 실패: HTTP {코드}`(보통 401) · 끝 줄 `검색 {첫 후보에 검색어가 있는 섹션 수}번 · 실패 {같은 수}` → 목록이 `다시 묶기`와 같음(검색 실패 → 묶음 크기, D13) |
-| 잘못된 키(AI 정리) | 안전 실행(자식 env `ANTHROPIC_API_KEY=wrong-ant-0000`) `npm.cmd run group -- --search 0` → SQL 목록 | 누출 false · 종료 코드 1 · 둘째 줄 `AI 정리 실패: 호출 실패: …`(401 문구, 키 없음) `→ 규칙으로 묶음` → 목록이 `다시 묶기`와 같음(D15 대체) |
-| 묶기(실제) | 안전 실행 `npm.cmd run group -- --search 1`(실제 호출 = Claude 정리 1번 + 첫 후보가 있는 섹션 수, 최대 6) → SQL: <오늘> 섹션별 이슈 수 · `issue_id` null 기사 수 · 이슈 섹션이 묶인 기사 수집 섹션과 다른 기사 수 → 크레딧 확인(실제 호출 1번) | 누출 false · 종료 코드 0 · 둘째 줄 `AI 정리 · 묶음 {b} · 제외 {x} · 빠진 기사 {m}` · 섹션마다 첫 후보 줄이 `{id} {AI 검색어} {n}건 (묶음 {k})`이고 n ≥ k, 나머지는 ` 검색 안 함` · 모든 후보 줄 n < 1,000 · 끝 줄 `실패 0 · 남은 크레딧 R2`(R2 = R1 − 검색 수) → 이슈 수 합 = `이슈 {n}`, null 기사 수 = x(+ 빠진 기사 없으면 그대로) · 사람 확인: 각 섹션 첫 후보의 대표 제목 · 묶인 기사 제목 · 섹션 · 검색어를 보고에 적어 한 사건인지 · 섹션이 맞는지 · 제외가 사진 · 주가 기사인지 봄(AC-02-1, D15) → 상태 200 · `x-api-limit-remaining` = R2 − 1(다르면 차이를 숫자로 적음). AI 정리 실패 · 검색 실패가 있으면 종료 코드 1 · 원인을 보고(다시 돌리지 않음) |
-| 오늘 랭킹(DB) | `GET /api/rankings` · `?date=<오늘>` | 둘 다 200 · 같은 본문(D3), `date` <오늘>, `updatedAt` = SQL로 본 <오늘> `ok` `collect_runs` 최대 `finished_at`을 KST `+09:00`(초까지)로 바꾼 값(AC-05-1), 섹션 6개 · 섹션마다 5개 이하 · `articleCount` 내림차순 · `rank` 1부터, <오늘> 이슈가 있는 섹션의 1위 = `묶기(실제)`의 그 섹션 첫 후보(id · articleCount 같음), 없는 섹션은 이전 날짜 이슈(D8), `url`은 언론사 주소(`news.naver.com` 아님) · `summary`는 null(같은 날 앞서 요약한 이슈가 id를 유지했으면 그 이슈만 3줄, 그 수를 k로 적음, AC-03-1 · AC-02-1) |
-| 요약(실제) | 안전 실행 `npm.cmd run summarize -- --max 3`(실제 Claude 호출 3번) → SQL: 출력의 세 id `summary` | 누출 false · 종료 코드 0 · 첫 줄 `요약 <오늘> · 최대 3개` · `  {id} ok` 3줄(`오늘 랭킹(DB)`에서 summary null인 이슈의 pol→it · rank 순 앞 3개) · 끝 줄 `대상 {t} · 요청 3번 · 성공 3 · 실패 0 · 이미 요약 {k}` → 셋 다 3줄 · 줄마다 1~100자 · 사람 확인: 3줄을 보고에 적고 묶인 기사 제목 · 설명문에 있는 내용인지 봄(US-04). 실패가 있으면 종료 코드 1 · 그 이슈 `summary` null · 원인을 보고(다시 돌리지 않음) |
-| 요약 다시(잘못된 키) | 안전 실행(자식 env `ANTHROPIC_API_KEY=wrong-ant-0000`) `npm.cmd run summarize -- --max 3` → SQL로 `요약(실제)`의 세 id와 이번 실패 id `summary` | 누출 false · 종료 코드 1 · 요청 줄 3개가 `요약(실제)`의 세 id가 아닌 다음 대상이고 모두 `실패: 호출 실패: …`(401, 키 없음) · 끝 줄 `대상 {t − 3} · 요청 3번 · 성공 0 · 실패 3 · 이미 요약 {k + 3}` → 앞 세 요약 그대로 · 실패 이슈 null(AC-04-3) |
+| 잘못된 키(AI 정리) | 안전 실행(자식 env `OPENAI_API_KEY=wrong-ant-0000`) `npm.cmd run group -- --search 0` → SQL 목록 | 누출 false · 종료 코드 1 · 둘째 줄 `AI 정리 실패: 호출 실패: …`(401 문구, 키 없음) `→ 규칙으로 묶음` → 목록이 `다시 묶기`와 같음(D15 대체) |
+| 묶기(실제) | 안전 실행 `npm.cmd run group -- --search 1`(실제 호출 = OpenAI 정리 1번 + 첫 후보가 있는 섹션 수, 최대 6) → SQL: <오늘> 섹션별 이슈 수 · `issue_id` null 기사 수 · 이슈 섹션이 묶인 기사 수집 섹션과 다른 기사 수 → 크레딧 확인(실제 호출 1번) | 누출 false · 종료 코드 0 · 둘째 줄 `AI 정리 · 묶음 {b} · 제외 {x} · 빠진 기사 {m}` · 섹션마다 첫 후보 줄이 `{id} {AI 검색어} {n}건 (묶음 {k})`이고 n ≥ k, 나머지는 ` 검색 안 함` · 모든 후보 줄 n < 1,000 · 끝 줄 `실패 0 · 남은 크레딧 R2`(R2 = R1 − 검색 수) → 이슈 수 합 = `이슈 {n}`, null 기사 수 = x(+ 빠진 기사 없으면 그대로) · 사람 확인: 각 섹션 첫 후보의 대표 제목 · 묶인 기사 제목 · 섹션 · 검색어를 보고에 적어 한 사건인지 · 섹션이 맞는지 · 제외가 사진 · 주가 기사인지 봄(AC-02-1, D15) → 상태 200 · `x-api-limit-remaining` = R2 − 1(다르면 차이를 숫자로 적음). AI 정리 실패 · 검색 실패가 있으면 종료 코드 1 · 원인을 보고(다시 돌리지 않음) |
+| 오늘 랭킹(DB) | `GET /api/rankings` · `?date=<오늘>` | 둘 다 200 · 같은 본문(D3), `date` <오늘>, `updatedAt` = SQL로 본 <오늘> `ok` `collect_runs` 최대 `finished_at`을 KST `+09:00`(초까지)로 바꾼 값(AC-05-1), 섹션 6개 · 섹션마다 5개 이하 · `articleCount` 내림차순 · `rank` 1부터, <오늘> 이슈가 있는 섹션의 순위 = 저장된 이슈 전체를 연관기사 수 ↓ → importance ↓ → 최신 발행 시각 ↓ → id 자연 순서로 정렬한 Top 5(검색 전 첫 후보와 같다고 가정하지 않음), 없는 섹션은 이전 날짜 이슈(D8), `url`은 언론사 주소(`news.naver.com` 아님) · `summary`는 null(같은 날 앞서 요약한 이슈가 id를 유지했으면 그 이슈만 3줄, 그 수를 k로 적음, AC-03-1 · AC-02-1) |
+| 요약(실제) | 안전 실행 `npm.cmd run summarize -- --max 3`(실제 OpenAI 호출 3번) → SQL: 출력의 세 id `summary` | 누출 false · 종료 코드 0 · 첫 줄 `요약 <오늘> · 최대 3개` · `  {id} ok` 3줄(`오늘 랭킹(DB)`에서 summary null인 이슈의 pol→it · rank 순 앞 3개) · 끝 줄 `대상 {t} · 요청 3번 · 성공 3 · 실패 0 · 이미 요약 {k}` → 셋 다 3줄 · 줄마다 1~100자 · 사람 확인: 3줄을 보고에 적고 묶인 기사 제목 · 설명문에 있는 내용인지 봄(US-04). 실패가 있으면 종료 코드 1 · 그 이슈 `summary` null · 원인을 보고(다시 돌리지 않음) |
+| 요약 다시(잘못된 키) | 안전 실행(자식 env `OPENAI_API_KEY=wrong-ant-0000`) `npm.cmd run summarize -- --max 3` → SQL로 `요약(실제)`의 세 id와 이번 실패 id `summary` | 누출 false · 종료 코드 1 · 요청 줄 3개가 `요약(실제)`의 세 id가 아닌 다음 대상이고 모두 `실패: 호출 실패: …`(401, 키 없음) · 끝 줄 `대상 {t − 3} · 요청 3번 · 성공 0 · 실패 3 · 이미 요약 {k + 3}` → 앞 세 요약 그대로 · 실패 이슈 null(AC-04-3) |
 | 화면 주소 | 브라우저로 `http://localhost:3000/` | 이슈맵이 뜨고 6개 섹션 · 갱신 시각 줄이 보임(AC-05-1) |
 | 갱신 시각(화면) | 같은 화면의 갱신 시각 줄 | `{월}.{일} 오전/오후 {시}:{분} 수집 · 이슈 {n}개`, 시각이 `오늘 랭킹(DB)`의 `updatedAt`과 같음(06:00 고정 아님, AC-05-1) |
 | 원문 새 탭 · 요약 | 목록 보기에서 카드의 `기사 원문` 클릭, `요약(실제)` 이슈 카드와 다른 카드의 요약 칸 · 이슈맵 타일을 눌러 연 상세 | 새 탭에서 그 카드 `url`(언론사 주소)이 열림(AC-04-2), `요약(실제)` 이슈는 목록 · 상세에 3줄(SQL과 같은 글), 나머지 카드는 "요약을 준비 중입니다"이고 연관기사 수 · 원문 링크는 그대로 보임(AC-04-1 · AC-04-3) |
@@ -91,3 +101,71 @@
 | 중계 그대로 | `GET http://localhost:8787/api/rankings?date=<어제>`와 3000의 같은 요청 비교 | 상태 코드 · 본문 같음 |
 | Hono 꺼짐 | api 서버를 끄고 `GET /api/rankings` | 502 "API 서버에 연결할 수 없습니다" |
 | 원상복구(마지막) | SQL로 bookmarks 중 `2000-01-0`으로 시작하는 이슈를 가리키거나 `유지확인` · `화면확인` 폴더에 든 행 → 그 두 폴더 → `2000-01-0`으로 시작하는 issues → `date` `2000-01-04`이거나 `id > M`인 `collect_runs` → 링크가 `https://example.com/ex07-`로 시작하는 `articles`를 지우고 → 다섯 테이블 행 수 · <오늘> `articles` · `issues` · 요약 있는 issues · `ok` `collect_runs` 수 | 확인 행 0, <오늘> 실제 기사 · 이슈 · 요약 · ok 실행 기록은 남음(다음 단계가 씀), 샘플 이슈 · 폴더 0 그대로 |
+
+
+## 2026-10-14 KST — 사건 단위 프롬프트 보강·재검증 범위
+
+사용자 요청에 따라 이번에는 `server/ai.ts`의 정리 지시문만 보강한다. 입력·스키마·모델·토큰 한도·요약 지시문·DB 저장 정책·의존성은 유지한다. 원인이 정리 오묶음이므로 요약 프롬프트까지 동시에 바꾸지 않는다.
+
+| 변경 | 기준 / 근거 |
+|---|---|
+| 사건 단위 | 주체·행동/발표·대상·시점/장소가 같은 구체적 사건일 때만 병합. 섹션·지역·인물·주제만 같으면 분리, 불확실하면 단독. 섹션당 하나/Top 5/검색 후보 수에 맞춰 묶음 수를 줄이지 않음(AC-02-1·2) |
+| 반례 | 대통령 SNS 해명과 대법원장 고발, 조사료 생산과 투자유치, 대입 박람회와 산악사고는 각각 다른 사건. 같은 SNS 발언의 언론사별 보도는 병합 |
+| 제외·섹션 | 기사 내용으로 판정. 사진 표지가 없어도 사진 설명만 있는 것은 제외. 사진에 인물이 나온다는 이유만으로 실질 보도 제외 금지. 영화 흥행 감소는 주가 시세가 아님. 사진성 정치 기사를 IT에 넣지 않음 |
+| 검색어·번호 | 두 그룹 모두 같은 사건을 식별, 그룹 내부는 같은 뜻/명칭만. 다른 사건 단어를 OR로 모으거나 AND로 엮지 않음. 제외 포함 모든 번호 정확히 한 번, 중요도는 기사 수가 아닌 사건 영향 |
+
+새 패키지 없음. 이번 로컬 작업은 추가 유료 호출 0회·DB 변경 0회. 일반 테스트·빌드와 지시문 검토를 수행하되 의미 품질 통과로 간주하지 않는다. 고정 평가 입력은 `test/fixtures/ai/event_boundaries.json`(합성 13기사, 정답 8묶음·제외 2)으로 분리하며 정답을 모델 입력에 넣지 않는다.
+
+### 다음 실제 재검증(실행 전 확정할 추가 예산안)
+
+이전 newsdata 19·OpenAI 4회 한도는 이미 소진됐다. 아래는 다음 실행의 구체적 범위이며 이번 변경 작업에서 호출하지 않는다. 추가 유료 실행은 사용자가 이 범위로 재검증을 요청한 뒤 진행한다.
+
+1. newsdata 0회, OpenAI 최대 4회: 합성 13기사 정리 1회 → 저장된 2026-10-14 기사 116건 정리 1회 → 통과한 실제 새 묶음 요약 최대 2회. 중간 실패는 재시도 없이 중단하며 남은 호출을 임의로 전용하지 않는다. 모델·출력 한도 그대로, 입력 지시문 증가로 호출당 입력 토큰/비용은 늘 수 있음.
+2. 합성 입력: fixture의 `lines`만 `aiClient(key).organize`에 전달. raw output의 articles를 순서 무관한 집합으로 비교해 `expected.groups`와 정확히 일치, excluded 정확히 2개, 각 그룹 섹션은 allowedSections 중 하나. 중복·누락·없는 번호 0, terms 정확히 2×(1~3), importance 정수 1~5. terms의 동의어·동일 사건 여부는 사람이 별도로 확인. 실패면 뒤 단계 SKIP.
+3. 실제 입력: DB에서 해당 날짜 articles의 section/title/description/link/published_at만 읽어 GroupArticle로 변환, `inputLines`로 번호·순서·120자 설명문을 만들고 로컬 `.data/`에 입력·번호 대응·SHA-256 저장. 행 수가 116이 아니면 재현 입력 변경으로 중단. 원본에 있던 이슈·요약을 정답으로 쓰지 않음. `aiClient.organize`와 `checkOrganize`만 호출하고 DB 저장이나 `group` CLI는 실행하지 않음. 보정 전후 결과를 함께 저장하고 보정 0·누락 0이 통과 조건. 기존 6거대묶음·누락 9와 비교.
+4. 사람 검토: 실제 모든 다중 기사 묶음의 사건 일치, 모든 제외의 근거, 모든 묶음의 섹션·검색어를 확인. 알려진 대통령 SNS/조희대 고발/전기차 보조금, 조사료/투자유치/추경, 박람회/산악사고 분리. 동일 SNS 발언 기사 병합. 영화 흥행 기사 유지, 사진 설명 기사 제외. 오병합·명확한 동일 사건 분리·잘못된 제외·섹션 오류·다른 사건 검색어 혼합이 하나라도 있으면 FAIL. 묶음 수 증가만으로 PASS 금지.
+5. 앞 단계 통과 시: 새 실제 묶음 중 설명문 있는 pol(없으면 eco→soc→cul→wor→it) 다중 기사 묶음 1개와 그와 다른 단독 기사 묶음 1개를 선택(각 범주 중요도↓·최신 발행↓·대표 link↑). 해당 범주가 없으면 해당 요약 SKIP. `summarize` CLI 대신 그 묶음의 발행시각↓·link↑ 최대 10개 제목·설명문을 `aiClient.summarize`로 전달, 결과는 로컬에만 저장. 3줄·1~100자·입력 밖 사실 0·서로 다른 사건 혼합 0. 기존 DB summary를 재사용/삭제하지 않음(AC-04-1·3). API 실패는 null 경로로 보고, 자동 재시도 없음.
+6. 안전 실행은 기존 PLAN 규칙. 호출 카운트·실제 명령·입력 해시·결과·SKIP을 보고서에 기록. 품질 PASS 후 실제 DB 재묶기와 과거 오묶음 요약 정리 범위는 별도로 정함. 이번 평가만으로 브라우저·DB 재저장·검색 적합성 통합 검증이나 전체 ex08 PASS를 대신하지 않음.
+
+실행 기록(2026-10-14 KST): 사용자 재검증 요청으로 위 범위를 실행했으나 합성 단계에서 제외·섹션·검색어 의미 FAIL. OpenAI 1회만 사용, 실제 116기사·요약 단계는 중단. 재시도하지 않았으며 상세 결과는 reports/ex08_judge.md 마지막 절.
+
+
+## 2026-10-14 KST — 제외·섹션·동의어 2차 보완
+
+사용자 요청으로 정리 지시문만 다시 보완한다. 평가 fixture·정답은 고정하며 이전 실패를 통과로 바꾸지 않는다.
+
+- 처리 순서: 제외할 기사 판정 → 남은 기사만 사건별 묶기 → 내용으로 섹션 → 검색어/중요도 → 번호 전수 확인. '단독 이슈 유지'는 제외 대상에 적용하지 않는다.
+- 사진 장면 설명·자동 생성 시세는 반드시 excluded로 이동, 실질 보도는 유지. 사진/시세 제외와 해외 기술 발표의 올바른 JSON 예시를 추가하며 평가 fixture의 번호·기업·문장은 복사하지 않는다.
+- 해외에서 일어난 사건도 신기술·제품·연구 발표가 중심이면 it. wor는 국제관계·전쟁·외교·해외 정치 등 세계 정세 중심, 기업 실적·투자·시장은 eco, 영화 흥행은 cul. 수집 태그나 외국 지명보다 사건의 핵심 주제를 먼저 본다.
+- terms 각 그룹은 기본 1표현. 같은 대상/행동의 동의어가 확실할 때만 2~3개. 원인/결과, 선행/후속 행동, 숫자만 남긴 표현은 동의어가 아님. 기존 2×(1~3) 계약 유지.
+- 이번 보완은 추가 API 호출·DB 변경 없이 64개 회귀 테스트와 빌드로 코드 연결을 확인한다. 의미 품질은 미검증. 다음 실호출은 앞 절의 같은 입력·통과 기준·최대 4회 범위로 별도 재검증 요청 시 실행하며, 실패하면 중단. 과거 미사용 3회는 자동 재시도 예산이 아니다.
+
+2차 실행 기록(2026-10-14 KST): 합성 1회에서 사진/시세 제외는 맞았지만 a012 중복 보도 오제외·a002 섹션 불일치로 FAIL. 실제 116기사·요약은 SKIP, OpenAI 1·뉴스 0·DB 변경 0. 동일 정답 유지.
+
+
+## 2026-10-14 KST — 중복 보도·섹션 경계 3차 보완
+
+사용자의 다음 보완 요청으로 정리 지시문만 수정. 합성 입력·정답·모델·스키마·요약 지시문·저장 로직은 유지한다.
+
+- 같은 사건을 다시 보도한 기사는 제외 사유가 아니다. 제외 목록에 해당하지 않는 모든 기사 번호를 같은 묶음 articles에 남기며, 대표 기사 선택과 기사 제외를 구분한다. 동일 발표의 표현/수집 섹션이 다른 두 기사를 함께 남기는 JSON 예시 추가.
+- '국내 정치·정책은 pol'이라는 넓은 문구를 구체화: 선거·정당·정치인 공방·입법/예산 의결 과정은 pol. 주민 교통요금·교육·안전 등 서비스 변경 자체가 중심이면 soc. 행정기관이 발표했다는 이유로 pol로 보내지 않는다. 발표 주체가 아니라 기사 핵심을 기준으로 분류한다.
+- 검색어는 실제 제목에 쓰이는 짧은 명칭/행동 구절을 선택하며 관련 단어를 새 긴 구절로 이어 붙이지 않는다(2차의 '부상 구조 이송' 등 문제). 동의어 수·검색 조립 계약은 유지.
+- 코드 연결은 로컬 테스트·빌드로 확인, 추가 API/DB 변경 0. 다음 실제 검증은 기존 합성 13기사→실제 116기사→요약 2건, 최대 4회·뉴스 0·실패 시 중단 기준 유지. fixture의 고정 정답을 통과시키기 위한 사후 완화는 하지 않는다. 반복해서 본 표본이므로 통과해도 일반화 성능을 주장하지 않는다.
+
+3차 실행 기록(2026-10-14 KST): 합성 PASS, OpenAI 1회. 실제 116기사 단계는 자동 승인 검토가 데이터 외부 전송의 명시적 승인 부족으로 거절하여 실행 전 중단. 승인 후 남은 정리 1+요약 최대 2회 재개, 합성은 같은 코드/입력일 때 재호출하지 않음.
+
+3차 재개 기록(2026-10-14 KST): 사용자 명시적 외부 전송 승인 후 실제 116기사 정리 1회 실행. 9누락·3중복·104단독묶음으로 FAIL, 요약 2회 SKIP. 합성 포함 OpenAI 누적 2/4회, 뉴스 0·DB 변경 0. 증거 resumed-verdict.json이 최신 판정.
+
+
+## 대량 입력 배정·메타데이터 분리 (2026-10-14)
+
+사용자가 방식 검토·반영·검증까지 요청하여 기존 1회 정리를 최대 2회로 변경한다. 모델/요약/API 계약/DB 저장 정책/패키지는 유지한다.
+
+1. 1차는 모든 입력 기사 번호를 required 키로 가진 strict 객체 assignments를 반환. 값은 같은 사건 대표 기사 번호(자신 포함) 또는 제외 유형 #photo/#market/#obituary/#personnel/#language 중 하나. 중복 보도는 제외하지 않고 같은 대표로 배정. 대표는 그 사건 번호 중 가장 작은 번호이며 자신의 값은 자기 번호. 전체 기사를 함께 비교하므로 청크 경계나 섹션 경계 없이 병합한다.
+2. 서버가 알려진 번호/제외 사유 및 대표의 자기참조를 검증한다. 없는 번호·다른 대표로의 연결 사슬·순환·제외된 대표 참조는 null로 실패, 2차 호출하지 않음. required 키 및 strict 파싱으로 누락/추가 번호를 거부한다. 실패 시 기존 전체 규칙 대체를 유지한다.
+3. 배정 객체에서 코드가 묶음/제외를 조립한다. 2차는 확정된 각 사건 대표 번호를 required 키로 가진 객체로 section/importance/terms만 반환. 멤버를 추가·삭제·변경할 권한 없음. 2차 실패 시 부분 결과 저장 없이 null. 기존 AiReply의 issues/articles/excluded 형식으로 변환하여 group에 전달한다. importance 정수1~5, terms 2그룹×1~3 비어있지 않은 문자열을 검사한다.
+4. 빈 입력은 호출0; 전부 제외는 1차만. 전부 제외 응답은 기존 checkOrganize의 '묶음 없음' 처리(전체 규칙 대체) 유지하며 이 예외는 별도 결정 없이 바꾸지 않는다. 각 호출 8000 출력 토큰, 자동 재시도0. 호출 증가와 입력 중복 전송으로 비용/지연은 증가할 수 있음.
+5. 이번 실제 검증 상한: 합성 최대2→저장된 실제116 최대2→정리 의미 품질 통과 시 새 묶음 요약 최대2 = OpenAI6, 뉴스0. 이전 미사용 호출과 별도인 이번 변경 검증 범위. 기존 전송 승인 데이터만 사용, 링크·비밀값·본문 미전송, DB 미변경. 중간 FAIL 시 중단. 동일 고정 평가 입력/정답·의미 검토 기준 유지. 각 단계 원본 응답과 사용량을 로컬에 기록한다.
+6. 로컬 검증: 116기사 required 키, 멀리 떨어진 동일 사건 병합, 사유별 제외, 잘못된 대표/순환/누락/extra 키 차단, 2차 멤버 변경 불가, 호출 실패 후 무재시도·부분결과 거부, 순위/저장 계약 회귀. 테스트·빌드 후 실제 검증한다. 구조적 완전성과 사건 의미 품질은 별도 판정한다.
+
+실행 결과: 로컬 76/76·빌드 통과. 실제 합성 2회에서 배정 완전성·예상 사건 병합은 통과했으나 사진 a003 미제외로 FAIL(9묶음·제외1). 실제116·요약은 중단, 추가 호출 없음. 상세는 보고서 마지막 절.

@@ -1,6 +1,6 @@
 // npm run group [-- --search N] [--ai 0|1]: 그날(KST 오늘) 기사를 AI 정리(D15, 실패하면 ex07 제목 규칙 D11)로 묶어 issues에,
 // 검색어 제목 검색 · 1쪽 검증으로 연관기사 수(D13)
-// 검사(옵션 → N ≥ 1이면 newsdata 키 → --ai 1이면 Anthropic 키 → DB에서 그날 기사 · 이슈 · 북마크 섹션 읽기)를 통과해야 요청. 오류는 문구만 찍음(오류 객체 · 환경 변수 금지)
+// 검사(옵션 → N ≥ 1이면 newsdata 키 → --ai 1이면 OpenAI 키 → DB에서 그날 기사 · 이슈 · 북마크 섹션 읽기)를 통과해야 요청. 오류는 문구만 찍음(오류 객체 · 환경 변수 금지)
 // 종료 코드: 0 검색 실패 · 크레딧 부족 · AI 정리 실패 없음 · 1 있음 · 2 검사 · 저장 오류
 import { aiClient } from './ai';
 import { connectDb } from './db/client';
@@ -29,9 +29,9 @@ async function main(): Promise<number> {
     console.log('NEWSDATA_API_KEY가 없습니다');
     return 2;
   }
-  const aiKey = process.env.ANTHROPIC_API_KEY ?? '';
+  const aiKey = process.env.OPENAI_API_KEY ?? '';
   if (useAi === 1 && !aiKey) {
-    console.log('ANTHROPIC_API_KEY가 없습니다');
+    console.log('OPENAI_API_KEY가 없습니다');
     return 2;
   }
 

@@ -7,13 +7,13 @@ import { kstToday } from './sample';
 
 // 묶기에 쓰는 그날 기사(규칙은 제목만, AI 정리는 제목 · 설명문 앞 120자). section = 수집 섹션, publishedAt은 ISO 문자열
 export type GroupArticle = { section: SectionKey; title: string; description: string | null; link: string; publishedAt: string };
-// AI 응답(ai.ts가 만듦, 테스트는 가짜): 거절이거나 구조화 출력(없거나 max_tokens로 끊기면 null). SDK가 던지면 호출 실패
+// AI 응답(ai.ts가 만듦, 테스트는 가짜): 거절이거나 구조화 출력(없거나 max_output_tokens로 끊기면 null). SDK가 던지면 호출 실패
 export type AiReply<T> = { refusal: true } | { refusal: false; output: T | null };
 // 정리 함수: 입력 줄(`a000 [pol] 제목 | 설명문 앞 120자`) → 묶음 · 섹션 · 제외 · 검색어
 export type Organize = (lines: string[]) => Promise<AiReply<unknown>>;
 // 저장할 이슈 한 행. summary는 새 id면 null로 넣고, 있던 id면 그대로 둠
 export type GroupIssue = {
-  id: string; date: string; section: SectionKey; title: string; url: string; articleCount: number; latestPublishedAt: string;
+  id: string; date: string; section: SectionKey; title: string; url: string; articleCount: number; importance: number; latestPublishedAt: string;
 };
 
 // 저장소: DB 구현은 db/store.ts의 groupStore, 테스트는 메모리 구현
@@ -385,7 +385,7 @@ export async function group({ fetch, store, key, search, waitMs, organize = null
   const grouped = plans.flatMap(p => ('bundles' in p ? [p] : []));
   const issues = grouped.flatMap(p => p.bundles.map((b): GroupIssue => ({
     id: b.id, date, section: p.section, title: b.rep.title, url: b.rep.link,
-    articleCount: b.articleCount, latestPublishedAt: b.latestPublishedAt,
+    articleCount: b.articleCount, importance: b.importance, latestPublishedAt: b.latestPublishedAt,
   })));
   const issueOf = new Map(grouped.flatMap(p => p.bundles.flatMap(b => b.members.map(a => [a, b.id] as const))));
   const links = input.map(a => ({ section: a.section, link: a.link, issueId: issueOf.get(a) ?? null }));
