@@ -1,0 +1,45 @@
+# 하루 1회 자동 실행(ex09, D3 · D5): 매일 06:17 KST에 collect → group → summarize(npm run daily)
+# 실패해도 자동 재시도하지 않음. 같은 날 수동 재실행(Run workflow · Re-run)은 최대 2회(운영 규칙, 코드로 막지 않음)
+# 이후 단계마다 working-directory · cache-dependency-path를 최신 exXX로 바꿈
+name: daily
+
+on:
+  schedule:
+    - cron: '17 21 * * *' # UTC 21:17 = KST 06:17
+  workflow_dispatch:
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ex09
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ex09/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: npm run daily
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # pipefail(shell: bash 기본)로 tee 뒤에도 daily 종료 코드를 받고, 실패해도 출력을 실행 요약에 붙인 뒤 그 코드로 끝냄
+        run: |
+          set +e
+          npm run daily 2>&1 | tee "$RUNNER_TEMP/daily.log"
+          code=$?
+          { printf '```\n'; cat "$RUNNER_TEMP/daily.log"; printf '```\n'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"

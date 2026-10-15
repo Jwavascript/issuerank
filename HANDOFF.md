@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-15 · ex08 심사 PASS(OK31/대체9/SKIP0, 같은 세션 심사), ex10·ex11 PASS, 다음 ex09 자동화(ex11 출발, D17)
+최종 갱신: 2026-10-15 · ex09 제작 완료(테스트111·빌드·로컬 실제 하루 종료0), 사용자 푸시·Secrets·Run workflow 대기 → 심사. ex08·ex10·ex11 PASS
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
@@ -75,6 +75,7 @@ bash scripts/ex08-ubuntu.sh npm run db:migrate
 |---|---|
 | ex01~ex06 | 완료 · 커밋 |
 | ex07 | 완료. 2차 PASS 31/31, 이슈맵 로그 비율 보완 PASS(커밋 `5cb2a7a` · `7d62470`) |
+| ex09 하루 1회 자동 실행 | 제작 완료(2026-10-15): `npm run daily`·`.github/workflows/daily.yml`(06:17 KST). 테스트111/111·빌드, 로컬 실제 하루 종료0(뉴스18/20·OpenAI5/5, 잔여161). 사용자 단계·심사 대기 |
 | ex11 계정별 북마크·폴더 | 완료. 0006 적용. 독립 심사 PASS(2026-10-15): 테스트96/96·빌드·API/BFF/Chromium 80요청, OK11/FAIL0/SKIP0 |
 | ex10 이메일·비밀번호 로그인 | 완료. Better Auth 1.7.7, 0005 인증 테이블 적용. 독립 심사 PASS: 테스트85/85·빌드·API18·Chromium UI7, OK11/FAIL0/SKIP0 |
 | ex08 AI 이슈 정리 · 3줄 요약 | 완료. 심사 PASS(2026-10-15): OK31/FAIL0/SKIP0/대체9(D17). gpt-6-luna·후보 힌트·배정 effort medium(조정 기준: 섹션 경계 기록), ex11 반영 |
@@ -83,9 +84,12 @@ ex08 요약:
 - `npm run group`: OpenAI(`gpt-4.1-mini-2025-04-14`)가 그날 기사를 묶고, 섹션 · 제외 · `terms`(검색 핵심어 2묶음) · `importance`(1~5)를 정한다. 실패하면 ex07 규칙으로 묶는다.
 - 연관기사 수: `qInTitle` 검색 + 1쪽 검증(D13). 순위: 건수 ↓ → importance ↓ → 시각 ↓ → id 자연 순서(D16). importance는 DB에 저장하고 기존 행·규칙·빠진 기사는 0이다.
 - `npm run summarize`: Top 5 중 요약이 없는 이슈를 3줄로 요약한다. 설명문이 없으면 건너뛴다.
-- 하루 실행 순서: `collect` → `group` → `summarize`(ex09가 자동화할 예정)
+- 하루 실행 순서: `collect` → `group` → `summarize`(ex09 `npm run daily`로 묶음, Actions 예약 06:17 KST)
 
 ## 4. 다음 작업
+
+- **ex09 제작(2026-10-15)**: `reports/ex09_build.md`. ex11 복사·`scripts/ex09-ubuntu.sh`, 명령은 `bash scripts/ex09-ubuntu.sh ...`. 새 파일 `server/steps.ts`·`server/daily.ts`·`test/daily.test.ts`·package.json `daily`, 루트 `.github/workflows/daily.yml`(cron `17 21 * * *`·수동, checkout@v7·setup-node@v7). ai.ts 해시 `07e10b1e…` 유지. 테스트111/111·빌드 통과. 실제: 잘못된 키 줄(확인행6 삭제·해시 불변), 로컬 하루 `--pages 1 --search 1 --max 3` 종료0(기사108·이슈92·요약3), newsdata 18크레딧·OpenAI 5회, 잔여 161. 품질 첫 줄 `reports/ex09_daily.md`.
+- **다음 작업(사용자)**: 커밋 → main 푸시 → GitHub Settings › Secrets and variables › Actions에 `DATABASE_URL`(풀러)·`NEWSDATA_API_KEY`·`OPENAI_API_KEY` 등록 → Actions › daily › Run workflow 1회. 그다음 ex09 독립 심사(새 세션, `reports/ex09_judge.md`, 심사 newsdata 1·OpenAI 0), 다음 날 06:17 KST 이후 예약 실행 확인, 7일째까지 `reports/ex09_daily.md` 기록.
 
 - ex11 제작 검증 완료: `reports/ex11_build.md`, 테스트13파일96개·빌드 통과, 실제 API/BFF·브라우저 합계74/250요청·임시계정2개. 0006 적용·재실행 불변, 계정 분리·재시작·과거 기사 저장·두 브라우저 계정 전환·세션 만료 통과. 임시 행 정리·기존 내용 해시 보존·뉴스/OpenAI0. 독립 심사 PASS: `reports/ex11_judge.md`, OK11/FAIL0/SKIP0·심사 80/250요청·임시계정2개 정리·기존 내용 해시 불변·뉴스/OpenAI0. 실제 검증은 Codex 세션이 실행했고 보고·테스트/빌드 재실행·남은 브라우저 프로필 정리는 Claude Code 세션이 이어서 했다.
 - 현재 공유 DB에는 0006까지 적용됐다. ex10 소스는 보존하지만 무소유 저장 쓰기는 호환되지 않으므로 실행은 ex11 래퍼를 사용한다.
