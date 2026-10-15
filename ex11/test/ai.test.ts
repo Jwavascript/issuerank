@@ -32,15 +32,15 @@ describe('OpenAI Responses 어댑터', () => {
     expect(String(url)).toBe('https://api.openai.com/v1/responses');
     expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${KEY}`);
     const request = JSON.parse(String(init?.body));
-    expect(request).toMatchObject({ model: MODEL, input: 'a000 [it] 누리호 발사', max_output_tokens: 8000, store: false,
+    expect(request).toMatchObject({ model: MODEL, input: 'a000 [it] 누리호 발사', max_output_tokens: 16000, reasoning: { effort: 'medium' }, store: false,
       text: { format: { type: 'json_schema', name: 'assign_articles', strict: true, schema: { additionalProperties: false } } } });
     expect(request.instructions).toContain('한국어 뉴스 편집자');
-    expect(request).not.toHaveProperty('reasoning');
     expect(request).not.toHaveProperty('stream');
     net.mockImplementation(async () => new Response(JSON.stringify(response(JSON.stringify(summary))), { headers: { 'content-type': 'application/json' } }));
     expect(await client.summarize([{ title: '제목', description: '설명' }])).toEqual({ refusal: false, output: summary });
     const second = JSON.parse(String(net.mock.calls[2][1]?.body));
-    expect(second).toMatchObject({ max_output_tokens: 1000, input: '1. 제목: 제목\n   설명문: 설명', text: { format: { name: 'summary' } } });
+    expect(JSON.parse(String(net.mock.calls[1][1]?.body)).reasoning).toEqual({ effort: 'low' });
+    expect(second).toMatchObject({ max_output_tokens: 4000, reasoning: { effort: 'low' }, input: '1. 제목: 제목\n   설명문: 설명', text: { format: { name: 'summary' } } });
   });
 
   it('refusal은 거절로 전달한다', async () => {

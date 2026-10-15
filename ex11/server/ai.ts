@@ -6,8 +6,8 @@ import { z } from 'zod';
 import type { AiReply, Organize } from './grouping';
 import type { Summarize } from './summary';
 
-// 비용 절감·비추론 모델. 비교 가능한 동작을 위해 snapshot 고정.
-export const MODEL = 'gpt-4.1-mini-2025-04-14';
+// D18: gpt-4.1-mini 종료(2027-01-14)로 공식 권장 대체. 날짜 snapshot이 없어 매일 결과로 동작 변화를 확인한다.
+export const MODEL = 'gpt-6-luna';
 
 const MetadataSchema = z.strictObject({
   section: z.enum(['pol', 'eco', 'soc', 'cul', 'wor', 'it']),
@@ -26,8 +26,12 @@ const ASSIGN_SYSTEM = `당신은 한국어 뉴스 편집자입니다. 전체 기
 같은 사건의 중복 보도는 전부 같은 대표에 배정합니다. 대표 한 건만 남기고 다른 기사를 제외하지 않습니다.
 같은 지역·인물·주제만으로 다른 사건을 합치지 않습니다. 대통령 SNS 발언 해명과 별개 고발 사건은 분리하되, 같은 SNS 발언의 언론사별 보도는 합칩니다.
 제외는 사진 장면 설명만인 기사 #photo, 자동 생성 주가/시세/목표주가 #market, 부음 #obituary, 인사 #personnel, 어학 칼럼 #language뿐입니다.
-사진과 함께 실질 사건을 보도하면 제외하지 않습니다. 영화 흥행 손실·기업 실적은 자동 주가 시세가 아닙니다. 짧거나 설명문이 없거나 중복 보도라는 이유로 제외하지 않습니다.
-예: a000과 a080이 같은 신제품 발표, a001이 사진 설명이면 {"assignments":{"a000":"a000","a001":"#photo","a080":"a000"}}입니다. 예시 번호는 실제 입력에 있을 때만 사용합니다.
+사건을 찾기 전에 기사마다 제외 대상인지 먼저 판단하고, 제외하지 않은 기사만 사건에 배정합니다.
+사진 기사 단서: 제목이 "…하는 OOO", "…살펴보는 OOO"처럼 인물·사물의 동작·자세·장면만 말하고, 설명문이 어디서 무엇을 하고 있다는 장면 묘사나 "…에서 열린 행사에서"뿐이며 새 사실·결정·수치·발언 내용이 없으면 #photo입니다. 같은 행사를 찍은 연속 사진도 하나하나 #photo이며 사건으로 묶지 않습니다.
+사진과 함께 실질 사건(발언 내용, 결정, 사고 결과 등)을 보도하면 제외하지 않습니다. 영화 흥행 손실·기업 실적은 자동 주가 시세가 아닙니다. 짧거나 설명문이 없거나 중복 보도라는 이유로 제외하지 않습니다.
+예: a000과 a080이 같은 신제품 발표, a001이 사진 설명이면 {"assignments":{"a000":"a000","a001":"#photo","a080":"a000"}}입니다.
+예: a002 "인사하는 박OO 장관 | 박OO 장관이 개막식에서 참석자들과 인사하고 있다", a003 "축사하는 박OO 장관 | 박OO 장관이 같은 개막식에서 축사하고 있다"는 둘 다 장면 묘사뿐이므로 {"a002":"#photo","a003":"#photo"}입니다. 예시 번호는 실제 입력에 있을 때만 사용합니다.
+목록 뒤에 "같은 사건 후보"가 있으면 참고합니다. 각 후보 안에서 제외 대상을 먼저 빼고, 같은 사건인 기사끼리 같은 대표로 배정하며, 다른 사건이면 나눕니다. 후보라는 이유만으로 합치지 않고, 후보에 없는 기사도 같은 사건이면 합칩니다.
 모든 배정 대상 대표의 값이 자기 자신인지 확인합니다. 대표 연결 사슬/순환은 만들지 않습니다. 사건 합치기가 필요한데 모든 기사를 단독으로 처리하지 않습니다.`;
 
 const METADATA_SYSTEM = `당신은 한국어 뉴스 편집자입니다. 코드가 확정한 사건별 기사 묶음의 메타데이터만 작성합니다.
@@ -55,13 +59,43 @@ const SUMMARY_SYSTEM = `당신은 한국어 뉴스 편집자입니다. 한 이�
 - 기사 문장을 그대로 옮기지 않습니다.
 - 입력이 짧으면 있는 짧은 사실을 세 줄로 나눠 쓰고, 입력에 없는 내용을 덧붙이지 않습니다.`;
 
+// 같은 사건 후보: 제목의 두 글자 조각을 3개 이상, 작은 쪽의 40% 이상 공유하면 연결한 묶음(2건 이상).
+// 모델이 대량 입력에서 거의 모두 단독 배정하는 문제 보완용 힌트이며 최종 판단은 모델이 한다.
+export function candidateGroups(lines: string[]): string[][] {
+  const items = lines.map(line => {
+    const title = line.replace(/^\S+ \[[a-z]+\] /, '').split(' | ')[0].replace(/[^가-힣A-Za-z0-9]/g, '');
+    const pieces = new Set<string>();
+    for (let i = 0; i < title.length - 1; i++) pieces.add(title.slice(i, i + 2));
+    return { n: line.split(' ')[0], pieces };
+  });
+  const parent = items.map((_, i) => i);
+  const root = (i: number): number => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const shared = [...items[i].pieces].filter(p => items[j].pieces.has(p)).length;
+      const smaller = Math.min(items[i].pieces.size, items[j].pieces.size);
+      if (shared >= 3 && shared / smaller >= 0.4) parent[root(j)] = root(i);
+    }
+  }
+  const groups = new Map<number, string[]>();
+  items.forEach((item, i) => groups.set(root(i), [...(groups.get(root(i)) ?? []), item.n]));
+  return [...groups.values()].filter(g => g.length > 1);
+}
+
+function assignInput(lines: string[]): string {
+  const candidates = candidateGroups(lines);
+  if (!candidates.length) return lines.join('\n');
+  return `${lines.join('\n')}\n\n같은 사건 후보(제목 글자 겹침, 틀릴 수 있음):\n${candidates.map(g => `- ${g.join(' ')}`).join('\n')}`;
+}
+
 // completed 응답만 파싱: 잘린 JSON·잘못된 스키마는 null, HTTP/네트워크 오류는 호출자에게 전달.
-async function ask<T>(client: OpenAI, schema: z.ZodType<T>, name: string, system: string, content: string, maxTokens: number): Promise<AiReply<T>> {
+async function ask<T>(client: OpenAI, schema: z.ZodType<T>, name: string, system: string, content: string, maxTokens: number, effort: 'low' | 'medium' = 'low'): Promise<AiReply<T>> {
   const response = await client.responses.create({
     model: MODEL,
     instructions: system,
     input: content,
     max_output_tokens: maxTokens,
+    reasoning: { effort },
     store: false,
     text: { format: zodTextFormat(schema, name) },
   });
@@ -88,7 +122,7 @@ export function aiClient(apiKey: string): { organize: Organize; summarize: Summa
         return { refusal: false, output: null };
       }
       const schema = z.strictObject({ assignments: z.strictObject(Object.fromEntries(numbers.map(n => [n, z.string()]))) });
-      const first = await ask(client, schema, 'assign_articles', ASSIGN_SYSTEM, lines.join('\n'), 8000);
+      const first = await ask(client, schema, 'assign_articles', ASSIGN_SYSTEM, assignInput(lines), 16000, 'medium');
       if (first.refusal || !first.output) return first;
       const assignment = first.output.assignments;
       const groups = new Map<string, string[]>();
@@ -104,13 +138,13 @@ export function aiClient(apiKey: string): { organize: Organize; summarize: Summa
       const metadata = z.strictObject({ events: z.strictObject(Object.fromEntries(roots.map(n => [n, MetadataSchema]))) });
       const byNumber = new Map(numbers.map((n, i) => [n, lines[i]]));
       const content = roots.map(n => `사건 ${n}\n${groups.get(n)!.map(id => byNumber.get(id)).join('\n')}`).join('\n\n');
-      const second = await ask(client, metadata, 'describe_events', METADATA_SYSTEM, content, 8000);
+      const second = await ask(client, metadata, 'describe_events', METADATA_SYSTEM, content, 16000);
       if (second.refusal || !second.output) return second;
       return { refusal: false, output: {
         issues: roots.map(n => ({ ...second.output!.events[n], articles: groups.get(n)! })), excluded,
       } };
     },
     summarize: articles => ask(client, SummarySchema, 'summary', SUMMARY_SYSTEM,
-      articles.map((a, i) => `${i + 1}. 제목: ${a.title}${a.description ? `\n   설명문: ${a.description}` : ''}`).join('\n'), 1000),
+      articles.map((a, i) => `${i + 1}. 제목: ${a.title}${a.description ? `\n   설명문: ${a.description}` : ''}`).join('\n'), 4000),
   };
 }

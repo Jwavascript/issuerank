@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { aiClient } from '../server/ai';
+import { aiClient, candidateGroups } from '../server/ai';
 const meta = { section: 'it', importance: 3, terms: [['연구소'], ['센서']] };
 function network(outputs: unknown[]) {
   const net = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify({
@@ -59,4 +59,29 @@ it.each([
   const net = network([{ assignments: { a000: 'a000' } }, output]);
   expect(await aiClient('fake-key').organize(['a000 [it] 센서'])).toEqual({ refusal: false, output: null });
   expect(net).toHaveBeenCalledTimes(2);
+});
+it('배정 지시문은 제외 판정을 먼저 하고 연속 사진 장면 기사를 #photo로 안내한다', async () => {
+  const net = network([{ assignments: { a000: '#photo' } }]);
+  await aiClient('fake-key').organize(['a000 [pol] 인사하는 장관']);
+  const { instructions } = JSON.parse(String(net.mock.calls[0][1]?.body));
+  expect(instructions).toContain('제외 대상인지 먼저 판단');
+  expect(instructions).toContain('연속 사진도 하나하나 #photo');
+});
+it('candidateGroups: 제목 조각을 많이 공유하는 기사를 연쇄로 묶고 설명문·짧은 제목은 무시한다', () => {
+  expect(candidateGroups([
+    'a000 [pol] 장관 “예산 삭감 없다” 국회 답변 | 같은 설명',
+    'a001 [eco] 장관 “예산 삭감은 없다” | 같은 설명',
+    'a002 [soc] 시내버스 요금 인상 | 같은 설명',
+    'a003 [pol] 장관 예산 삭감 없다 재확인',
+    'a004 [it] 장관 | 장관 “예산 삭감 없다” 국회 답변',
+  ])).toEqual([['a000', 'a001', 'a003']]);
+  expect(candidateGroups(['a000 [it] 누리호 발사', 'a001 [it] 우주 소식'])).toEqual([]);
+});
+it('후보가 있으면 배정 입력 끝에 후보 줄을 붙이고, 없으면 기사 목록만 보낸다', async () => {
+  const lines = ['a000 [pol] 장관 “예산 삭감 없다” 국회 답변', 'a001 [eco] 장관 “예산 삭감은 없다”', 'a002 [soc] 시내버스 요금 인상'];
+  const net = network([{ assignments: { a000: '#photo', a001: '#photo', a002: '#photo' } }, { assignments: { a000: '#photo' } }]);
+  await aiClient('fake-key').organize(lines);
+  expect(JSON.parse(String(net.mock.calls[0][1]?.body)).input).toBe(`${lines.join('\n')}\n\n같은 사건 후보(제목 글자 겹침, 틀릴 수 있음):\n- a000 a001`);
+  await aiClient('fake-key').organize(['a000 [it] 누리호 발사']);
+  expect(JSON.parse(String(net.mock.calls[1][1]?.body)).input).toBe('a000 [it] 누리호 발사');
 });
