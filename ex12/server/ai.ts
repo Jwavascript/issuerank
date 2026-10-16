@@ -17,6 +17,14 @@ const MetadataSchema = z.strictObject({
 const EXCLUSIONS = new Set(['#photo', '#market', '#obituary', '#personnel', '#language']);
 // 입력 줄 `a000 [섹션] 제목 | 설명문`에서 제목이 사진 접두로 시작하는지(D19-2)
 const PHOTO_PREFIX = /^\S+ \[[a-z]+\] \[(사진|포토|화보)\]/;
+// 제목 맨 앞 대괄호 머리표 안(띄어쓰기 무관)에 뉴스 모음 낱말이 있는지(D19-3). 본문 속 낱말은 보지 않는다.
+const TITLE_TAG = /^\S+ \[[a-z]+\] \[([^\]]*)\]/;
+const DIGEST_WORD = /헤드라인|뉴스리뷰|주요뉴스|뉴스브리핑|간추린/;
+// AI 배정 전에 코드로 제외할 입력 줄인지: 사진 접두(D19-2) 또는 뉴스 모음 머리표(D19-3)
+export function excludedBeforeAi(line: string): boolean {
+  const tag = TITLE_TAG.exec(line)?.[1];
+  return PHOTO_PREFIX.test(line) || (tag !== undefined && DIGEST_WORD.test(tag.replace(/\s/g, '')));
+}
 
 const SummarySchema = z.object({ line1: z.string(), line2: z.string(), line3: z.string() });
 
@@ -124,8 +132,9 @@ export function aiClient(apiKey: string): { organize: Organize; summarize: Summa
         return { refusal: false, output: null };
       }
       // D19-2: 제목이 [사진]·[포토]·[화보]로 시작하는 기사는 AI에 보내지 않고 #photo로 제외한다.
-      const excluded = lines.filter(line => PHOTO_PREFIX.test(line)).map(line => line.split(' ')[0]);
-      const rest = lines.filter(line => !PHOTO_PREFIX.test(line));
+      // D19-3: 제목 맨 앞 머리표가 뉴스 모음(헤드라인·뉴스리뷰·주요뉴스·뉴스브리핑·간추린)인 기사도 같은 방식으로 제외한다.
+      const excluded = lines.filter(excludedBeforeAi).map(line => line.split(' ')[0]);
+      const rest = lines.filter(line => !excludedBeforeAi(line));
       if (rest.length === 0) return { refusal: false, output: { issues: [], excluded } };
       const restNumbers = rest.map(line => line.split(' ')[0]);
       const schema = z.strictObject({ assignments: z.strictObject(Object.fromEntries(restNumbers.map(n => [n, z.string()]))) });

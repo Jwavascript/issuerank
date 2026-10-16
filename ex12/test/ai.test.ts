@@ -1,6 +1,6 @@
 // 실제 OpenAI SDK + 가짜 HTTP: API 키·외부 네트워크·DB 없이 어댑터 계약을 검증한다.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { aiClient, MODEL } from '../server/ai';
+import { aiClient, excludedBeforeAi, MODEL } from '../server/ai';
 
 const KEY = 'test-openai-key';
 const organized = { issues: [{ section: 'it', articles: ['a000'], importance: 5, terms: [['누리호'], ['발사']] }], excluded: [] };
@@ -87,6 +87,32 @@ describe('OpenAI Responses 어댑터', () => {
     const net = mockHttp(response(JSON.stringify(assigned)));
     expect(await aiClient(KEY).organize(['a000 [cul] [사진]장면', 'a001 [soc] [포토]장면'])).toEqual({ refusal: false, output: { issues: [], excluded: ['a000', 'a001'] } });
     expect(net).not.toHaveBeenCalled();
+  });
+
+  it('제목 맨 앞 머리표가 뉴스 모음이면 AI에 보내지 않고 제외한다(D19-3)', async () => {
+    const lines = ['a000 [it] 누리호 발사', 'a001 [pol] [이시각헤드라인] 10월 15일 뉴스리뷰 | 모음', 'a002 [eco] [주요 뉴스] 오늘의 경제', 'a003 [soc] [뉴스 브리핑] 오후 소식',
+      'a004 [cul] [뉴스리뷰] 한 주 정리', 'a005 [it] 헤드라인 뉴스 개편 발표 | 헤드라인', 'a006 [wor] [단독] 헤드라인 조작 의혹', 'a007 [soc] [포토] 행사 장면'];
+    expect(lines.map(excludedBeforeAi)).toEqual([false, true, true, true, true, false, false, true]);
+    expect(excludedBeforeAi('a008 [pol] [헤드라인] 오늘')).toBe(true);
+    expect(excludedBeforeAi('a009 [it] [간추린 단신] 기업 소식 외')).toBe(true);
+    expect(excludedBeforeAi('a010 [soc] [단신] 시청 화재 진화')).toBe(false);
+    const assign = { assignments: { a000: 'a000', a005: 'a005', a006: 'a006' } };
+    const meta = { events: { a000: described.events.a000, a005: { section: 'it', importance: 1, terms: [['헤드라인'], ['개편']] }, a006: { section: 'wor', importance: 2, terms: [['헤드라인'], ['조작']] } } };
+    const net = mockHttp(response(JSON.stringify(assign)));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(assign))), { headers: { 'content-type': 'application/json' } }));
+    net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(meta))), { headers: { 'content-type': 'application/json' } }));
+    const result = await aiClient(KEY).organize(lines);
+    expect(net).toHaveBeenCalledTimes(2);
+    const first = JSON.parse(String(net.mock.calls[0][1]?.body));
+    for (const n of ['a001', 'a002', 'a003', 'a004', 'a007']) {
+      expect(first.input).not.toContain(n);
+      expect(first.text.format.schema.properties.assignments.properties).not.toHaveProperty(n);
+    }
+    expect(first.input.startsWith('a000 [it] 누리호 발사\na005 [it] 헤드라인 뉴스 개편 발표 | 헤드라인\na006 [wor] [단독] 헤드라인 조작 의혹')).toBe(true);
+    expect(JSON.parse(String(net.mock.calls[1][1]?.body)).input).not.toContain('뉴스리뷰');
+    const output = (result as { output: { issues: { articles: string[] }[]; excluded: string[] } }).output;
+    expect(output.excluded).toEqual(['a001', 'a002', 'a003', 'a004', 'a007']);
+    expect([...output.issues.flatMap(i => i.articles), ...output.excluded].sort()).toEqual(lines.map(l => l.split(' ')[0]));
   });
 
   it('refusal은 거절로 전달한다', async () => {
