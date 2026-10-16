@@ -253,7 +253,9 @@ a { color: inherit; }
 .tile .mark { margin-left: auto; width: 10px; height: 12px; opacity: 0; }
 .tile.saved .mark { opacity: .95; }
 .tile.xs { padding: 4px 5px; justify-content: center; align-items: center; }
-.tile.xs .t, .tile.xs .rk, .tile.xs .mark { display: none; }
+.tile.xs .t, .tile.xs .mark { display: none; }
+.tile.xs .foot { flex-wrap: wrap; justify-content: center; gap: 0 4px; white-space: nowrap; }
+.tile.xs .rk::after { content: " ·"; }
 .tile.xxs .foot { display: none; }
 
 .tip {
@@ -652,6 +654,7 @@ function squarify(items, x, y, w, h) {
 }
 
 const GAP = 2, LABEL_H = 22;
+const NARROW = matchMedia('(max-width: 640px)');
 const secTotal = k => secIssues(k).reduce((a, b) => a + b.articleCount, 0);
 
 function renderMap() {
@@ -670,9 +673,16 @@ function renderMap() {
 function drawMap() {
   const map = document.getElementById('map');
   if (!map || !ranking) return;
+  // 640px 이하 전체 섹션: 섹션 블록을 한 줄에 하나씩 세로로 쌓음(지도는 세로로 길어짐)
+  const stack = NARROW.matches && !state.zoom;
+  const shown = SECTIONS.filter(s => secIssues(s.key).length);
+  const boxH = Math.round(Math.min(320, Math.max(260, map.clientWidth * 0.8)));
+  map.style.height = stack ? (shown.length * boxH) + 'px' : '';
   const W = map.clientWidth, H = map.clientHeight;
   const gRects = state.zoom
     ? SECTIONS.map(s => s.key === state.zoom ? { s, x: 0, y: 0, w: W, h: H } : { s, x: W / 2, y: H / 2, w: 0, h: 0, hidden: true })
+    : stack
+    ? SECTIONS.map(s => { const i = shown.indexOf(s); return i < 0 ? { s, x: W / 2, y: 0, w: 0, h: 0, hidden: true } : { s, x: 0, y: i * boxH, w: W, h: boxH }; })
     : squarify(SECTIONS.map(s => ({ s, value: secIssues(s.key).length ? 1 : 0 })), 0, 0, W, H);
 
   for (const r of gRects) {

@@ -321,3 +321,86 @@ vitest · 빌드 전후 `git status --short` 같음(되돌린 파일 없음).
 사용자가 Vercel Logs(01:26~01:56Z, 22줄)를 전달. 12절 확인 요청 시간대 01:49:56~01:50:05Z에 해당하는 줄은 10줄로 요청 10회와 경로·상태가 모두 일치(rankings 200 · 404, sign-up 200, get-session 200, folders 201, bookmarks POST 201 · GET 200 · DELETE 204, sign-out 200, 악성 Origin sign-in 403). 5xx 0. level error는 403 요청의 `AUTH_INTERNAL_ERROR` 안전 코드 1줄뿐(12절에 예상된 줄로 명시, 스택·원문 없음). 22줄 전체에 비밀값·쿠키·토큰 원문 0. 배포 id는 e7dcd99 푸시 후 자동 재배포분(dpl_Btcr…)이며 ex12 코드 동작은 동일. 나머지 12줄은 사용자 브라우저 요청(모두 200 info).
 
 **13 배포 로그 [OK].** ex12 최종 합계 OK 17 / FAIL 0 / SKIP 0 → **PASS**(D19·D19-2·D19-3 보완 심사 포함). 기록: 코디네이터(사용자 전달 로그 대조).
+
+## 14. 2026-10-16 KST — D20 모바일 이슈맵 가독성 독립 심사
+
+심사 역할(`agent_prompts/3_judge_agent.md`), Claude Code, Termux Chromium 155 headless + CDP, proot Ubuntu `next start -p 3000 --hostname 127.0.0.1`. 기준: `plan/PLAN_backend_ex12.md` 끝 절(D20), PLAN.md 5절 D20 · 6절. 제작 보고 14절은 참고만 했고 제작 스크립트(`verify-mapmobile.mjs`)는 쓰지 않았다. 측정 스크립트는 스크래치 폴더에 새로 작성 후 삭제. 제품 코드 수정 · 커밋 · 푸시 · stash 없음.
+
+**판정: PASS 보류 — OK 18 / FAIL 0 / SKIP 1(배포 360px, 푸시 후).** 로컬에서 확인할 수 있는 줄은 모두 통과.
+
+### 14.1 PLAN 항목별
+| 항목 | 판정 | 근거 |
+|---|---|---|
+| 모바일 배치(640px 이하 세로 쌓기, 가로 스크롤 0, 확대 · 범례 · 이동 그대로) | done | `drawMap()` `stack = NARROW.matches && !state.zoom`, 블록 높이 260~320. 360 · 375 · 390 · 640에서 stacked, 641에서 기존 squarify |
+| 360px 각 섹션 1위 제목 2줄 이상 | done | 360 1위 제목 줄 수 2·3·2·3·3·3 |
+| 작은 타일 `n위 · m건`, xxs 0, 누르면 기존 상세창 | done | CSS `.tile.xs .rk` 숨김 해제 + `::after " ·"`. 360 xs 2개 `4위 · 1건`·`5위 · 1건`, xxs 0 |
+| 유지(641px 이상 배치 · 산식 · 색 · 문구 · aria-label · API, 새 패키지 0, ex09 미복사) | done | diff 상 squarify · L() · 색 · aria-label 줄 변경 없음, 641 · 768 · 1280 좌표 동일 |
+
+### 14.2 범위 · 기존 코드 경로
+- `git diff --stat`: 제품 변경은 `ex12/public/index.html` 하나(+11 −1, sha256 `348787b4…` = 제작 보고). 나머지는 문서(HANDOFF · PLAN · PLAN_backend_ex12 · ex12_build). ex09 · 다른 단계 · package 파일 변경 0.
+- 641px 이상 · 확대 상태: `stack=false` → `map.style.height=''`(변경 전엔 인라인 높이 없음 = 같은 CSS 높이), gRects는 기존 zoom 식 · squarify 식 그대로. 새로 계산되는 `shown`·`boxH`는 쓰이지 않음. 640 이하 확대도 CSS 높이 760으로 기존과 같음.
+
+### 14.3 테스트 · 빌드
+| 명령 | 결과 |
+|---|---|
+| `bash scripts/ex12-ubuntu.sh npm test` | 14파일 119/119, 앞뒤 `git status --short` 같음 |
+| `bash scripts/ex12-ubuntu.sh npm run build` | 변경 전(HEAD 임시 교체) · 변경 후 모두 종료 0, 출력 비밀값 검사 leak:false |
+
+변경 전 기준: `git show HEAD:ex12/public/index.html`을 스크래치에 두고(HEAD `01cbdb25…`, 작업본 `348787b4…`) index.html만 교체 → 빌드 · 측정 → 작업본 복원, 복원 후 해시 `348787b4…` 일치.
+
+### 14.4 뷰포트별 측정(10-16 랭킹 30타일, 직접 작성한 DOM 측정)
+| 뷰포트 | 배치 | 지도 높이 | xs(전→후) | xxs | 순위 보임(전→후) | 1위 제목 · 줄 수 | 가로 스크롤 | 넘침 |
+|---|---|---|---|---|---|---|---|---|
+| 360×800 | 세로 쌓기 | 760→1572 | 12→2 | 0 | 18→30/30 | 6/6 · 2,3,2,3,3,3 | 0 (360=360) | 0 |
+| 375×667 | 세로 쌓기 | 760→1644 | 9→2 | 0 | 21→30/30 | 6/6 · 2,3,2,3,3,3 | 0 | 0 |
+| 390×844 | 세로 쌓기 | 760→1716 | 9→0 | 0 | 21→30/30 | 6/6 | 0 | 0 |
+| 640×900 | 세로 쌓기 | 760→1920 | 2→0 | 0 | 28→30/30 | 6/6 | 0 | 0 |
+| 641×900 | 기존 트리맵 | 640=640 | 4=4 | 0 | 26→30/30 | 6/6 | 0 | 0 |
+| 768×1024 | 기존 트리맵 | 764=764 | 0 | 0 | 30/30 | 6/6 | 0 | 0 |
+| 1280×800 | 기존 트리맵 | 540=540 | 0 | 0 | 30/30 | 6/6 | 0 (1265≤1280) | 0 |
+
+- 순위 보임 = `.rk`가 표시되고 타일 사각형 안에 있으며 `n위`로 시작. 넘침 = 보이는 자식(.t · .foot · .rk · .n)이 타일 밖이거나 타일 scrollWidth/Height > client.
+- 360 · 390에서 타일 30개를 하나씩 화면 가운데로 스크롤해 `elementFromPoint` = 그 타일 30/30(덮임 없음).
+- 넓은 화면 좌표: 641 · 768 · 1280에서 섹션 블록 6개 · 타일 30개의 id별 x · y · w · h · xs · xxs가 변경 전과 **모두 같음**, 768 · 1280 캡처는 PNG 해시까지 같음.
+- 640/641 경계: 640 세로 쌓기(블록 320 × 6), 641 기존 2열 트리맵 — `@media (max-width: 640px)`와 일치.
+
+동작(360, 변경 후): 가장 작은 정치 4위(67.6×130.8) 클릭 → 상세창 h2 = 이슈 제목 OK · 정치 확대 → 정치 블록만 · 높이 760 · 가로 스크롤 0, 전체 복귀 → 좌표 처음과 같음 OK · 이전 날짜(10-15) → 세로 쌓기 · 30타일 순위 30/30 · xxs 0, 오늘 복귀 → 좌표 처음과 같음 OK · 창 360→1280→360 → 1280은 새로 연 1280과, 360은 새로 연 360과 좌표 같음 OK · 다크(prefers-color-scheme) → 배경 rgb(18,18,17), 세로 쌓기 · xxs 0 · 가로 스크롤 0 OK.
+
+캡처(`ex12/.data/judge-mapmobile-20261016/`, git 무시): `before-*` · `after-*` 7뷰포트, `after-360-{drawer,zoom-pol,prevday,dark,view-soc,view-cul}.png`, 측정값 `before.json` · `after.json`. 눈으로 확인: after-360(타일마다 순위 · 1위 제목), before-360(xs `n건`만), after-641(기존 2열, xs `4위 · 1건`), after-360-drawer, after-360-dark, after-360-view-soc. 지도 전체 길이 캡처는 중간이 비어 보이는데 닫힌 바텀시트(82vh)가 늘린 캡처 영역을 덮는 캡처 방식 문제이며(변경 전 캡처도 같음), 스크롤 뷰포트 캡처와 elementFromPoint 30/30으로 화면 문제 아님을 확인.
+
+### 14.5 외부 호출 · DB
+- 브라우저 요청(localhost): `/`, `/api/rankings`(날짜 이동 포함), `/api/auth/get-session`만. newsdata · OpenAI 0(랭킹 라우트는 store만 import, 서버 로그 Error · newsdata · openai 0줄). 글꼴 CDN(jsdelivr Pretendard)은 기존 페이지 동작.
+- DB: 심사 전후 9개 표(articles 610 · issues 370 · bookmarks · folders · collect_runs · user · account · session · verification) 행 수 · md5 같음 → 쓰기 0. 서버 · 빌드 · 스냅숏 출력 비밀값 검사 모두 leak:false.
+
+### 14.6 점검 줄 합계
+| # | 줄 | 판정 |
+|---|---|---|
+| 1 | npm test 119/119 | OK |
+| 2 | npm run build(전 · 후) | OK |
+| 3 | diff 범위(제품은 index.html뿐) | OK |
+| 4 | 641 이상 · 확대 기존 코드 경로 | OK |
+| 5 | 360 · 375 · 390 · 640 순위 30/30 | OK |
+| 6 | 섹션 1위 제목(360 2줄 이상) | OK |
+| 7 | xxs 0 | OK |
+| 8 | 가로 스크롤 0(7뷰포트) | OK |
+| 9 | 텍스트 넘침 0(7뷰포트) | OK |
+| 10 | 640/641 경계 전환 | OK |
+| 11 | 641 · 768 · 1280 좌표 변경 전과 동일 | OK |
+| 12 | 타일 클릭 → 상세창 제목 | OK |
+| 13 | 섹션 확대 · 복귀 | OK |
+| 14 | 날짜 이전 · 오늘 재배치 | OK |
+| 15 | 창 360→1280→360 재배치 | OK |
+| 16 | 다크 모드 | OK |
+| 17 | 외부 호출 0 · DB 쓰기 0 · 비밀값 누출 0 | OK |
+| 18 | 임시 교체 원복 해시 · 프로세스 정리 | OK |
+| 19 | 배포 주소 360px 캡처 | SKIP — 푸시 후 |
+
+**합계 OK 18 / FAIL 0 / SKIP 1.**
+
+### 14.7 발견한 점(심각도 순, 모두 참고)
+1. 641~767px에서도 xs 타일이 이제 `n위 · m건`을 보인다(오늘 641에서 4개, 전엔 `1건`만). 배치 · 좌표는 같고 PLAN 「작은 타일」 줄(폭 조건 없음)과 맞음. 제작 보고는 768 · 1280의 xs 0만 언급.
+2. 360 · 375에서 정치 4 · 5위는 여전히 xs(폭 67.6/70.8 < 72)라 제목 없이 `n위 · m건` — PLAN이 허용한 형태, 누르면 상세창 제목.
+3. 페이지 전체 길이 캡처는 닫힌 바텀시트가 가린다(캡처 방식 문제, 제작 보고에도 언급). 배포 360 캡처도 뷰포트 캡처를 권장.
+
+### 14.8 정리
+next-server · npm exec · proot 트리와 Chromium(본체 · zygote) 종료 → curl 3000 = 000 · CDP 9447 = 000, `ps -ef | grep -E "next-server|next start|chromium"` 0줄. (첫 확인에서 `grep -v claude`가 프로필 경로의 `claude-…` 때문에 Chromium 줄까지 걸러 9447이 200으로 남은 것을 발견해 다시 종료함.) 브라우저 프로필 · 임시 스크립트(`ex12/.data/judge-d20-snap.mjs` 포함) · 백업 사본 삭제, `git status --short`는 심사 전과 같음(본 보고 · HANDOFF 제외).

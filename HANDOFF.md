@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-16 · ex12 배포 심사 PASS(https://issuerank-kappa.vercel.app), ex09 PASS, D19 검색어·D19-2/3 제외 규칙 푸시(10-17 예약 실행부터 적용). 다음: 워크플로 작업 폴더 ex12로(D10), 7일 품질 기록
+최종 갱신: 2026-10-16 · ex12 D20 모바일 이슈맵 제작 완료(미커밋, `reports/ex12_build.md` 14절) · 독립 심사 PASS 보류 OK18/FAIL0/SKIP1(`reports/ex12_judge.md` 14절, 남은 것 배포 360px). ex12 배포 심사 PASS(https://issuerank-kappa.vercel.app), ex09 PASS, D19 검색어·D19-2/3 제외 규칙 푸시(10-17 예약 실행부터 적용). 다음: 사용자 확인 후 D20 커밋·푸시 → 배포 주소 360px 뷰포트 캡처로 SKIP 1줄 판정, 7일 품질 기록
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
@@ -100,6 +100,8 @@ ex08 요약:
 - **D19-2 다음**: 10-16 06:17 KST 예약 실행(푸시된 옛 코드)과 ex09 예약 실행 심사 확인 → 사용자 확인 후 커밋·푸시 → 그다음 예약 실행(10-17) 연관기사 수 분포를 `reports/ex09_daily.md`에 기록.
 - **D19-3 제작(2026-10-16)**: `reports/ex12_build.md` 12절. 바뀐 파일 ex09·ex12 `server/ai.ts`(excludedBeforeAi + organize 제외 두 줄)·`test/ai.test.ts`(+1) — 작업 트리에만. 검사 스크립트 `ex12/.data/check-digest.ts`, 결과 `ex12/.data/digest-20261016/result.json`. 다음: 사용자 확인 후 D19-3 커밋 · D19-2(5156e89 로컬)와 함께 푸시 → 다음 예약 실행에서 모음 기사 제외·연관기사 수 분포를 `reports/ex09_daily.md`에 기록.
 - **D19-3 심사(2026-10-16)**: `reports/ex12_judge.md` 11절 PASS(OK13/FAIL0/SKIP0). 독립 스크립트(삭제함)로 610건 읽기 전용 검사, 결과 `ex12/.data/judge-digest-20261016/result3.json`. 참고: `[간추린 단신]`(id 1449) 단신 모음은 4낱말 밖이라 미제외 — 넣을지는 사용자 결정. 경계 `[헤드라인 단독]` 제외 · 전각 괄호 · 앞 공백 미제외(현재 데이터 영향 0).
+- **D20 모바일 이슈맵 제작(2026-10-16)**: `reports/ex12_build.md` 14절. `ex12/public/index.html`만(+11 −1): 640px 이하·확대 아님이면 섹션 블록 세로 쌓기(블록 높이 260~320px), xs 타일 `n위 · m건`. 실제 Chromium 측정 360 xs 12→2·390 9→0, 순위 30/30·xxs 0·가로 스크롤 0·1위 제목 6/6, 768·1280 좌표 변경 전과 동일, 클릭→상세창·확대·다크 OK. 테스트119·빌드 OK, 외부0·DB 쓰기0. 측정 스크립트 `ex12/.data/verify-mapmobile.mjs`, 캡처 `ex12/.data/mapmobile-20261016/`. 다음: 독립 심사 → 사용자 확인 후 커밋·푸시 → 배포 주소 360px 캡처 1회. 로컬 서버는 `next start --hostname 127.0.0.1`(dev Turbopack 불가).
+- **D20 독립 심사(2026-10-16)**: `reports/ex12_judge.md` 14절 PASS 보류(OK18/FAIL0/SKIP1). 독립 CDP 측정 7뷰포트(360·375·390·640·641·768·1280): 640 이하 세로 쌓기·순위 30/30·xxs 0·가로 스크롤 0·넘침 0, 641·768·1280 좌표 변경 전과 동일, 클릭·확대·날짜·창 크기·다크 OK, 외부 0·DB 쓰기 0. 캡처 `ex12/.data/judge-mapmobile-20261016/`. 남은 SKIP: 푸시 후 배포 주소 360px(전체 길이 캡처는 바텀시트가 가리므로 뷰포트 캡처).
 - **다음 작업**: (ex12) 사용자에게 받을 것 4가지(`reports/ex12_judge.md` 8절: Vercel 설정 화면·배포 고유 주소·PC/폰 결과·15:20~15:45 KST Logs) → SKIP 4줄만 다시 판정(배포 요청 남은 한도 84) → PASS면 워크플로 2줄 ex12로. (ex09) 예약 실행 심사 PASS(2026-10-16, `reports/ex09_judge.md` 9절). 남은 것: 사용자가 로그인 브라우저로 run 38825041172·38683426817 Summary에 daily 출력·끝 줄이 있는지 확인, `ubuntu-latest`→Ubuntu 26 이동(10-19) 뒤 첫 예약 실행 확인, 7일째(10-21)까지 `reports/ex09_daily.md` 기록(10-16 줄은 n=묶음 6/6, 옛 검색어 코드). D19-2 커밋 5156e89는 로컬만(푸시는 사용자 확인 후).
 - (완료) 이전 사용자 단계: 커밋 → main 푸시 → GitHub Settings › Secrets and variables › Actions에 `DATABASE_URL`(풀러)·`NEWSDATA_API_KEY`·`OPENAI_API_KEY` 등록 → Actions › daily › Run workflow 1회. 그다음 ex09 독립 심사(새 세션, `reports/ex09_judge.md`, 심사 newsdata 1·OpenAI 0), 다음 날 06:17 KST 이후 예약 실행 확인, 7일째까지 `reports/ex09_daily.md` 기록.
 
