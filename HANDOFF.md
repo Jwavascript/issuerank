@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-16 · ex12 D20 모바일 이슈맵 제작 완료(미커밋, `reports/ex12_build.md` 14절) · 독립 심사 PASS 보류 OK18/FAIL0/SKIP1(`reports/ex12_judge.md` 14절, 남은 것 배포 360px). ex12 배포 심사 PASS(https://issuerank-kappa.vercel.app), ex09 PASS, D19 검색어·D19-2/3 제외 규칙 푸시(10-17 예약 실행부터 적용). 다음: 사용자 확인 후 D20 커밋·푸시 → 배포 주소 360px 뷰포트 캡처로 SKIP 1줄 판정, 7일 품질 기록
+최종 갱신: 2026-10-16 · ex12 PASS(배포 https://issuerank-kappa.vercel.app, D20 모바일 이슈맵 PASS·배포 반영), ex09 PASS, 하루 실행은 ex12 폴더·새 검색어·사진/모음 제외로 10-17 첫 운영. 다음: 10-21까지 품질 기록, 예약 지연 관찰, 10-19 Ubuntu 26 전환 후 확인
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 

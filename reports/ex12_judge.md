@@ -404,3 +404,7 @@ vitest · 빌드 전후 `git status --short` 같음(되돌린 파일 없음).
 
 ### 14.8 정리
 next-server · npm exec · proot 트리와 Chromium(본체 · zygote) 종료 → curl 3000 = 000 · CDP 9447 = 000, `ps -ef | grep -E "next-server|next start|chromium"` 0줄. (첫 확인에서 `grep -v claude`가 프로필 경로의 `claude-…` 때문에 Chromium 줄까지 걸러 9447이 200으로 남은 것을 발견해 다시 종료함.) 브라우저 프로필 · 임시 스크립트(`ex12/.data/judge-d20-snap.mjs` 포함) · 백업 사본 삭제, `git status --short`는 심사 전과 같음(본 보고 · HANDOFF 제외).
+
+### 14절 보충: 배포 확인 (2026-10-16, 코디네이터)
+
+커밋 62c3d3d 푸시 후 Vercel 자동 재배포. 약 20초 뒤 `https://issuerank-kappa.vercel.app/` 응답 본문 SHA-256이 로컬 심사 파일 `ex12/public/index.html`(348787b4…)과 일치 — 배포된 화면 코드가 로컬에서 7뷰포트 측정한 코드와 동일하고, 배치는 이 파일과 같은 API 데이터만으로 결정된다. 배포 주소 360px 줄 **[OK](배포 파일 해시 일치)**. 실제 기기 화면은 사용자 휴대폰 확인을 권장(판정 외). D20 최종 OK 19 / FAIL 0 / SKIP 0 → **PASS**.
