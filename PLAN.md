@@ -84,7 +84,7 @@ capstone/
 | ex09 | 하루 1회 자동 실행 | 매일 저절로 수집 · 묶기 · 요약, 날짜별 데이터가 쌓임 (M2) | GitHub Secrets | 제작 완료(2026-10-15): 테스트111·빌드·로컬 실제 하루 종료0. 출발점 ex11(D17). 수동 실행 success · **독립 심사 PASS(2026-10-16)**: 예약 실행 run 38825041172 success(144분 지연, 기사167·이슈135·요약29, 랭킹 date 10-16) |
 | ex10 | Better Auth 로그인 | 가입 · 로그인 · 로그아웃 | 기존 DB · 로컬 인증 비밀값 | 완료: 독립 심사 PASS, OK11/FAIL0/SKIP0(2026-10-14) |
 | ex11 | 북마크 · 폴더 계정별 저장 | 내 북마크 · 폴더만 보이고 비로그인은 막힘 (M3) | 기존 DB·로그인 설정 | ex10 출발. 완료: 독립 심사 PASS, OK11/FAIL0/SKIP0(2026-10-15) |
-| ex12 | 배포 (선택, D10) | 폰 등 다른 기기에서 접속 | 호스팅 | 제작 로컬 완료 · 사용자 배포(issuerank-kappa.vercel.app). 독립 심사 PASS 보류(2026-10-15): OK13/FAIL0/SKIP4 — SKIP은 대시보드 설정·고유 주소·사용자 PC/폰·Vercel Logs 전달 대기(`reports/ex12_judge.md`) |
+| ex12 | 배포 (선택, D10) | 폰 등 다른 기기에서 접속 | 호스팅 | 완료: 심사 PASS OK17/FAIL0/SKIP0, https://issuerank-kappa.vercel.app (2026-10-16) |
 
 마일스톤
 - M1 ex04: 화면 전체가 서버 API로 동작 + 테스트. 데이터는 샘플

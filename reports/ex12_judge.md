@@ -276,3 +276,48 @@ vitest · 빌드 전후 `git status --short` 같음(되돌린 파일 없음).
 | 13 | 외부 호출 0 · DB 쓰기 0(read only on, 전후 같음) · 누출 false · 새 패키지 0 · 임시 스크립트 삭제 | [OK] |
 
 **합계: OK 13 · FAIL 0 · SKIP 0 → PASS.**
+
+## 12. 2026-10-16 KST — 남은 SKIP 4줄 재판정(7b · 9b · 11b · 13)
+
+심사 역할(Claude Code), 제품 코드 · Vercel/GitHub 설정 · 재배포 · 커밋 · 푸시 없음, 서버 안 띄움. newsdata 0 · OpenAI 0.
+
+### 12.1 로그 시간대용 확인 요청(이번 실행)
+스크립트 `ex12/.data/judge-log.mjs`(sha256 `a6d4b6df…`), 결과 `ex12/.data/judge-log-verdict.json`(`0779bf12…`, git 무시). `bash scripts/ex12-ubuntu.sh node .data/judge-log.mjs` 종료 0, 출력은 `.env` 값 · DB 비밀번호 · 사용자 · 호스트 누출 검사 `leak:false` 뒤에만 봄. 쿠키 · 토큰 · 비밀번호 출력 0.
+
+- **시간대: 2026-10-16 01:49:56Z ~ 01:50:05Z (10:49:56 ~ 10:50:05 KST)** — 첫 요청 직전 ~ 악성 Origin 요청 직후. 9b 확인 2회는 그 직후(다른 호스트, 01:50:05Z~01:50:06Z 무렵).
+- `https://issuerank-kappa.vercel.app` 요청 10회(누계 76/150) + 9b 2회.
+
+| 요청 | 상태 |
+|---|---|
+| GET `/api/rankings` | 200(date 2026-10-16) |
+| GET `/api/rankings?date=2000-01-01` | 404 |
+| POST 가입(`ex12-log-<uuid>@example.invalid`) | 200 |
+| GET get-session | 200(본인 id 일치) |
+| POST `/api/folders` | 201 |
+| POST `/api/bookmarks`(그날 Top 5 첫 카드) | 201 |
+| GET `/api/bookmarks` | 200(1개, 같은 id) |
+| DELETE `/api/bookmarks/:id` | 204 |
+| POST sign-out | 200 |
+| POST 로그인 `Origin: https://evil.example` | **403**(Set-Cookie 0) |
+
+정리(finally): 이번 userId의 bookmarks → folders → session → account → user 삭제, 남은 행 b0 · f0 · s0 · a0 · user0. 9테이블 건수 · md5 전후 **같음**(시작 시 articles 610 · issues 370 · collect_runs 78 · bookmarks 1 · folders 1 · user 1 · session 1 · account 1 · verification 0 — 사용자 본인 계정 행 보존).
+
+### 12.2 SKIP 줄 재판정
+| # | 줄 | 판정 | 근거 |
+|---|---|---|---|
+| 7b | 배포 설정 — 대시보드 화면 | **OK(사용자 확인)** | 사용자가 Root `ex12` · Next.js · Node 24.x · icn1 · 환경 변수 3개(Production) · Standard Protection 확인 |
+| 9b | 배포 고유 주소 보호 | **OK** | 코디네이터 확인(로그인 없이 GET → 302 `vercel.com/sso-api`)에 더해 심사가 각 1회 다시 확인: `https://issuerank-c6f5r36em-jwavascripts-projects.vercel.app/api/rankings` **302 → `https://vercel.com/sso-api`**, `https://issuerank-git-main-jwavascripts-projects.vercel.app/api/rankings` **302 → `https://vercel.com/sso-api`**(쿼리 생략). 공개는 Production 주소뿐 |
+| 11b | 두 기기 ②(사용자 PC · 폰) | **OK(사용자 확인)** | 사용자가 PC · 폰에서 같은 계정 북마크 연동 확인(DB에도 사용자 행 user 1 · bookmarks 1 · folders 1 존재) |
+| 13 | 배포 로그 | **SKIP — 대기** | 아래 시간대 Vercel › Logs를 사용자가 줄 때 판정 |
+
+참고(판정 근거 아님): 사용자가 준 2026-10-16 01:12~01:42Z 로그 12줄은 모두 level info · 200 · 오류 0. 고유 주소에서 200인 줄은 로그인한 브라우저(Vercel SSO 통과) 요청으로 보임 — 비로그인 302와 모순 없음.
+
+**13 기대 결과**: 시간대 **2026-10-16 01:49:50Z ~ 01:50:10Z(10:49:50 ~ 10:50:10 KST)**의 `issuerank-kappa` 요청 10줄(위 표와 같은 경로 · 상태) — 5xx 0, 비밀값 · 쿠키 · 토큰 · 비밀번호 · SQL 인수 원문 0, 악성 Origin 로그인은 403. error 레벨 0을 기대하되, 2026-10-15 로컬 심사에서 악성 Origin 1회에 better-auth가 `AUTH_INTERNAL_ERROR` 안전 코드 한 줄을 남긴 적이 있으므로(5절 13줄) **그 403 요청에 붙은 이 코드 한 줄만은 예상된 줄**로 보고 FAIL로 치지 않는다(다른 error · 스택 · 원문 값이 있으면 FAIL). 9b 302 두 건은 SSO 단계라 앱 로그에 없을 수 있다.
+
+**합계(5절 17줄): OK 16 / FAIL 0 / SKIP 1(13 배포 로그 대기) → PASS 보류.** 13이 기대대로면 ex12 PASS.
+
+## 13. 배포 로그 줄 판정 · 최종 (2026-10-16)
+
+사용자가 Vercel Logs(01:26~01:56Z, 22줄)를 전달. 12절 확인 요청 시간대 01:49:56~01:50:05Z에 해당하는 줄은 10줄로 요청 10회와 경로·상태가 모두 일치(rankings 200 · 404, sign-up 200, get-session 200, folders 201, bookmarks POST 201 · GET 200 · DELETE 204, sign-out 200, 악성 Origin sign-in 403). 5xx 0. level error는 403 요청의 `AUTH_INTERNAL_ERROR` 안전 코드 1줄뿐(12절에 예상된 줄로 명시, 스택·원문 없음). 22줄 전체에 비밀값·쿠키·토큰 원문 0. 배포 id는 e7dcd99 푸시 후 자동 재배포분(dpl_Btcr…)이며 ex12 코드 동작은 동일. 나머지 12줄은 사용자 브라우저 요청(모두 200 info).
+
+**13 배포 로그 [OK].** ex12 최종 합계 OK 17 / FAIL 0 / SKIP 0 → **PASS**(D19·D19-2·D19-3 보완 심사 포함). 기록: 코디네이터(사용자 전달 로그 대조).

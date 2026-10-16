@@ -1,4 +1,4 @@
-# 하루 1회 자동 실행(ex09, D3 · D5): 매일 06:17 KST에 collect → group → summarize(npm run daily)
+# 하루 1회 자동 실행(ex09에서 시작, 2026-10-16 ex12 PASS 뒤 ex12로 이동 · D3 · D5 · D10): 매일 06:17 KST에 collect → group → summarize(npm run daily)
 # 실패해도 자동 재시도하지 않음. 같은 날 수동 재실행(Run workflow · Re-run)은 최대 2회(운영 규칙, 코드로 막지 않음)
 # 이후 단계마다 working-directory · cache-dependency-path를 최신 exXX로 바꿈
 name: daily
@@ -21,14 +21,14 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: ex09
+        working-directory: ex12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: ex09/package-lock.json
+          cache-dependency-path: ex12/package-lock.json
       - run: npm ci --no-audit --no-fund
       - name: npm run daily
         shell: bash

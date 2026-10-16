@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-16 · **D19-3 독립 심사 PASS**(`reports/ex12_judge.md` 11절, OK13/FAIL0/SKIP0: 테스트 ex12 119·ex09 115·빌드 OK, 해시 일치, 저장 610건 읽기 검사 모음 일치 1건(id 1315)·오탐0·제품=독립 판정·사진 접두 7, 누락 검토에서 PLAN 밖 `[간추린 단신] … 외` 1건(참고), 외부 호출0·DB 쓰기0·누출 false) · **D19-3 뉴스 모음 머리표 제외 제작**(ex12 ai.ts `excludedBeforeAi`: 제목 맨 앞 대괄호 머리표에 헤드라인·뉴스리뷰·주요뉴스·뉴스브리핑(띄어쓰기 무관)이면 사진 접두와 같이 AI 전 제외 → ex09 해시 일치 ai.ts dff44e9f…·테스트 c096e870…, ex08·ex11 07e10b1e… 보존; 테스트 ex12 119/119·ex09 115/115·빌드 OK; 저장 610건 읽기 검사 모음 일치 1건·오탐0·사진 접두 7건, 외부 호출0·DB 쓰기0, `reports/ex12_build.md` 12절; 미커밋) · **ex09 독립 심사 PASS**(예약 실행 run 38825041172 schedule·success, 08:41 KST 시작=144분 지연, 2026-10-16 ok 6행·기사167·이슈135·요약29, 배포 랭킹 date 10-16, 로그 누출 false, newsdata 1(남은199)·OpenAI0·DB쓰기0, `reports/ex09_judge.md` 9절; Summary 화면만 사용자 확인) · 2026-10-15 · D19-2 검색어 보완 2차·사진 접두 제외 제작: ex12 ai.ts(terms 한 낱말·표기 변형 동의어·美 등 약칭 허용, organize에서 `[사진]`·`[포토]`·`[화보]` 접두 제목을 AI 전에 제외) → ex09 해시 일치(8c41162a…, 테스트 8b939bbf…; ex08·ex11 07e10b1e… 보존), 테스트 ex12 118/118·ex09 114/114·빌드 OK, 로컬 실제 검증 **PASS**(같은 입력 158줄, 첫 후보 n>묶음 5/6·최대 n 58·오병합0·사진 접두 5건 전부 제외, newsdata 8·OpenAI 2·남은 90·DB 쓰기0, `reports/ex12_build.md` 11절). 1차(10절)는 FAIL. 커밋·푸시 안 함. · **D19-2 독립 심사 PASS 보류**(`reports/ex12_judge.md` 10절, OK14/FAIL0/SKIP1=다음 날 분포): 테스트·빌드 재실행 OK, 실제 1회 같은 입력에서 n>묶음 5/6·최대58·오병합0·사진 접두 5건 전부 제외 → 기준 통과. 단 이번 실행은 동의어 0·CPI 3건 병합 누락(AI 실행차). newsdata 8·OpenAI 2·남은 **82**·DB 쓰기0. · ex12 배포 독립 심사 PASS 보류(사용자 전달 대기, `reports/ex12_judge.md` OK13/FAIL0/SKIP4). 배포 https://issuerank-kappa.vercel.app 에서 icn1·랭킹=로컬 8787·Secure 쿠키·계정별 북마크·격리 Chromium 2개 같은 목록 OK(배포 요청 66/150, 임시계정2 정리, 해시 불변, 뉴스/OpenAI0). ex09 심사 PASS(10-16, OK12/FAIL0/SKIP0). 명령은 `bash scripts/ex12-ubuntu.sh ...`. ex08·ex10·ex11 PASS
+최종 갱신: 2026-10-16 · ex12 배포 심사 PASS(https://issuerank-kappa.vercel.app), ex09 PASS, D19 검색어·D19-2/3 제외 규칙 푸시(10-17 예약 실행부터 적용). 다음: 워크플로 작업 폴더 ex12로(D10), 7일 품질 기록
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
@@ -75,7 +75,7 @@ bash scripts/ex08-ubuntu.sh npm run db:migrate
 |---|---|
 | ex01~ex06 | 완료 · 커밋 |
 | ex07 | 완료. 2차 PASS 31/31, 이슈맵 로그 비율 보완 PASS(커밋 `5cb2a7a` · `7d62470`) |
-| ex12 배포(Vercel) | 제작 로컬 완료 · 사용자 배포(https://issuerank-kappa.vercel.app). 독립 심사(2026-10-15) PASS 보류: OK13/FAIL0/SKIP4 — 테스트115·빌드·로컬 줄·배포 icn1·랭킹/날짜·쿠키(Secure·__Secure-)·북마크 분리·격리 Chromium 2개·화면 회귀 OK. SKIP: 대시보드 설정 화면·배포 고유 주소·사용자 PC/폰·Vercel Logs(사용자 전달 대기) |
+| ex12 배포(Vercel) | 제작 로컬 완료 · 사용자 배포(https://issuerank-kappa.vercel.app). 독립 심사 PASS 보류: OK16/FAIL0/SKIP1(`reports/ex12_judge.md` 12절, 2026-10-16) — 7b 설정 화면·11b PC/폰 사용자 확인 OK, 9b 고유 주소 2개 비로그인 302→vercel.com/sso-api OK. 남은 SKIP: 13 Vercel Logs(2026-10-16 01:49:50Z~01:50:10Z = 10:49:50~10:50:10 KST, 확인 요청 10줄) 사용자 전달 대기 |
 | ex09 하루 1회 자동 실행 | 제작 완료(2026-10-15): `npm run daily`·`.github/workflows/daily.yml`(06:17 KST). 테스트111/111·빌드, 로컬 실제 하루 종료0(뉴스18/20·OpenAI5/5, 잔여161). 푸시·Secrets3·수동 실행 success(기사158·이슈133·요약29). 독립 심사 **PASS**(2026-10-16): 예약 실행 38825041172 success(144분 지연, 기사167·이슈135·요약29). 실행 요약 화면은 사용자 확인 남음 |
 | ex11 계정별 북마크·폴더 | 완료. 0006 적용. 독립 심사 PASS(2026-10-15): 테스트96/96·빌드·API/BFF/Chromium 80요청, OK11/FAIL0/SKIP0 |
 | ex10 이메일·비밀번호 로그인 | 완료. Better Auth 1.7.7, 0005 인증 테이블 적용. 독립 심사 PASS: 테스트85/85·빌드·API18·Chromium UI7, OK11/FAIL0/SKIP0 |
