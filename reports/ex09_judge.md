@@ -4,7 +4,11 @@
 - 대상: `ex09/`(출발점 ex11, D17) · 저장소 루트 `.github/workflows/daily.yml` · 기준: SPEC AC-01-1 · AC-01-2, PLAN.md 5절(D3 · D5 · D17 · D18) · 6절, `plan/PLAN_backend_ex09.md`, AGENTS.md
 - 제작 보고 `reports/ex09_build.md`는 참고만 하고 모든 줄을 직접 다시 확인함(제작 전용 `실제 하루(로컬)` 줄 제외).
 
-## 판정: **PASS 보류 — 예약 실행 확인 대기**
+## 판정: **PASS** (2026-10-16 예약 실행 확인, 9절) — 아래 첫 판정(2026-10-15)은 기록으로 보존
+
+- 2026-10-16: ⑪ 예약 실행 [OK] → 합계 [OK] 12 · [FAIL] 0 · [SKIP] 0 · 해당 없음 1. 실행 요약(Summary) 화면은 API · 비로그인으로 여전히 볼 수 없어 사용자 확인 항목(⑩ 하위, 참고)으로 남김(9절).
+
+### 첫 판정(2026-10-15): PASS 보류 — 예약 실행 확인 대기
 
 - 구현 항목 모두 done · 테스트 111/111 · 빌드 성공 · 위반 없음 · 수동 실행(workflow_dispatch) success.
 - 남은 것: `예약 실행(AC-01-1)` 줄 [SKIP] — 첫 예약 실행은 2026-10-16 06:17 KST(2026-10-15 21:17 UTC) 이후라 아직 없음. 같은 확인 때 Actions 실행 요약 화면(아래 4절 ⑩의 하위 항목)도 함께 본다. 이 둘이 OK면 PASS.
@@ -92,3 +96,27 @@
 3. 브라우저(로그인)로 그 실행 페이지 Summary에 daily 출력 코드 블록과 끝 줄이 있는지 확인(오늘 수동 실행 38683426817의 Summary도 함께 보면 ⑩ 하위 항목 해결).
 4. SQL(읽기, 안전 실행): 날짜 2026-10-16 `collect_runs` ok 6행의 `finished_at`이 실행 시간 안 · 섹션마다 기사 > 0 · 이슈 > 0 · 요약 ≥ 1. API를 띄웠다면 `GET /api/rankings` 기본 응답 `date` = 2026-10-16(node fetch).
 5. `reports/ex09_daily.md`에 예약 실행 줄 추가(run id 포함). newsdata 호출은 크레딧 확인 최대 1, OpenAI 0. 모두 OK면 이 보고의 판정을 PASS로 갱신.
+
+## 9. 예약 실행 확인(2026-10-16 09:50~10:00 KST, ⑪ 줄만)
+
+- 실행: Claude Code 독립 심사 세션, Android/Termux + proot. 서버 띄우지 않음. 코드 수정 · 커밋 · 푸시 · Actions 실행 · Secrets/Vercel 설정 0. 로컬 main은 origin보다 1커밋(5156e89) 앞선 그대로 둠.
+
+| 기대(PLAN 검증표 「예약 실행」) | 확인 | 판정 |
+|---|---|---|
+| 이벤트 `schedule` | `gh run list --workflow daily.yml`: run **38825041172** · event `schedule` · completed | OK |
+| 시작 21:17 UTC 이후(지연 분 수를 적음) | startedAt `2026-10-15T23:41:04Z`(08:41 KST) → **지연 144분**(2시간 24분 4초). updatedAt 23:45:10Z(4분 6초). PLAN 문구는 하한(21:17 UTC 이후)과 지연 분 기록만 요구하고 상한이 없으며, 같은 PLAN의 GitHub 사실 줄에 "부하가 크면 늦어지거나 빠질 수 있음(06:17보다 늦게 시작해도 KST 같은 날이라 날짜는 같음)"이 있음 → 지연 자체는 FAIL 아님. 실제로 KST 날짜 2026-10-16 그대로 | OK |
+| success | conclusion `success`, 잡 단계 8개 모두 success. 로그 끝 줄 `하루 실행 끝 · collect 0 · group 0 · summarize 0` | OK |
+| 실행 코드 | headSha `292c47b`(ex12 배포 준비 커밋). `git diff --stat 269ec9c 292c47b -- ex09 .github` 출력 0줄 → ex09 · 워크플로가 심사한 269ec9c와 같음 | OK |
+| 그 날짜 6섹션 ok 행의 `finished_at`이 실행 시간 안 | SQL(읽기 전용 트랜잭션, `transaction_read_only = on`): 2026-10-16 `collect_runs` 167~172 6행 모두 ok(pol 29 · eco 27 · soc 30 · cul 23 · wor 30 · it 28 = 로그), `finished_at` 모두 23:41:50.499Z ∈ [23:41:04Z, 23:45:10Z]. 그 날짜 다른 행 없음 | OK |
+| 섹션마다 기사 > 0 | articles 2026-10-16: cul 23 · eco 27 · it 28 · pol 29 · soc 30 · wor 30(합 167 = 로그 `기사 167건`) | OK |
+| 이슈 > 0 | issues 2026-10-16: 합 135(= 로그 `이슈 135`), 섹션 cul 26 · eco 23 · it 13 · pol 17 · soc 34 · wor 22 | OK |
+| 요약 ≥ 1 | 요약 있는 이슈 29(= 로그 `성공 29` · 이미 요약 0), 섹션별 pol 4 · 나머지 5 | OK |
+| 기본 랭킹 `date` = 그 날짜 | 로컬 API 대신 배포 주소(같은 DB) `GET https://issuerank-kappa.vercel.app/api/rankings` 1회(node fetch) → 200 · `date` **2026-10-16** · `updatedAt` 2026-10-16T08:41:50+09:00(= collect finished_at) | OK |
+
+**⑪ 예약 실행(AC-01-1): [OK]** → AC-01-1 충족(매일 지정 시각 예약 실행으로 자동 수집 · 저장, 지연 144분은 PLAN이 허용한 GitHub 지연).
+
+- 로그 누출: `gh run view 38825041172 --log`(301줄)를 scratchpad 임시 파일로 받아 `ex09/.env`의 DATABASE_URL 전체 · 비밀번호 · 디코딩 비밀번호 · NEWSDATA_API_KEY · OPENAI_API_KEY · BETTER_AUTH_SECRET(6값)과 대조 → **leak false**. 그 뒤 daily 줄만 봄: collect `ok 6 · failed 0 · 기사 167건 · 요청 18번 · 남은 크레딧 64` / group 둘째 줄 `AI 정리 · 묶음 135 · 제외 14 · 빠진 기사 0` / `이슈 135 · 검색 36번 · 실패 0 · 남은 크레딧 28` / summarize `대상 30 · 요청 29번 · 성공 29 · 실패 0 · 이미 요약 0 · 설명문 없음 1` / 끝 줄 위와 같음. 임시 로그 · DB 확인 스크립트 삭제.
+- 실행 요약(Summary) 화면: check-run API `output.summary` 길이 0(주석 1개는 GitHub 공지 "ubuntu-latest가 2026-10-19부터 Ubuntu 26으로 이동"), 비로그인 실행 페이지에 daily 출력 없음 · `summary_raw` 404 → **볼 수 없음**. 붙이는 명령 줄은 로그에 있음. ⑩의 하위 항목이라 판정 줄이 아니며 사용자 확인 항목으로 남김(아래).
+- 품질 기록: `reports/ex09_daily.md`에 예약 실행 줄 추가. 첫 후보 6개 모두 한 사건, `n건 (묶음 k)` n = k **6/6**(후보 줄 36개 전부 n = k, 최대 n 6) — 푸시된 옛 검색어 코드(D19 이전)라 예상대로. 참고: pol-1에 `[이시각헤드라인] 10월 15일 뉴스리뷰`(여러 소식 모음 기사) 1건이 섞임, cul-1 · cul-2 같은 사건 미병합 1. 전부 단독 · 대량 제외(14/167) · AI 정리 실패 · 명백한 다른 사건 오병합은 없음 → PLAN.md 10절 추가는 이번 허용 범위 밖이라 하지 않음(모음 기사를 오병합으로 볼지는 사용자 판단).
+- 호출: newsdata 크레딧 확인 **1회**(09:54 KST, status 200 · `x-api-limit-remaining` **199** — 일일 한도가 초기화된 뒤라 실행 끝 28과 직접 비교 불가). OpenAI 0. 배포 주소 GET 1회. DB 쓰기 0(읽기 전용 트랜잭션).
+- 사용자 확인: ① 로그인 브라우저로 run 38825041172(그리고 수동 실행 38683426817)의 Summary에 daily 출력 코드 블록 · 끝 줄이 있는지. ② 예약 지연(오늘 144분)이 계속 크면 06:17 수집분 시각이 밀림 — 기록만. ③ GitHub 공지: `ubuntu-latest`가 2026-10-19부터 Ubuntu 26으로 바뀜(그 뒤 첫 예약 실행 결과를 한 번 볼 것).
