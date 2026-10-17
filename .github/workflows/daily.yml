@@ -1,11 +1,11 @@
-# 하루 1회 자동 실행(ex09에서 시작, 2026-10-16 ex12 PASS 뒤 ex12로 이동 · D3 · D5 · D10): 매일 06:17 KST에 collect → group → summarize(npm run daily)
+# 하루 1회 자동 실행(ex09에서 시작, 2026-10-16 ex12 PASS 뒤 ex12로 이동 · D3 · D5 · D10): 매일 04:17 KST에 collect → group → summarize(npm run daily)
 # 실패해도 자동 재시도하지 않음. 같은 날 수동 재실행(Run workflow · Re-run)은 최대 2회(운영 규칙, 코드로 막지 않음)
 # 이후 단계마다 working-directory · cache-dependency-path를 최신 exXX로 바꿈
 name: daily
 
 on:
   schedule:
-    - cron: '17 21 * * *' # UTC 21:17 = KST 06:17
+    - cron: '17 19 * * *' # UTC 19:17 = KST 04:17 (2026-10-17 변경: 예약 지연 136~144분 관찰, 7시 전 갱신 목표)
   workflow_dispatch:
 
 concurrency:
