@@ -1,6 +1,6 @@
 # HANDOFF — 이슈랭크 캡스톤
 
-최종 갱신: 2026-10-16 · ex12 PASS(배포 https://issuerank-kappa.vercel.app, D20 모바일 이슈맵 PASS·배포 반영), ex09 PASS, 하루 실행은 ex12 폴더·새 검색어·사진/모음 제외로 10-17 첫 운영. 다음: 10-21까지 품질 기록, 예약 지연 관찰, 10-19 Ubuntu 26 전환 후 확인
+최종 갱신: 2026-10-17 · 운영 단계 전환(D21, ex12 운영 폴더). 운영 기획안 plan/PRODUCT_PLAN.md(주 대상 출근길 직장인, 로드맵 O1 위젯 → O2 Google 로그인 → O3 인스타 카드 → O4 푸시·공유). O0 하루 실행 04:17 KST 적용(10-18부터). 다음: O1 위젯 계획(plan/PLAN_ops_O1_widget.md)
 
 다른 PC · 새 Codex 세션에서 이어 갈 때 AGENTS.md와 이 파일을 읽는다. 이전 PC 결과와 현재 Termux/Ubuntu에서 다시 실행한 결과를 각 단계 기록에서 구분한다.
 
