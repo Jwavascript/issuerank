@@ -108,6 +108,8 @@ a { color: inherit; }
 .view.active[data-from="left"]  { --dx: -18px; }
 .view.active[data-from="right"] { --dx: 18px; }
 @keyframes enter { from { opacity: 0; transform: translateX(var(--dx, 0)); } to { opacity: 1; transform: none; } }
+/* 전환(translateX) 중 · 뒤에도 레이아웃 폭이 화면보다 넓어지지 않게(D25). clip은 스크롤 컨테이너가 아니라 sticky 그대로 */
+main { overflow-x: clip; }
 
 .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
 .wrap-wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
@@ -540,14 +542,17 @@ const state = {
 let ranking = null;
 
 // 첫 진입은 date 없이 부르고, 받은 date로 시작
+// 반환: 서버가 답했는지(200 · 404 = true, 그 밖의 오류 · 네트워크 실패 = false — 그 오류 토스트는 여기서 이미 보임)
 async function loadRanking(date) {
   try {
     ranking = await api('/rankings' + (date ? `?date=${date}` : ''));
     state.date = ranking.date;
+    return true;
   } catch (e) {
     ranking = null;
     if (date) state.date = date;
     if (e.status !== 404) toast(e.message);
+    return e.status === 404;
   }
 }
 async function loadBookmarks() {
@@ -824,7 +829,7 @@ function openDrawer(id) {
       <dl class="facts">
         <dt>연관기사</dt><dd class="num">${it.articleCount}건</dd>
         <dt>섹션 순위</dt><dd>${SEC[it.section].name} ${it.rank}위 / 5</dd>
-        <dt>수집</dt><dd>${fmtShort(it.date)} 오전 6:00</dd>
+        <dt>수집</dt><dd>${it.date === ranking.date ? fmtUpdated(ranking.updatedAt) : fmtShort(it.date)}</dd>
       </dl>
     </div>
     <div class="drawer-foot">
@@ -1103,13 +1108,34 @@ let raf;
 new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { placePill(); if (state.view === 'map') drawMap(); }); }).observe(document.body);
 
 /* ─────────────── Init ─────────────── */
-(async () => {
+// 위젯 바로가기 /?issue=<id>(첫 로드 때만): 값을 읽은 즉시 주소의 쿼리를 지움(해시 · 기록 수 그대로 → 새로고침 · 뒤로가기는 평소 화면).
+// id가 {YYYY-MM-DD}-{섹션 키}-{숫자}(달력에 있는 날짜, KST 오늘 이하)면 date = 그 날짜, 아니면 null. 값은 화면에 쓰지 않음(찾기에만)
+function issueShortcut() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('issue')) return null;
+  history.replaceState(null, '', location.pathname + location.hash);
+  const id = params.get('issue');
+  const m = /^(\d{4}-\d{2}-\d{2})-([a-z]+)-\d+$/.exec(id);
+  const ok = !!m && iso(parse(m[1])) === m[1] && m[1] <= TODAY && SECTIONS.some(s => s.key === m[2]);
+  return { id, date: ok ? m[1] : null };
+}
+async function start() {
   renderUser(); renderTabs();
-  await Promise.all([loadRanking(), restoreSession()]);
+  const shortcut = issueShortcut();
+  const [answered] = await Promise.all([loadRanking(shortcut?.date), restoreSession()]);
   renderList(); renderBookmarks();
   go(viewFromHash(), false);
+  // 로그인 확인 · 화면 그리기가 끝난 뒤에 엶(그 전에 열면 applyUser · go가 닫음). 형식 틀림 · 그 날짜 랭킹 없음(404) · 랭킹에 없는 id는
+  // 토스트 "이슈를 찾을 수 없습니다". 5xx · 네트워크 실패는 loadRanking의 오류 토스트를 그대로 둠(D25)
+  if (shortcut) {
+    if (shortcut.date && issueById(shortcut.id)) openDrawer(shortcut.id);
+    else if (answered) toast('이슈를 찾을 수 없습니다');
+  }
   document.fonts?.ready.then(() => { placePill(); drawMap(); });
-})();
+}
+start();
 </script>
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

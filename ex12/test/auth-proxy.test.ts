@@ -82,3 +82,15 @@ it('공개 경로의 앱 준비 실패 502에는 no-store를 붙이지 않는다
   expect(await res.json()).toEqual(MESSAGE);
   expect(res.headers.get('cache-control')).toBeNull();
 });
+
+it('공개 경로 /api/widget은 앱의 CDN 캐시 헤더를 그대로 두고(no-store 안 붙음) 외부 fetch를 하지 않는다', async () => {
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  const handle = createBff(() => ({ fetch: () => Response.json({ date: '2026-10-07', items: [] }, { headers: { 'Cache-Control': 'public, max-age=0, s-maxage=300' } }) }));
+  const res = await handle(new Request('http://localhost:3000/api/widget'));
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ date: '2026-10-07', items: [] });
+  expect(res.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=300');
+  expect(res.headers.getSetCookie()).toEqual([]);
+  expect(fetchMock).not.toHaveBeenCalled();
+});

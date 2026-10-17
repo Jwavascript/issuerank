@@ -8,7 +8,7 @@ import type { Store } from '../app';
 import type { GroupStore } from '../grouping';
 import type { CollectStore } from '../newsdata';
 import type { SummaryStore } from '../summary';
-import { buildRanking, findCard, SECTIONS, type IssueRow } from '../ranking';
+import { buildRanking, buildWidget, findCard, SECTIONS, type IssueRow } from '../ranking';
 import { kstToday } from '../sample';
 import type { Db } from './client';
 import { articles, bookmarks, collectRuns, folders, issues } from './schema';
@@ -21,6 +21,20 @@ export function dbStore(db: Db): Store {
   const rowsOn = async (dates: string[]) =>
     dates.length ? (await db.select().from(issues).where(inArray(issues.date, dates))).map(toRow) : [];
 
+  // 랭킹 · 위젯 목록의 입력: 그날 행 + 대체 섹션 행(D8: 그날 이슈가 없는 섹션만, 그 이전에 그 섹션 이슈가 있는 가장 늦은 날짜의 행)
+  // + 그날 ok 실행의 가장 늦은 finished_at만. 그날 행이 없으면 null
+  const rankingInput = async (date: string) => {
+    const rows = await rowsOn([date]);
+    if (rows.length === 0) return null;
+    for (const { key } of SECTIONS.filter(s => !rows.some(r => r.section === s.key))) {
+      const [prev] = await db.select({ date: max(issues.date) }).from(issues).where(and(eq(issues.section, key), lt(issues.date, date)));
+      if (prev?.date) rows.push(...(await db.select().from(issues).where(and(eq(issues.section, key), eq(issues.date, prev.date)))).map(toRow));
+    }
+    const [run] = await db.select({ finishedAt: max(collectRuns.finishedAt) }).from(collectRuns)
+      .where(and(eq(collectRuns.date, date), eq(collectRuns.status, 'ok')));
+    return { rows, runs: run?.finishedAt ? [{ status: 'ok', finishedAt: run.finishedAt.toISOString() }] : [] };
+  };
+
   return {
     // D3: KST 오늘 이하 가장 늦은 date
     latestDate: async () => {
@@ -28,17 +42,15 @@ export function dbStore(db: Db): Store {
       return r?.date ?? null;
     },
 
-    // 대체 섹션 행(D8: 그날 이슈가 없는 섹션만, 그 이전에 그 섹션 이슈가 있는 가장 늦은 날짜의 행) · 그날 ok 실행의 가장 늦은 finished_at만 읽어 넘김
     ranking: async date => {
-      const rows = await rowsOn([date]);
-      if (rows.length === 0) return null;
-      for (const { key } of SECTIONS.filter(s => !rows.some(r => r.section === s.key))) {
-        const [prev] = await db.select({ date: max(issues.date) }).from(issues).where(and(eq(issues.section, key), lt(issues.date, date)));
-        if (prev?.date) rows.push(...(await db.select().from(issues).where(and(eq(issues.section, key), eq(issues.date, prev.date)))).map(toRow));
-      }
-      const [run] = await db.select({ finishedAt: max(collectRuns.finishedAt) }).from(collectRuns)
-        .where(and(eq(collectRuns.date, date), eq(collectRuns.status, 'ok')));
-      return buildRanking(date, rows, run?.finishedAt ? [{ status: 'ok', finishedAt: run.finishedAt.toISOString() }] : []);
+      const input = await rankingInput(date);
+      return input && buildRanking(date, input.rows, input.runs);
+    },
+
+    // 같은 입력 · 같은 카드로 위젯 순서(D22)
+    widget: async date => {
+      const input = await rankingInput(date);
+      return input && buildWidget(date, input.rows, input.runs);
     },
 
     issue: async id => {

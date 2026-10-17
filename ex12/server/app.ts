@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { rankings } from './routes/rankings';
+import { widgetRoute } from './routes/widget';
 import { bookmarksRoute } from './routes/bookmarks';
 import { foldersRoute } from './routes/folders';
 import { BAD_REQUEST } from './schemas';
-import type { Issue, Ranking } from './ranking';
+import type { Issue, Ranking, Widget } from './ranking';
 
 export type Bookmark = Issue & { folderId: string; savedAt: string };
 export type Folder = { id: string; name: string; count: number };
@@ -13,6 +14,7 @@ export type Folder = { id: string; name: string; count: number };
 export type Store = {
   latestDate(): Promise<string | null>;                              // 최근 수집일(KST 오늘 이하 가장 늦은 date), 없으면 null
   ranking(date: string): Promise<Ranking | null>;                    // 날짜의 이슈 → 랭킹, 없으면 null
+  widget(date: string): Promise<Widget | null>;                      // 날짜의 랭킹 카드 → 위젯 목록(D22), 없으면 null
   issue(id: string): Promise<Issue | null>;                          // 이슈 하나(카드 8칸)
   bookmarks(userId: string): Promise<Bookmark[]>;                                  // 북마크 목록, savedAt ↓
   saveBookmark(userId: string, issue: Issue, folderId: string): Promise<Bookmark | null>; // 저장, 이미 북마크한 이슈면 null
@@ -21,7 +23,7 @@ export type Store = {
   createFolder(userId: string, name: string): Promise<Folder>;                       // 폴더 만들기
 };
 
-// Hono 앱(라우트 3개 · onError). 서버는 index.ts가 띄우고, 테스트는 app.request로 바로 부름
+// Hono 앱(라우트 4개 · onError). 서버는 index.ts가 띄우고, 테스트는 app.request로 바로 부름
 export type SessionEnv = { Variables: { userId: string } };
 type Auth = {
   handler: (request: Request) => Promise<Response>;
@@ -37,6 +39,7 @@ export function createApp(store: Store, auth?: Auth) {
     return response;
   });
   app.route('/api/rankings', rankings(store));
+  app.route('/api/widget', widgetRoute(store));
   // JSON 검사와 저장소 접근보다 먼저 서버 세션을 검증한다.
   app.use('/api/*', async (c, next) => {
     if (!/^\/api\/(bookmarks|folders)(\/|$)/.test(c.req.path)) return next();

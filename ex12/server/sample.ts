@@ -1,7 +1,7 @@
 // 샘플: 화면에 있던 POOL · rng를 옮겨 실행일(KST) 기준 이슈 · 북마크 · 폴더를 만듦
 // seedRows(오늘) · memoryStore(같은 샘플로 도는 메모리 저장소)는 테스트에만 씀(D14: 실제 DB에는 샘플을 넣지 않음)
 import { randomUUID } from 'node:crypto';
-import { buildRanking, findCard, SECTIONS, type IssueRow, type SectionKey } from './ranking';
+import { buildRanking, buildWidget, findCard, SECTIONS, type IssueRow, type SectionKey } from './ranking';
 import type { Bookmark, Store } from './app';
 
 // 섹션당 7개 풀에서 날짜별로 5개를 뽑아 랭킹 후보 구성
@@ -147,6 +147,7 @@ export function resetSample() {
 export const memoryStore: Store = {
   latestDate: async () => kstToday(),
   ranking: async date => buildRanking(date, rowsOn(date)),
+  widget: async date => buildWidget(date, rowsOn(date)),
   issue: async id => findCard(id, rowsOn(id.slice(0, 10))),
   bookmarks: async userId => bookmarks.filter(b => b.userId === userId)
     .sort((a, b) => Date.parse(b.card.savedAt) - Date.parse(a.card.savedAt) || b.sequence - a.sequence).map(b => ({ ...b.card })),

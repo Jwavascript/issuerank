@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이슈랭크 위젯</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --text: #161616; --muted: #6f6b65; --faint: #a29e97;
+  --line: #e7e4df; --hover: #efede9; --ink: #161616; --ink-text: #ffffff;
+  --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121211; --surface: #1a1a19; --text: #ecebe8; --muted: #9b978f; --faint: #6a675f;
+    --line: #2b2a27; --hover: #222220; --ink: #ecebe8; --ink-text: #121211;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font);
+  font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+.wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px 56px; }
+.brand { margin: 0; font-size: 14px; font-weight: 700; color: var(--muted); }
+h1 { margin: 4px 0 6px; font-size: 24px; line-height: 1.3; letter-spacing: -.02em; }
+h2 { margin: 28px 0 8px; font-size: 17px; }
+.note { margin: 0; color: var(--muted); font-size: 13px; }
+ol { margin: 0; padding-left: 22px; }
+li { margin: 8px 0; overflow-wrap: anywhere; }
+.code { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.code-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.code button {
+  height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--ink); color: var(--ink-text);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.code button:disabled { opacity: .4; cursor: default; }
+.code textarea {
+  display: block; width: 100%; height: 220px; margin: 0; padding: 12px; border: 0; resize: vertical;
+  background: transparent; color: var(--text); font: 12px/1.5 var(--mono); white-space: pre; overflow: auto;
+}
+.status { min-height: 21px; margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="brand">이슈랭크</p>
+  <h1>홈 화면 위젯</h1>
+  <p class="note">휴대폰 버전에 따라 메뉴 이름이 조금 다를 수 있습니다.</p>
+
+  <h2>iPhone</h2>
+  <ol>
+    <li>App Store에서 <b>Scriptable</b>(무료, iOS 15.5 이상)을 설치합니다.</li>
+    <li>이 페이지의 <b>스크립트 복사</b>를 누릅니다.</li>
+    <li>Scriptable을 열고 오른쪽 위 <b>+</b> → 빈 화면을 길게 눌러 <b>붙여넣기</b> → 위쪽 제목을 <b>이슈랭크</b>로 바꾸고 <b>완료</b>. ▶를 누르면 중간 크기 미리보기가 보입니다.</li>
+    <li>홈 화면 빈 곳을 길게 눌러 <b>편집 › 위젯 추가</b> → <b>Scriptable</b> → 크기(작게 3줄 · 중간 5줄 · 크게 10줄) → <b>위젯 추가</b>.</li>
+    <li>위젯을 길게 눌러 <b>위젯 편집</b> → <b>Script</b>에서 <b>이슈랭크</b>를 고릅니다.</li>
+    <li>중간 · 큰 위젯은 줄을, 작은 위젯은 아무 데나 누르면 Safari에서 이슈랭크가 열립니다(Scriptable이 잠깐 보일 수 있음). 하단 시각이 오늘이 아니면 아직 갱신 전입니다(매일 새벽 갱신). 새 버전이 나오면 같은 방법으로 내용을 바꿔 붙여넣습니다.</li>
+  </ol>
+
+  <section class="code" aria-label="위젯 스크립트">
+    <div class="code-head"><b>스크립트</b><button type="button" id="copyBtn" disabled>스크립트 복사</button></div>
+    <textarea id="script" readonly wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="위젯 스크립트 내용"></textarea>
+  </section>
+  <p class="status" id="copyMsg" role="status" aria-live="polite"></p>
+
+  <h2>Android</h2>
+  <ol start="7">
+    <li>Chrome으로 이슈랭크(https://issuerank-kappa.vercel.app)를 열고 주소 표시줄 오른쪽 <b>더보기(⋮) › 설치 및 바로가기 만들기 › 바로가기 만들기</b> → <b>추가</b>를 누르면 홈 화면에 아이콘이 생깁니다. 홈 화면 위젯은 준비 중입니다.</li>
+  </ol>
+</main>
+<script>
+// /widget.js를 읽어 읽기 전용 칸에 보여 줌. 복사는 버튼을 누른 순간 클립보드에 쓰고, 안 되면 칸 전체를 선택해 길게 눌러 복사하게 함
+const box = document.getElementById('script');
+const copyBtn = document.getElementById('copyBtn');
+const copyMsg = document.getElementById('copyMsg');
+fetch('/widget.js', { cache: 'no-store' })
+  .then(res => { if (!res.ok) throw new Error(); return res.text(); })
+  .then(text => { box.value = text; copyBtn.disabled = false; })
+  .catch(() => { box.value = '스크립트를 불러오지 못했습니다'; });
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(box.value);
+    copyMsg.textContent = '복사했습니다';
+  } catch {
+    box.focus();
+    box.select();
+    box.setSelectionRange(0, box.value.length);
+    copyMsg.textContent = '길게 눌러 복사해 주세요';
+  }
+});
+</script>
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

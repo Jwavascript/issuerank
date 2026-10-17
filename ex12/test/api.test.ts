@@ -123,6 +123,49 @@ describe('GET /api/rankings', () => {
   });
 });
 
+describe('GET /api/widget (D22 · AC-11-1 · AC-11-3)', () => {
+  type Widget = { date: string; updatedAt: string; updatedLabel: string; morePath: string; items: { id: string; section: string; title: string; path: string }[] };
+  type Card = Issue & { section: string; title: string };
+
+  it('공개 · 최근 수집일: 칸 5개 · 항목 칸 4개 · 30개 = 랭킹 카드 · 섹션 1위들 먼저 · 링크 · 하단 문구 · CDN 캐시 헤더, 쿼리는 무시', async () => {
+    const res = await createApp(memoryStore).request('/api/widget'); // 세션 없이
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=300');
+    expect(res.headers.get('set-cookie')).toBeNull();
+    const body = (await res.json()) as Widget;
+    const ranking = (await (await get('/api/rankings')).json()) as Ranking;
+    expect(Object.keys(body).sort()).toEqual(['date', 'items', 'morePath', 'updatedAt', 'updatedLabel']);
+    expect([body.date, body.updatedAt]).toEqual([TODAY, ranking.updatedAt]);
+    expect(ranking.date).toBe(TODAY);
+    expect(body.updatedLabel).toBe('10.7 오전 6:00 수집');
+    expect(body.morePath).toBe('/#list');
+    expect(body.items).toHaveLength(30);
+    const cards = new Map(ranking.sections.flatMap(s => s.issues as Card[]).map(x => [x.id, x]));
+    expect(new Set(body.items.map(x => x.id))).toEqual(new Set(cards.keys()));
+    for (const x of body.items) {
+      expect(Object.keys(x).sort()).toEqual(['id', 'path', 'section', 'title']);
+      expect(x.path).toBe(`/?issue=${x.id}`);
+      expect([x.section, x.title]).toEqual([cards.get(x.id)!.section, cards.get(x.id)!.title]);
+    }
+    const ranks = body.items.map(x => cards.get(x.id)!.rank);
+    expect(ranks.slice(0, 6)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(ranks.slice(6).every(r => r > 1)).toBe(true);
+    // 묶음 안은 연관기사 수 ↓(동점 규칙은 ranking.test.ts)
+    const counts = body.items.map(x => cards.get(x.id)!.articleCount);
+    for (const group of [counts.slice(0, 6), counts.slice(6)]) group.slice(1).forEach((n, i) => expect(n).toBeLessThanOrEqual(group[i]));
+    expect(await (await get(`/api/widget?date=${YESTERDAY}&x=1`)).json()).toEqual(body);
+  });
+
+  it('랭킹 없음: 404 같은 문구 · 캐시 헤더 없음 / POST는 404', async () => {
+    for (const latestDate of [async () => null, async () => '2000-01-01']) {
+      const res = await createApp({ ...memoryStore, latestDate }).request('/api/widget');
+      expect(res.headers.get('cache-control')).toBeNull();
+      await expectMessage(res, 404, MSG.noRanking);
+    }
+    expect((await post('/api/widget', {})).status).toBe(404);
+  });
+});
+
 describe('북마크 · 폴더', () => {
   it('목록: 북마크 10개 savedAt 내림차순, 폴더 f1 4 · f2 3 · f3 3 (AC-08-1 · AC-10-1)', async () => {
     const res = await get('/api/bookmarks');

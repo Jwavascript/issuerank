@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: 이슈랭크 API
-  version: 0.1.0
-  description: 화면(index.html)이 서버에 바라는 랭킹 · 북마크 · 폴더 API 계약.
+  version: 0.2.0
+  description: 화면(index.html)과 홈 화면 위젯이 서버에 바라는 랭킹 · 위젯 · 북마크 · 폴더 API 계약.
 
 servers:
   - url: http://localhost:3000
@@ -236,6 +236,53 @@ paths:
                     message: 오늘 이후 날짜는 조회할 수 없습니다
         '404':
           description: 해당 날짜의 랭킹 데이터 없음(date를 생략했는데 저장된 랭킹이 하나도 없을 때 포함)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 해당 날짜의 랭킹 데이터가 없습니다
+
+  /api/widget:
+    get:
+      operationId: getWidget
+      summary: 홈 화면 위젯 헤드라인(순서 · 링크를 서버가 정함)
+      description: >-
+        로그인 · 쿠키 없이 부르는 공개 API. 날짜는 date를 생략한 /api/rankings와 같은 최근 수집일이고 쿼리는 받지 않는다(붙어도 무시).
+        items는 그날 /api/rankings 카드 전부(섹션마다 Top 5, 대체 섹션 포함, 최대 30)를 섹션 1위들 → 나머지 순으로,
+        각각 연관기사 수 ↓ → 중요도 ↓ → 최신 기사 발행 시각 ↓ → id 자연 순서로 늘어놓은 것이다.
+        위젯은 앞에서부터 크기만큼 그리며, 연관기사 수 · 요약 · 원문 url · rank는 주지 않는다.
+      responses:
+        '200':
+          description: 위젯 목록
+          headers:
+            Cache-Control:
+              description: CDN이 지역마다 300초 보관한다(Vercel은 클라이언트에 s-maxage를 뺀 값을 준다). 404 · 500 · 502에는 붙지 않는다.
+              schema: { type: string, const: 'public, max-age=0, s-maxage=300' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+              example:
+                date: '2026-10-07'
+                updatedAt: '2026-10-07T06:00:00+09:00'
+                updatedLabel: '10.7 오전 6:00 수집'
+                morePath: '/#list'
+                items:
+                  - id: '2026-10-07-pol-0'
+                    section: pol
+                    title: 내년도 예산안 국회 상임위 심사 본격화
+                    path: '/?issue=2026-10-07-pol-0'
+                  - id: '2026-10-07-eco-0'
+                    section: eco
+                    title: 기준금리 동결, 연내 인하 가능성 시사
+                    path: '/?issue=2026-10-07-eco-0'
+                  - id: '2026-10-07-it-1'
+                    section: it
+                    title: 차세대 HBM 양산 경쟁 본격화
+                    path: '/?issue=2026-10-07-it-1'
+        '404':
+          description: 저장된 랭킹이 하나도 없음
           content:
             application/json:
               schema:
@@ -584,6 +631,48 @@ components:
         url:
           type: string
           format: uri
+
+    Widget:
+      type: object
+      required: [date, updatedAt, updatedLabel, morePath, items]
+      properties:
+        date:
+          type: string
+          format: date
+          description: 랭킹 날짜(KST, YYYY-MM-DD). date를 생략한 /api/rankings의 date와 같음
+        updatedAt:
+          type: string
+          format: date-time
+          description: 마지막 갱신 시각(ISO 8601, +09:00). 같은 날 /api/rankings의 updatedAt과 같음
+        updatedLabel:
+          type: string
+          description: 위젯 하단 문구. updatedAt을 화면 날짜 줄과 같은 꼴로 쓴 것({월}.{일} {오전·오후} {시}:{분} 수집, 예 10.17 오전 4:31 수집)
+        morePath:
+          type: string
+          pattern: '^/'
+          description: 작은 위젯 전체 · 줄 밖을 누를 때 여는 사이트 경로(랭킹 목록 /#list)
+        items:
+          type: array
+          minItems: 1
+          maxItems: 30
+          description: 표시 순서대로(섹션 1위들 → 나머지)
+          items:
+            $ref: '#/components/schemas/WidgetItem'
+
+    WidgetItem:
+      type: object
+      required: [id, section, title, path]
+      properties:
+        id:
+          $ref: '#/components/schemas/IssueId'
+        section:
+          $ref: '#/components/schemas/SectionKey'
+        title:
+          type: string
+        path:
+          type: string
+          pattern: '^/\?issue='
+          description: 사이트에서 그 이슈 상세를 여는 경로(/?issue={id})
 
     Bookmark:
       allOf:
