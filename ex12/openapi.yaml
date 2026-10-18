@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 이슈랭크 API
-  version: 0.2.0
+  version: 0.3.0
   description: 화면(index.html)과 홈 화면 위젯이 서버에 바라는 랭킹 · 위젯 · 북마크 · 폴더 API 계약.
 
 servers:
@@ -113,6 +113,82 @@ paths:
                 properties:
                   success: { type: boolean }
         '403': { $ref: '#/components/responses/AuthForbidden' }
+  /api/auth/sign-in/social:
+    post:
+      operationId: signInSocial
+      summary: Google 로그인 시작(운영 O2)
+      description: >-
+        GOOGLE_CLIENT_ID · GOOGLE_CLIENT_SECRET이 둘 다 있을 때만 켜진다. 화면은 아래 3칸만 보내고, 응답 url이
+        https://accounts.google.com/ 으로 시작할 때만 그 주소로 이동한다(fetch는 200 응답의 Location을 따라가지 않음).
+        Google 주소는 response_type=code · client_id · redirect_uri({BETTER_AUTH_URL}/api/auth/callback/google) ·
+        scope=openid email profile · state · code_challenge(S256) · include_granted_scopes=true이고 access_type · prompt · nonce는 없다.
+        DB 쓰기 없음. Cache-Control no-store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, callbackURL, errorCallbackURL]
+              properties:
+                provider: { type: string, enum: [google] }
+                callbackURL:
+                  type: string
+                  description: 로그인 뒤 돌아올 주소. /로 시작하는 상대 주소(화면은 /?login=google[&issue={이슈 id}][#보기]) 또는 같은 origin
+                errorCallbackURL:
+                  type: string
+                  description: 실패 · 취소 때 돌아올 주소(화면은 callbackURL과 같은 값). 뒤에 error={코드}가 붙는다
+      responses:
+        '200':
+          description: Google 동의 화면 주소. 상태 쿠키(state · code_verifier · 돌아올 주소 · 만료 10분을 암호화) 1개.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: better-auth.oauth_state(HTTPS에서는 __Secure- 접두 · Secure), HttpOnly · SameSite=Lax · Path=/ · Max-Age=600
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, redirect]
+                properties:
+                  url: { type: string, format: uri, description: 'https://accounts.google.com/o/oauth2/v2/auth?…' }
+                  redirect: { type: boolean, const: true }
+        '403':
+          description: callbackURL · errorCallbackURL이 /로 시작하는 상대 주소도 같은 origin도 아님(INVALID_CALLBACK_URL · INVALID_ERROR_CALLBACK_URL), 쿠키가 있는 요청의 다른 Origin(INVALID_ORIGIN). 쿠키 · DB 쓰기 없음
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthError' }
+        '404':
+          description: Google 로그인이 꺼짐(PROVIDER_NOT_FOUND — 환경 변수 둘 중 하나라도 없음) 또는 본문 idToken 로그인(ID_TOKEN_NOT_SUPPORTED, 닫음)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthError' }
+  /api/auth/callback/google:
+    get:
+      operationId: googleCallback
+      summary: Google에서 돌아옴(운영 O2)
+      description: >-
+        상태 쿠키 안의 state와 쿼리 state가 같아야 한다. 같으면 code를 Google 토큰 주소에서 바꿔 ID 토큰의 sub · email · email_verified · name을 읽고,
+        처음 보는 Google 계정이면 가입(같은 이메일의 기존 계정과는 잇지 않음), 같은 sub면 그 계정으로 로그인한다. Google 토큰은 저장하지 않는다.
+        응답은 모두 302 · Cache-Control no-store.
+      parameters:
+        - { in: query, name: state, required: false, schema: { type: string } }
+        - { in: query, name: code, required: false, schema: { type: string } }
+        - { in: query, name: error, required: false, schema: { type: string }, description: Google이 붙이는 오류(취소면 access_denied) }
+        - { in: cookie, name: better-auth.oauth_state, required: false, schema: { type: string } }
+      responses:
+        '302':
+          description: >-
+            성공이면 Location = 시작 때의 callbackURL. 실패면 Location = errorCallbackURL 뒤에 error={코드}(해시보다 앞, 예 /?login=google&error=access_denied#bookmarks):
+            access_denied(Google에서 취소) · account_not_linked(같은 이메일의 이메일 · 비밀번호 계정이 있음, 새 행 0) · state_mismatch(state 다름 · 10분 지남) ·
+            invalid_code(코드 교환 실패) 등. 상태 쿠키가 없거나 읽을 수 없으면 Location = /?error=state_mismatch(깨진 쿠키는 state_invalid).
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie:
+              schema: { type: string }
+              description: 성공이면 세션 쿠키(better-auth.session_token, 이메일 로그인과 같은 속성 · 7일)와 상태 쿠키 만료. 여러 헤더를 각각 전달한다
+            Cache-Control: { schema: { type: string, const: no-store } }
   /api/rankings:
     get:
       operationId: getRankings

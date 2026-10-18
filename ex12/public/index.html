@@ -274,6 +274,16 @@ main { overflow-x: clip; }
 .bm-head { padding: 32px 0 14px; }
 .bm-head h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; line-height: 1.25; }
 .bm-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+/* 휴대폰 로그아웃(O2 ⑨): 640px 이하에서만 보임(아래 Responsive), 641px 이상은 헤더 버튼 그대로 */
+.bm-user {
+  display: none; max-width: 100%; height: 30px; margin-top: 8px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+  font-size: 13px; font-weight: 600; line-height: 28px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top;
+}
+.bm-user:hover { background: var(--hover); color: var(--text); }
+/* 모든 화면 공통 맨 아래 한 줄(O2 ⑤): 정책 링크만(이메일 주소는 /privacy · /terms에만) */
+.site-foot { padding: 0 16px 32px; text-align: center; font-size: 12px; color: var(--faint); }
+.site-foot a { color: var(--muted); text-decoration: none; }
+.site-foot a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 2px; }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
@@ -344,6 +354,7 @@ main { overflow-x: clip; }
   .switch { justify-self: center; }
   .switch button { padding: 6px 12px; }
   .pill-btn .lbl, #userBtn { display: none; }
+  .bm-user { display: inline-block; }
   .wrap, .wrap-wide { padding: 0 16px; }
   .context, .bm-head { padding-top: 24px; }
   .context h1, .bm-head h1 { font-size: 22px; }
@@ -361,6 +372,17 @@ main { overflow-x: clip; }
 .auth-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
 .auth-error { min-height: 20px; color: #b42318; font-size: 14px; }
 #userBtn { max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Google로 계속하기(O2): Google 버튼 지침의 밝은 꼴(바탕 #FFFFFF · 테두리 #747775 · 글자 #1F1F1F · 표준 4색 G 로고 20px).
+   창이 늘 밝은 색이라 밝은 꼴 하나만 */
+.google-btn {
+  width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 12px;
+  border: 1px solid #747775; border-radius: 20px; background: #FFFFFF; color: #1F1F1F; font-size: 14px; font-weight: 500;
+}
+.google-btn svg { width: 20px; height: 20px; flex: none; display: block; }
+.google-btn:disabled { opacity: .38; cursor: default; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; color: #6f6b65; font-size: 13px; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: #ddd; }
+.auth-legal { margin: 16px 0 0; text-align: center; font-size: 12px; color: #6f6b65; }
 </style>
 </head>
 <body>
@@ -451,6 +473,7 @@ main { overflow-x: clip; }
     <div class="wrap">
       <div class="bm-head">
         <h1>북마크</h1>
+        <button type="button" class="bm-user" id="bmUser" hidden></button>
         <p id="bmSub"></p>
       </div>
       <div class="chips" id="folderChips" role="group" aria-label="폴더"></div>
@@ -459,6 +482,7 @@ main { overflow-x: clip; }
     </div>
   </section>
 </main>
+<footer class="site-foot"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/privacy#contact">문의</a></footer>
 
 <div class="tip" id="tip" role="tooltip"></div>
 <div class="scrim" id="scrim"></div>
@@ -469,12 +493,15 @@ main { overflow-x: clip; }
 <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle">
   <h2 id="authTitle">로그인</h2>
   <form id="authForm">
+    <button type="button" id="authGoogle" class="google-btn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg><span>Google로 계속하기</span></button>
+    <p class="auth-or">또는 이메일로</p>
     <label id="authNameLabel" hidden>이름<input id="authName" name="name" autocomplete="name" maxlength="100" disabled></label>
     <label>이메일<input name="email" type="email" autocomplete="email" required></label>
     <label>비밀번호<input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
     <p id="authError" class="auth-error" role="alert" aria-live="polite"></p>
     <div class="auth-actions"><button type="submit" id="authSubmit" class="chip-btn">로그인</button><button type="button" id="authSwitch" class="chip-btn">회원가입</button><button type="button" id="authClose" class="chip-btn">닫기</button></div>
   </form>
+  <p class="auth-legal"><a href="/terms" target="_blank" rel="noopener">이용약관</a> · <a href="/privacy" target="_blank" rel="noopener">개인정보처리방침</a></p>
 </dialog>
 <script>
 /* ─────────────── Data ─────────────── */
@@ -969,6 +996,10 @@ addEventListener('popstate', () => go(viewFromHash(), false));
 
 function renderUser() {
   document.getElementById('userBtn').textContent = state.loggedIn ? `${state.user.name} · 로그아웃` : '로그인';
+  // 640px 이하는 헤더 버튼이 숨겨져 있어 북마크 화면 제목 아래에 같은 문구 · 동작(signOut)을 둠(O2 ⑨, 641px 이상은 CSS로 숨김)
+  const bmUser = document.getElementById('bmUser');
+  bmUser.hidden = !state.loggedIn;
+  bmUser.textContent = state.loggedIn ? `${state.user.name} · 로그아웃` : '';
 }
 
 /* 세션만 메모리에 보관한다. 쿠키는 브라우저의 HttpOnly 저장소에 맡긴다. */
@@ -989,8 +1020,11 @@ function setAuthMode(mode) {
   authForm.elements.password.value = '';
   document.getElementById('authError').textContent = '';
 }
-function openAuth() {
+// issue: 비로그인 북마크 안내 토스트의 "로그인"으로 연 창이면 그 북마크 버튼의 이슈 id(Google에서 돌아온 뒤 그 이슈 상세창을 엶). 그 밖은 null
+let authIssue = null;
+function openAuth(issue) {
   if (authBusy) return;
+  authIssue = typeof issue === 'string' ? issue : null;
   setAuthMode('sign-in');
   authDialog.showModal();
   authForm.elements.email.focus();
@@ -1056,6 +1090,40 @@ document.getElementById('authClose').addEventListener('click', () => authDialog.
 authDialog.addEventListener('cancel', e => { if (authBusy) e.preventDefault(); });
 authDialog.addEventListener('close', () => { authForm.elements.password.value = ''; });
 
+/* Google로 계속하기(O2): 창의 버튼을 모두 잠그고 시작 요청 → 응답 url이 Google 주소일 때만 이동(이동하는 동안 잠금 유지), 실패면 문구 · 잠금 풂.
+   돌아올 주소(성공 · 실패 같음) = /?login=google [+ &issue={북마크하려던 이슈 id}] + 지금 해시 */
+let googleLeaving = false;
+function googleStartMessage(status, code) {
+  if (status === 404 && code === 'PROVIDER_NOT_FOUND') return '지금은 Google 로그인을 사용할 수 없습니다';
+  if (status === 429) return '잠시 후 다시 시도해 주세요';
+  return '인증 요청을 처리하지 못했습니다. 다시 시도해 주세요';
+}
+async function googleSignIn() {
+  if (authBusy) return;
+  authBusy = true;
+  const buttons = Array.from(authForm.querySelectorAll('button'));
+  buttons.forEach(b => b.disabled = true);
+  document.getElementById('authError').textContent = '';
+  const back = '/?login=google' + (authIssue ? `&issue=${encodeURIComponent(authIssue)}` : '') + location.hash;
+  try {
+    const data = await authRequest('sign-in/social', { provider: 'google', callbackURL: back, errorCallbackURL: back });
+    if (typeof data?.url !== 'string' || !data.url.startsWith('https://accounts.google.com/')) throw new Error();
+    googleLeaving = true;
+    location.assign(data.url);
+    return;
+  } catch (err) { document.getElementById('authError').textContent = googleStartMessage(err.status, err.code); }
+  authBusy = false;
+  buttons.forEach(b => b.disabled = false);
+}
+document.getElementById('authGoogle').addEventListener('click', () => { void googleSignIn(); });
+// Google 화면에서 브라우저 뒤로가기로 돌아와 페이지가 그대로 복원되면(bfcache) 잠금을 풂
+addEventListener('pageshow', e => {
+  if (!e.persisted || !googleLeaving) return;
+  googleLeaving = false;
+  authBusy = false;
+  Array.from(authForm.querySelectorAll('button')).forEach(b => b.disabled = false);
+});
+
 /* ─────────────── Events ─────────────── */
 document.addEventListener('click', e => {
   const el = sel => e.target.closest(sel);
@@ -1068,7 +1136,7 @@ document.addEventListener('click', e => {
   if ((b = el('[data-folder]'))) { state.folderFilter = b.dataset.folder; renderBookmarks(); return; }
   if ((b = el('[data-bm]'))) {
     const id = b.dataset.bm;
-    if (!state.loggedIn) return toast('북마크하려면 로그인이 필요합니다', '로그인', openAuth);
+    if (!state.loggedIn) return toast('북마크하려면 로그인이 필요합니다', '로그인', () => openAuth(id));
     if (findBookmark(id)) { closePop(); return unsave(id); }
     return popFor === id ? closePop() : openPop(b, id);
   }
@@ -1079,6 +1147,7 @@ document.addEventListener('click', e => {
   if (el('[data-today]') || el('#todayBtn')) return setDate(TODAY);
   if (el('#prevDay')) return setDate(addDays(state.date, -1));
   if (el('#nextDay')) return setDate(addDays(state.date, 1));
+  if (el('#bmUser')) return void signOut();
   if (el('#userBtn') || el('[data-login]')) {
     if (state.loggedIn && el('#userBtn')) void signOut();
     else openAuth();
@@ -1108,20 +1177,35 @@ let raf;
 new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { placePill(); if (state.view === 'map') drawMap(); }); }).observe(document.body);
 
 /* ─────────────── Init ─────────────── */
-// 위젯 바로가기 /?issue=<id>(첫 로드 때만): 값을 읽은 즉시 주소의 쿼리를 지움(해시 · 기록 수 그대로 → 새로고침 · 뒤로가기는 평소 화면).
-// id가 {YYYY-MM-DD}-{섹션 키}-{숫자}(달력에 있는 날짜, KST 오늘 이하)면 date = 그 날짜, 아니면 null. 값은 화면에 쓰지 않음(찾기에만)
+// 첫 로드 때만: 주소에 issue · login · error 중 하나라도 있으면 값을 읽은 즉시 쿼리 전체를 지움(해시 · 기록 수 그대로 → 새로고침 · 뒤로가기는 평소 화면).
+// issue(위젯 바로가기 /?issue=<id> · Google 로그인 뒤 북마크하려던 이슈): id가 {YYYY-MM-DD}-{섹션 키}-{숫자}(달력에 있는 날짜, KST 오늘 이하)면
+// date = 그 날짜, 아니면 null. login · error(Google 로그인에서 돌아옴, O2). 값은 화면에 쓰지 않음(찾기 · 문구 고르기에만)
 function issueShortcut() {
   const params = new URLSearchParams(location.search);
-  if (!params.has('issue')) return null;
+  if (!['issue', 'login', 'error'].some(k => params.has(k))) return null;
   history.replaceState(null, '', location.pathname + location.hash);
+  const back = { issue: null, google: params.get('login') === 'google', error: params.has('error') ? params.get('error') : null };
+  if (!params.has('issue')) return back;
   const id = params.get('issue');
   const m = /^(\d{4}-\d{2}-\d{2})-([a-z]+)-\d+$/.exec(id);
   const ok = !!m && iso(parse(m[1])) === m[1] && m[1] <= TODAY && SECTIONS.some(s => s.key === m[2]);
-  return { id, date: ok ? m[1] : null };
+  back.issue = { id, date: ok ? m[1] : null };
+  return back;
+}
+// Google 로그인에서 돌아온 뒤(랭킹 · 세션 확인 · 화면 그리기 · issue 처리 다음): 로그인 상태 + login=google + error 없음 → 토스트,
+// 비로그인 + error → 로그인 창(로그인 모드) + 문구, 그 밖은 아무것도 하지 않음
+function googleReturn({ google, error }) {
+  if (state.loggedIn && google && error === null) return toast('로그인했습니다');
+  if (state.loggedIn || error === null) return;
+  openAuth();
+  document.getElementById('authError').textContent = error === 'access_denied' ? 'Google 로그인을 취소했습니다'
+    : error === 'account_not_linked' ? '이미 가입된 이메일입니다. 처음 가입한 방법으로 로그인해 주세요'
+    : 'Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요';
 }
 async function start() {
   renderUser(); renderTabs();
-  const shortcut = issueShortcut();
+  const back = issueShortcut();
+  const shortcut = back?.issue;
   const [answered] = await Promise.all([loadRanking(shortcut?.date), restoreSession()]);
   renderList(); renderBookmarks();
   go(viewFromHash(), false);
@@ -1131,6 +1215,7 @@ async function start() {
     if (shortcut.date && issueById(shortcut.id)) openDrawer(shortcut.id);
     else if (answered) toast('이슈를 찾을 수 없습니다');
   }
+  if (back) googleReturn(back);
   document.fonts?.ready.then(() => { placePill(); drawMap(); });
 }
 start();

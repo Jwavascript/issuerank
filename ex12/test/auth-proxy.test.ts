@@ -94,3 +94,25 @@ it('공개 경로 /api/widget은 앱의 CDN 캐시 헤더를 그대로 두고(no
   expect(res.headers.getSetCookie()).toEqual([]);
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it('O2: Google 콜백 302의 상대 Location · 복수 Set-Cookie(Expires 포함)를 그대로 두고 no-store를 붙이며 외부 fetch를 하지 않는다', async () => {
+  const headers = new Headers({ Location: '/?login=google#list' });
+  headers.append('Set-Cookie', 'better-auth.session_token=new; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax');
+  headers.append('Set-Cookie', 'better-auth.oauth_state=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path=/; HttpOnly; SameSite=Lax');
+  const seen: { url: string; cookie: string | null; method: string }[] = [];
+  const app = { fetch: vi.fn(async (req: Request) => {
+    seen.push({ url: req.url, cookie: req.headers.get('cookie'), method: req.method });
+    return new Response(null, { status: 302, headers });
+  }) };
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  const handle = createBff(() => app);
+  const res = await handle(new Request('http://localhost:3000/api/auth/callback/google?state=s&code=c', { headers: { Cookie: 'better-auth.oauth_state=enc' } }));
+  expect(res.status).toBe(302);
+  expect(res.headers.get('location')).toBe('/?login=google#list');
+  expect(res.headers.getSetCookie()).toEqual(headers.getSetCookie());
+  expect(res.headers.getSetCookie()).toHaveLength(2);
+  expect(res.headers.get('cache-control')).toBe('no-store');
+  expect(seen).toEqual([{ url: 'http://localhost:3000/api/auth/callback/google?state=s&code=c', cookie: 'better-auth.oauth_state=enc', method: 'GET' }]);
+  expect(fetchMock).not.toHaveBeenCalled();
+});
