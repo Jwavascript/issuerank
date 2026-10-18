@@ -80,7 +80,7 @@ partial · missing · wrong: 없음.
 | 15 배포 API · 캐시 | SKIP — 푸시 후 | 커밋 · 푸시 전(9절 절차) |
 | 16 배포 바로가기(CDP) | SKIP — 푸시 후 | 9절 |
 | 17 04:17 반영 | SKIP — 푸시 다음 날 05~09시 | 9절 |
-| 18 iPhone 실제 | SKIP — 사용자 iPhone 확인 대기(D24, PASS 아님) | 기기 없음. 볼 것은 8~10번 하네스로 고정 |
+| 18 iPhone 실제 | SKIP — iPhone 실기기 당분간 불가(D24, PASS 아님 · 10-17 표기 변경, 12절) | 기기 없음. 볼 것은 8~10번 하네스로 고정 |
 | 19 Android 안내 칸 | OK | 7번 문구 PLAN과 같음(`더보기(⋮) › 설치 및 바로가기 만들기 › 바로가기 만들기` · "홈 화면 위젯은 준비 중입니다"), 360px에서 화면 안(left ≥ 0 · right ≤ 360), Android 코드 · 빌드 파일 0 |
 | 20 상세창 수집 시각 | OK | ① VM: `04:31:12 → 10.17 오전 4:31` · `13:05 → 오후 1:05` · `00:07 → 오전 12:07` · `12:00:59 → 오후 12:00` · `10-09 23:59 → 10.9 오후 11:59`, D8 카드 `10.8`, 템플릿에 "오전 6:00" 없음 ② 브라우저: 상세창 "수집" `10.17 오전 8:34` = 날짜 줄 `10.17 오전 8:34 수집 · 이슈 30개`의 앞 = `/api/widget` updatedLabel − " 수집"(지난 날 `10.16 오전 8:41` = SQL 그날 실행) |
 | 21 Web Analytics | SKIP — ①만 OK, ②③ 푸시 · Enable 뒤 | ① 로컬(Enable 없음): `/` · `/?issue=` 10탭 · `/widget` 모두 script.js 404(불러오기 실패만 기록) · JS 예외 0(페이지 시작 전 넣은 오류 수집기 12탭 전부, CDP 예외 이벤트는 `/` · `/widget` · 지난 날 · 5xx 3탭에서도 0) · `typeof window.va` = function · `document.cookie` 빈 값 · 브라우저 쿠키 0 · 13①⑦ · 19 그대로 |
@@ -155,3 +155,45 @@ partial · missing · wrong: 없음.
 - 스크립트(심사가 새로 작성): `jlib.mjs`(비밀값 검사 · D16 · 라벨) · `judge-db.mjs`(SQL 순서 · DB 스냅샷) · `judge-server.mjs`(next start 3001 + 세기 프록시 3000) · `judge-api.mjs`(12번) · `judge-ui.mjs`(13 · 19 · 20 · 21① · D25) · `judge-widget-vm.mjs`(Scriptable 하네스) · `judge-drawer-vm.mjs`(20① · 바로가기 형식) · `judge-openapi.cjs`(5번 구조) · `judge-rank-equiv.ts`(HEAD 비교). 비교 기준 사본: `index-head.html` · `head-ranking.ts`(`git show HEAD:`).
 - 결과: `sql-order.json` · `api-result.json` · `ui-result.json` · `widget-vm-*.json`(5시간대) · `db-snapshot-before.json` · `db-snapshot-after.json` · `request-count.json`(70) · `request-log.json` · `server-state.json` · `server-log.txt`(leak:false).
 - 캡처(360×800, 직접 열어 확인한 것 ✓): `o1j-360-issue-first.png` ✓(상세창 · 수집 `10.17 오전 8:34`) · `o1j-360-issue-prev.png` ✓(10월 16일 · 수집 `10.16 오전 8:41`) · `o1j-360-issue-missing.png` ✓(토스트) · `o1j-360-shortcut-502.png` ✓(서버 오류 토스트) · `o1j-360-list-after.png` ✓(전환 뒤 목록, 넘침 없음) · `o1j-360-widget-light.png` ✓ · `o1j-360-widget-dark.png` ✓(전체 선택 대체 경로) · `o1j-360-issue-first-bookmark.png` · `o1j-360-issue-bad.png` · `o1j-360-issue-list.png` · `o1j-360-bookmarks.png` · `o1j-360-bookmarks-after.png` · `o1j-360-widget-copy-fallback.png`.
+
+## 11. 2026-10-17 16:35 KST — 배포 줄 판정(푸시 d249399 뒤)
+근거: 코디네이터 전달(사용자 승인으로 `d249399` 푸시 · Vercel 재배포 끝). 심사 확인: 로컬 HEAD = `d249399`, `main...origin/main` 앞뒤 차이 없음, 커밋된 O1 파일 sha256 = 이 심사가 본 파일(1~10절)과 같음. 지금 할 수 있는 줄(15 · 16 · 21②)만 실행. 스크립트 `ex12/.data/judge-o1-20261017/judge-deploy.mjs`(새로 작성, 배포 요청을 직접 셈 · 한도 40 · 넘을 것 같으면 탭 전에 멈춤). 실행 전 같은 스크립트를 가짜 서버(127.0.0.1:3999, 배포 요청 0)로 드라이런해 도구를 확인(23/23, 결과는 지움). DB는 순서 비교용 SQL만 다시 읽음(`judge-db.mjs order`, 읽기 전용 — 1~10절 값과 같음). newsdata · OpenAI 0 · 임시 계정 0 · 제품 코드 · 커밋 · 푸시 0.
+
+| # | 판정 | 결과(배포 `https://issuerank-kappa.vercel.app`) |
+|---|---|---|
+| 15 배포 API · 캐시 | **OK** | `/api/widget` ①(07:35:15Z) 200 `x-vercel-cache: HIT` `age: 296` → ②(10초 뒤) 200 `MISS` `age: 0`(300초 보관이 그 사이 끝남) → PLAN대로 30초 뒤 ③ 200 **`HIT` `age: 30`** — `s-maxage=300` CDN 보관이 설계대로 동작. 세 번 모두 클라이언트 `cache-control: public, max-age=0`(s-maxage 없음 · max-age=0) · Set-Cookie 0 · 같은 본문. 본문 5칸 · 항목 4칸, date `2026-10-17` = `/api/rankings` date = SQL 최근 수집일, **30개 순서 = SQL 독립 계산(12번 방법)과 일치**, updatedLabel `10.17 오전 8:34 수집`. `/api/rankings` 200 `public, max-age=0, must-revalidate` · Set-Cookie 0. `/widget.js` 200(본문 sha256 = 저장소 파일) · `/widget` 200(= widget.html) · `/?issue=2026-10-17-soc-3` 200(= D25 판 index.html) |
+| 16 배포 바로가기(CDP 360×800) | **OK** | 13① 주소로 바로 연 탭: 상세창 제목 `부천 도장공장 화재로 8명 부상…` · 3줄 요약 · `106건` · 원문 새 탭 · noopener = 배포 rankings 카드, 쿼리 지움 · 해시 없음 · **history.length 1** · 토스트 0 · 넘침 0(측정 탭에서도 상세창 · 토스트 0). 13④ `/?issue=abc` → date 없이 1번 · 상세창 0 · 토스트 "이슈를 찾을 수 없습니다" 하나. 13⑦ `/` → 랭킹 탭 실제 클릭(`#list`, 기록 2→3) → 뒤로(이슈맵) → 앞으로(목록) · 상세창 계속 닫힘 · `/#bookmarks` → "로그인이 필요합니다" · 넘침 0. 20② 상세창 "수집" `10.17 오전 8:34` = 날짜 줄 `10.17 오전 8:34 수집 · 이슈 30개` 앞 = 배포 updatedLabel − " 수집". 19 그대로: `/widget` 칸 = 저장소 widget.js(3821자) · Android 7번 문구 · 360px 안 |
+| 21 ② Enable 전 | **OK**(줄 21은 ③ 남아 SKIP 유지) | `/?issue={id}` · `/` · `/widget` 세 측정 탭 모두 `/_vercel/insights/script.js` **404**(아직 Enable 전), JS 예외 0(페이지 시작 전 수집기 + CDP 예외 이벤트), `typeof window.va` = function, `document.cookie` 빈 값, 브라우저 쿠키(배포 도메인) 0, view 요청 0 |
+| 17 · 18 · 21③ | SKIP | 17 = 내일(10-18) 05~09시 KST, 21③ = 사용자 Analytics Enable · Redeploy 뒤, 18 = 사용자 iPhone |
+
+- 배포 요청(심사 카운터, 코디네이터의 3요청은 밖): **32/40**(위로 어림한 값) — Node 7(widget 3 · rankings · widget.js · widget · /?issue=) + 브라우저 25(탭 5개마다 `max(CDP 기록, Resource Timing)` + favicon 1 어림 = 6 · 5 · 5 · 5 · 4, 바로 연 탭은 Resource Timing으로 셈). favicon 어림을 빼고 확인된 값은 Node 7 + 브라우저 20 = 27. 외부 호스트는 글꼴 jsdelivr뿐.
+- 참고 ①: PLAN 위젯 규칙 표는 Vercel이 클라이언트에 `public, max-age=0, must-revalidate`를 준다고 적었지만 실제는 **`public, max-age=0`**(must-revalidate 없음). 15번 기대("s-maxage 없음 · max-age=0")는 충족, 동작 차이 없음(문서 표현만). ②: 문서 `/?issue=…`는 `MISS`(정적 `/widget.js` · `/widget`은 `HIT` `age 338`) — 쿼리가 붙은 rewrite 문서가 따로 보관되는지 한 번으로는 판단 못 함, 본문은 같아 기능 영향 없음.
+- 정리: Chromium 새 PID 17개(시작 12 + 탭 렌더러 5)만 기록 → `Browser.close` 한 번에 모두 종료, 남은 PID 0, 프로필 삭제. 가짜 서버(드라이런)는 그 PID만 종료. `curl` 9351 · 3000 · 3001 · 3999 = 000, `ps` chromium 0, code-oss 17320 실행 중. 임시 파일 삭제, 결과 · 캡처 누출 검사 false(57파일).
+- 증거: `deploy-result.json` · `deploy-request-count.json`(32) · 캡처 `deploy-360-issue-first.png` ✓(직접 열어 확인) · `deploy-360-issue-bad.png` ✓ · `deploy-360-bookmarks.png` · `deploy-360-widget.png`.
+
+### 11.1 갱신된 합계 · 판정
+- 21줄: **OK 18(1~16 · 19 · 20) · FAIL 0 · SKIP 3(17 내일 · 21 ③ Enable 뒤(①② OK) · 18 iPhone)**. D25 추가 OK 2.
+- 판정: **PASS 보류 — 17(10-18 05~09시 KST) · 21③(사용자 Enable 뒤) 확인 + 18 iPhone 대기.** 17 · 21③이 OK가 되면 18번 하나만 남는 PASS 보류(D24).
+- 남은 절차: 9절 4(21③) · 5(17) · 6(18) 그대로.
+
+## 12. 2026-10-17 16:58 KST — 21③ 판정(Analytics Enable · Redeploy 뒤)
+근거: 코디네이터 전달(사용자가 Vercel › Analytics › Enable과 Redeploy 실행). 이번 확인은 21③만. 스크립트 `ex12/.data/judge-o1-20261017/judge-analytics.mjs`(새로 작성, 가짜 서버 드라이런으로 도구 확인 뒤 1회 실행). 배포 `/`를 360×800 Chromium 측정 탭(about:blank에서 준비 뒤 이동)으로 **1번**만 엶 — `/widget`은 필요 없어 열지 않음. 실제 사용자 브라우저처럼 모바일 Chrome UA · `navigator.webdriver` false(`--disable-blink-features=AutomationControlled`)로 엶(헤드리스 표시로 분석 스크립트 동작이 달라지는 것을 피함). newsdata · OpenAI 0 · DB 0 · 임시 계정 0 · 제품 코드 · 커밋 · 푸시 0.
+
+| 확인 | 결과 |
+|---|---|
+| script.js | 페이지가 부르는 `/_vercel/insights/script.js` **200**(Enable 전 404 → 이제 200, 경로는 지금 코드 그대로) |
+| view 이벤트 | `POST /_vercel/insights/view` **1회 · 200**, 그 밖의 insights 요청 0 |
+| 쿠키 | 모든 응답 Set-Cookie 0 · `document.cookie` 빈 값 · 브라우저 쿠키(배포 도메인) 0 |
+| JS 예외 | 0(페이지 시작 전 수집기 + CDP 예외 이벤트) |
+| 화면 | `window.va` 함수 · 이슈맵 · 날짜 줄 `10.17 오전 8:34 수집 · 이슈 30개` · 360px 넘침 0(`analytics-360-home.png` 직접 열어 확인) |
+| 대시보드 방문 수 | **사용자 대시보드 확인 대기**(심사는 볼 수 없음). 이 확인 방문은 2026-10-17 16:57 KST, 모바일 Chrome UA 1페이지뷰 — 대시보드에서 구분 가능 |
+
+- 판정(관찰한 것으로): **21 OK**(① 로컬 · ② Enable 전 배포 · ③ Enable 뒤 배포 모두 OK, 대시보드 방문 수는 사용자 확인 대기로 따로 둠).
+- 배포 요청(이번 확인분 별도 카운터, 앞의 32와 따로): **7/10**(CDP로 본 6 — 문서 · script.js · rankings · get-session · view · favicon 404 — + favicon 1 위로 어림, favicon이 CDP에 보였으므로 실제는 6). `analytics-request-count.json`.
+- 정리: Chromium 새 PID 14개만 기록 → `Browser.close` 한 번에 모두 종료, 남은 0, 프로필 삭제. 드라이런 가짜 서버는 그 PID만 종료. `curl` 9352 · 3999 · 3000 = 000, `ps` chromium 0, code-oss 17320 실행 중. 임시 파일 삭제, 증거 58파일 누출 검사 false.
+- 증거: `analytics-result.json` · `analytics-request-count.json` · `analytics-360-home.png`.
+
+### 12.1 18번 표기 · 갱신된 합계 · 판정
+- 18번: 사용자 알림(iPhone 실기기 테스트 당분간 불가)에 따라 **[SKIP — iPhone 실기기 당분간 불가]**로 표기 변경(5절 표도 같게 고침). 확인할 내용은 8~10번 가짜 전역 하네스로 고정돼 있음.
+- 21줄: **OK 19(1~16 · 19 · 20 · 21) · FAIL 0 · SKIP 2(17 · 18)**. D25 추가 OK 2.
+- 판정(PLAN 규칙): 17번(10-18 05~09시 KST) 결과 전까지 **"PASS 보류"**. 17번이 OK면 **"18번만 남은 PASS 보류(운영 반영 완료)"**로 갱신. 17번 절차는 9절 5.
