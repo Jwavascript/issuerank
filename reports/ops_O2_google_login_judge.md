@@ -172,3 +172,112 @@ Termux Chromium 155 headless + CDP. Google 차단 두 겹: ① 모든 요청을 
 ## 10. 증거 파일(저장소 밖 — 심사 세션 scratchpad, 세션이 끝나면 지워질 수 있음)
 
 `/data/data/com.termux/files/usr/tmp/claude-10308/-data-data-com-termux-files-home-storage-capstone/3646d5a7-8930-403e-9918-202599e5948c/scratchpad/o2judge/`: 스크립트 `jlib.mjs`(누출 검사 · 요청 카운터 · 속도 제한 문) · `judge-auth.mts`(사본, 5.2) · `judge-api.mjs`(12) · `judge-ui.mjs`(13) · `judge-bfcache.mjs` · `db.mjs`(사본) / 결과 `judge-auth-result.json` · `api-fake.json` · `api-off.json` · `ui-result.json` · `bfcache-result.json` · `request-count.json` · `db-before.json` · `db-after.json` · `protected-hash.txt` · `npm-test-1.txt` · `npm-build-2-clean.txt` · `redocly-{work,head}.txt` · `db-generate.txt` · `auth-generate.txt` · `server-{fake,off}.log`(모두 누출 검사 false) / 캡처 16장 `o2j-*.png`. 이 보고의 숫자가 판정 근거이고, 파일은 다시 볼 때만 참고.
+
+## 11. 2026-10-18 15:50 KST — D27 재심사(정지 뒤 로그인 창 잠김 수정)
+
+> 대상: 7절 발견 1번을 사용자가 푸시 전에 고치기로 한 D27(PLAN.md D27 · `plan/PLAN_ops_O2_google_login.md` 끝 「범위 추가 (D27)」). 기준 HEAD `b2c9379`, 미커밋 변경 `ex12/public/index.html`(+17 −7) · `ex12/test/google-ui.test.ts`(+55 −1). 제작 보고 13절은 참고만 하고 영향받는 줄을 **새 심사 스크립트로 다시 실행**(제작 `ex12/.data/o2-d27-20261018/` 재사용 0). 제품 코드 수정 0.
+> **판정: D27 OK — O2는 계속 PASS 보류.** D27 추가 줄 OK, FAIL 0, 위반 0. 21줄 합계 **OK 14 · FAIL 0 · SKIP 7**(변화 없음, 15 · 16 · 20 배포 부분 = 푸시 후, 17 · 18 · 21 = 사용자, 19 = 선택).
+
+### 11.1 범위 · 보호 파일
+- `git diff b2c9379`: ex12에서 바뀐 것은 `public/index.html` · `test/google-ui.test.ts` 2개뿐. 나머지 추적 83개(ex12 + `.github/workflows/daily.yml`)는 HEAD와 SHA-256이 같음. 여기에는 보호 파일 전부(`server/bff.ts` · route · `server/db/*` · `drizzle/*` · package · lock · 위젯 3 · 하루 실행 파일 · `server/auth.ts` · `privacy.html` · `terms.html` · `openapi.yaml` · `next.config.mjs`)가 들어감. 새 파일 0 · 새 패키지 0.
+- 문서: PLAN.md D27 한 줄 · 계획 D27 절 · 제작 보고 13절 · HANDOFF. ex01~ex11 · frontend · web · SPEC 변경 0.
+- `index.html` 변경 내용(직접 읽음):
+  - `GOOGLE_STALL_MS = 5000` · `googleStall` · `googleUnlock()`(타이머 지움 · googleLeaving · authBusy false · 창 버튼 4개 다시 됨)을 더함.
+  - `location.assign` 뒤에 `googleLeaving = true` + 5초 타이머를 둠.
+  - `pagehide`에서 타이머를 지우고, `pageshow`(persisted)에서 `googleUnlock`.
+  - 시작 실패 경로 · 돌아온 화면 처리 · 이메일 흐름은 그대로.
+
+### 11.2 테스트 · 빌드
+- `bash scripts/ex12-ubuntu.sh npm test` → **17파일 158/158**(`google-ui` 9 = 기존 6 + D27 3). vitest가 바꾼 추적 파일 0.
+- `.next`를 지운 깨끗한 `npm run build`(Turbopack + `tsc --noEmit`) 성공. 출력 누출 false.
+
+### 11.3 심사 VM(`judge-d27-vm.mjs`, 25검사 25 OK)
+작업 트리 `index.html`의 로그인 블록을 그대로 잘라, 내가 만든 가짜 DOM · 가짜 시계(ms 단위 예약표) · 가짜 fetch에서 실행함. 제작 테스트 도구는 쓰지 않음.
+
+- **정지**:
+  - 누르면 응답 전에 이미 잠김. 응답 뒤 이동 1번 · 예약 1개(5000).
+  - **4999ms: 잠김 · Esc 막힘 → 5000ms: 버튼 4개 · authBusy · googleLeaving false**. 문구 · 토스트 0, 남은 예약 0, 입력 칸 계속 됨.
+  - 그 뒤 Esc로 닫힘. 다시 열어 이메일 로그인하면 `sign-in/email` 1번과 기존 401 문구.
+- **잠긴 동안 엔터 제출**: 요청 0. 풀린 뒤 1번.
+- **다시 누름**: 새 시작 · 새 예약. 다시 5000ms에 한 번만 풀림.
+- **정상 이동(pagehide)**: 예약이 지워지고, 20초가 지나도 아무것도 바뀌지 않음.
+- **bfcache**:
+  - pagehide persisted → 떠난 동안 그대로 → pageshow persisted에서 즉시 풀림 · 예약 0, 그 뒤 변화 0.
+  - persisted가 아닌 pageshow는 그대로. 예약 중 pageshow persisted면 예약도 지움.
+- **시작 실패 7가지**(404 `PROVIDER_NOT_FOUND` · 429 · 500 글 · 네트워크 · Google 아닌 url · url 없음 · JSON 아님): 표의 문구 · 즉시 풀림 · 이동 0 · 예약 0, 10초 뒤에도 같음.
+- **기타**:
+  - 응답 전 두 번 누름 → 요청 1번.
+  - `location.assign`이 던지면 → 일반 문구 · 풀림 · 예약 0.
+  - **잠긴 동안 창이 닫혀도**(Chrome이 활성화 없는 두 번째 Esc를 취소 불가 cancel로 보낼 때) 5초 뒤 다시 열 수 있음. D27 전에는 이 경우도 새로고침 전까지 막혔음.
+- **실수 넣기**(파일은 그대로 두고 메모리 안 코드 문자열만 바꿈 → 해시 · 백업 불필요): 6가지 모두 잡힘.
+
+  | 넣은 실수 | 실패한 검사 수 |
+  |---|---|
+  | 타이머 없음 | 10 |
+  | pagehide가 타이머를 안 지움 | 2 |
+  | 풀 때 authBusy 그대로 | 10 |
+  | 15초 | 8 |
+  | pageshow 풀기 없음 | 3 |
+  | 이동 전에 상태를 바꿈 | 1 |
+
+### 11.4 실제 Chromium(`judge-d27-ui.mjs`, 20검사 20 OK)
+- **실행 조건**:
+  - 로컬 `npx next start -p 3000 --hostname 127.0.0.1`. 가짜 Google 값은 scratchpad 시작 스크립트에만 둠.
+  - Termux Chromium 155 headless + CDP.
+  - Google 이동(문서)은 탭마다 다르게 처리함.
+    - 정지: 잡자마자 Aborted. 브라우저 "정지"와 같은 상태.
+    - 느린 이동: 잡아 둔 채 7초 뒤 가짜 HTML로 놓음.
+    - 정상 이동: 바로 가짜 HTML.
+  - Google의 다른 요청은 브라우저 안 404, 이름 풀이도 NOTFOUND.
+  - 시각은 페이지 안 기록기(문서 capture 단계 · `performance.now`)로 잼.
+- **360 정지** — `/#bookmarks` 북마크 탭 "로그인"으로 시작:
+  - 잠김은 누른 뒤 3ms. 시작 응답 200은 누른 뒤 38ms.
+  - Google 이동을 취소한 직후: 같은 문서 · 창 열림 · 버튼 4개 잠김 · 입력 칸 됨.
+  - 5초 전 Esc(이메일 칸을 눌러 활성화를 준 뒤): cancel이 취소 가능 상태로 와서 **막힘**.
+  - **풀림 = 시작 응답 뒤 5006ms**(누른 뒤 5044ms). 문구 없음 · 창 그대로.
+  - 풀린 뒤 Esc → **닫힘**.
+  - 다시 열어 **임시 계정으로 이메일 로그인 → 200** · "로그인했습니다" · 북마크 화면 "심사D27 · 로그아웃" → 로그아웃 200.
+- **1280 느린 이동** — 헤더 "로그인"으로 시작:
+  - 이동을 잡아 둔 동안 **시작 응답 뒤 5006ms에 풀림**. 그 기록이 잡혀 있는 중에도 CDP로 도착함.
+  - 7013ms 뒤 놓자 **이동이 끝까지 감**: 가짜 Google 문서가 열리고, pagehide persisted는 시작 응답 뒤 7153ms(풀림 뒤).
+  - 뒤로 → bfcache 복원 · 버튼 정상 · 풀림 1번뿐.
+- **360 정상 이동**:
+  - 페이지가 시작 응답 뒤 58ms에 떠남(pagehide persisted).
+  - 6.5초 머문 뒤 뒤로 → pageshow persisted(6628ms) 순간에 풀림(차이 1ms, 1번). 떠난 동안 타이머가 풀지 않음.
+  - 6초를 더 기다려도 새 기록 0.
+- **시작 실패 회귀**(같은 탭, 브라우저 안 모의 → 서버 0): 404 · 429 · 500 · 네트워크 · Google 아닌 url 5가지 모두 표의 문구 · 즉시 풀림 · 이동 0. 5.6초 뒤에도 문구 · 상태 · 기록이 그대로(타이머 없음).
+- **로그인 창 회귀(360 · 1280)**: 첫 요소 · 문구 · 지침 색 · G 4색 20×20 · 높이 40 · 너비 가득 · "또는 이메일로" · 기존 버튼 · 첫 초점 · 정책 링크 · 창 안 이메일 0 · 넘침 0, 1280 창 400.
+- **돌아온 화면 회귀**: `/?login=google&error=access_denied#bookmarks` → 북마크 화면 + 창 + "Google 로그인을 취소했습니다" · 버튼 됨 · 쿼리 지움 · 해시 그대로 · 5.6초 뒤에도 그대로.
+- **기타**: Google 문서 이동은 3번뿐(정지 · 느린 · 정상)이고 모두 CDP가 취소하거나 가짜로 답함. 주소 칸 정상(redirect_uri 로컬 콜백 · scope 3개 · 가짜 client_id · state 32 · challenge 43). JS 예외 0. 캡처 `d27j-360-stop-locked` · `d27j-360-stop-unlocked`를 직접 열어 확인함(잠김 = Google 버튼만 흐림).
+
+### 11.5 5초 선택에 대한 심사 판단 — 타당
+- **정상 이동에서 페이지가 떠나는 때**: Google 첫 응답 바이트가 아니라, 새 문서가 확정(commit)되는 때다. 그때까지 이름 풀이 · TCP · TLS · 첫 요청 + Google 쪽 리디렉트(같은 연결 재사용, 한 번에 왕복 1번) + 마지막 응답이 지나간다. 그래서 제작 근거의 "왕복 3~4번"은 조금 낙관적이다.
+- **실제 걸리는 시간**: 왕복 0.1초(좋은 LTE)면 약 1초 안, 0.3초(약한 신호)면 약 2~3초. 아주 느린 연결(왕복 0.6초 이상 · 혼잡)에서는 5초를 넘을 수 있다.
+- **5초를 넘겨도 문제없음**: 그때는 **잠금이 먼저 풀릴 뿐 진행 중인 이동은 그대로 이어진다**. 11.4 느린 이동에서 5006ms에 풀린 뒤 7초에 놓은 이동이 끝까지 감을 확인했다. 남는 위험은 그 사이 다시 누르면 새 시작이 첫 이동을 대신하는 정도이고, 상태가 맞지 않으면 돌아온 화면에 일반 문구가 나온다(제작 보고 13.2). 정상 흐름을 망가뜨리지 않는다.
+- **정지한 사람 입장**: 최대 5초만 기다리면 된다.
+- 결론: 늦게 풀려도 해가 없고 빨리 풀려도 해가 없으니, 둘의 균형으로 5초는 합리적이다. 더 길게(예 8~10초) 하면 느린 연결의 이른 풀림은 줄지만 정지한 사람의 기다림이 길어진다. 지금 값을 바꿀 근거는 없다.
+- 참고(D27 전부터 있던 것, 고치지 않음): 잠긴 동안 Google 버튼만 흐려지고 다른 버튼 3개는 비활성 모양이 없음(제작 13.5). Chrome의 Esc 남용 방지 규칙 때문에 잠긴 동안에도 활성화 없는 두 번째 Esc는 창을 닫을 수 있다. 이 경우도 이제 5초 뒤 다시 열 수 있다(11.3).
+
+### 11.6 요청 수 · 외부 · DB · 임시 계정 · 프로세스
+- **로컬 3000 요청 20/40**(이번 재심사 새 카운터, 시작 0, 막힘 0 · 429 0 · 5xx 0).
+  - Node 1: 임시 계정 가입.
+  - 브라우저 19: 정지 탭 8 · 느린 이동 4 · 정상 이동 4 · 돌아온 화면 3. bfcache 복원 2번은 요청 0.
+  - 브라우저 안에서 답해 서버에 닿지 않은 요청: insights · favicon 5 · 모의 5 · 가짜 Google 문서 2.
+- **외부**: newsdata 0 · OpenAI 0 · **Google 0**. Google 호스트 요청은 이동 문서 3 + 가짜 화면 favicon 1이고, 모두 CDP가 취소하거나 답함. DNS도 NOTFOUND. 서버는 code가 붙은 콜백을 받지 않아 토큰 교환 0. 서버 로그 = Next 시작 줄뿐(`AUTH_INTERNAL_ERROR` 0줄, 누출 false).
+- **DB**(읽기 전용 스냅숏): 9표 건수 · 내용 해시 전후 같음, 행 단위 변화 0(articles 937 · issues 616 · collect_runs 90 · bookmarks 1 · folders 1 · user 1 · session 1 · account 1 · verification 0).
+- **임시 계정 1개**(`o2j-<uuid>@example.invalid`): 정리 직전 그 userId 행 = session 1(API 가입 세션, 브라우저 세션은 로그아웃으로 지워짐) · account 1(credential, 토큰 칸 null) · bookmarks · folders 0. 그 행만 지운 뒤 다시 찾기 0.
+- **프로세스 · 파일**:
+  - 내 서버(11556 → 11575 → 11638 → 11639)와 Chromium 1벌(9 PID)만 PID로 종료. 이번에는 PID 목록을 명령 치환으로 넘겨 zsh 문제 없음.
+  - 끝에 `curl` 3000 · 3001 · 9379 = 000. `ps`에 next-server · next start · 내 chromium 0. 사용자 code-oss(PID 17320) 살아 있음.
+  - 프로필 삭제. 저장소 안 임시 폴더(`ex12/.data/judge-o2-d27/`, DB 도구)와 가짜 secret이 든 파일도 지움.
+  - 심사 중 저장소 변화 0: status · 추적 85파일 · 문서 5개 해시 같음.
+- **증거**: scratchpad `…/scratchpad/o2d27/`(`judge-d27-vm.mjs` · `judge-d27-ui.mjs` · `vm-result*.json` · `ui-d27-result.json` · `request-count.json` · `db-before.json` · `db-after.json` · `npm-test.txt` · `npm-build.txt` · `server.log` · 캡처 2장). 세션이 끝나면 지워질 수 있다.
+
+### 11.7 갱신된 합계 · 다음
+- 21줄 합계는 그대로 **OK 14 · FAIL 0 · SKIP 7**이고, D27 추가 줄은 OK. 판정 **PASS 보류**.
+- 7절 발견 1번은 **해결**됨(D27). 2번 `/list-accounts`는 D27 결정대로 그대로 둠.
+- 다음 순서:
+  1. O1 17번 처리.
+  2. 사용자 커밋 · 푸시 승인. 커밋 대상 = D27 두 파일 + 문서.
+  3. 배포 줄 15 · 16 · 20(9절 절차). 16번에서 정지 상태도 같은 방법(이동 취소 → 약 5초 뒤 풀림)으로 볼 수 있음.
+  4. 사용자 17 · 18 · 21(19는 선택).

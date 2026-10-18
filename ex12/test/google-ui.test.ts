@@ -52,9 +52,15 @@ function dialog(hash: string, reply: Reply) {
   });
   const toast = vi.fn();
   const location = { pathname: '/', search: '', hash, assign: vi.fn() };
+  // VM 안의 setTimeout · clearTimeout(가짜): 예약만 기록하고 runTimers()로 그 시간이 지난 것처럼 실행(D27)
+  const timers = new Map<number, { fn: () => void; ms: number }>();
+  let timerId = 0;
+  const runTimers = () => { for (const [id, t] of [...timers]) { timers.delete(id); t.fn(); } };
   const state = { loggedIn: false, user: null, authVersion: 0, view: 'map', folders: [], bookmarks: [] };
   const context = createContext({
     state, location, fetch: fetchMock, toast, Response, Error, JSON, Promise, scrim: {}, popFor: null,
+    setTimeout: (fn: () => void, ms: number) => { timers.set(++timerId, { fn, ms }); return timerId; },
+    clearTimeout: (id: number) => { timers.delete(id); },
     document: { getElementById: (id: string) => els[id] ?? null, addEventListener: (type: string, fn: Listener) => { (documentListeners[type] ??= []).push(fn); } },
     addEventListener: (type: string, fn: Listener) => { (windowListeners[type] ??= []).push(fn); },
     closePop: vi.fn(), closeDrawer: vi.fn(), renderUser: vi.fn(), syncBookmarkUI: vi.fn(), renderBookmarks: vi.fn(), loadBookmarks: vi.fn(), findBookmark: () => null,
@@ -63,7 +69,11 @@ function dialog(hash: string, reply: Reply) {
   // 문서 클릭: target.closest(selector)는 그 선택자에만 요소를 돌려줌(실제 이벤트 위임 코드를 그대로 지남)
   const click = (selector: string, target: unknown) => { for (const fn of documentListeners.click ?? []) fn({ target: { closest: (s: string) => (s === selector ? target : null) } }); };
   const pageshow = (persisted: boolean) => { for (const fn of windowListeners.pageshow ?? []) fn({ persisted }); };
-  return { els, fields, buttons, requests, toast, location, click, pageshow, busy: () => runInContext('authBusy', context) as boolean };
+  const pagehide = (persisted: boolean) => { for (const fn of windowListeners.pagehide ?? []) fn({ persisted }); };
+  // Esc = 창의 cancel 이벤트. 막혔으면(preventDefault) true
+  const escBlocked = () => { let prevented = false; els.authDialog.fire('cancel', { preventDefault: () => { prevented = true; } }); return prevented; };
+  return { els, fields, buttons, requests, toast, location, click, pageshow, pagehide, escBlocked, timers, runTimers,
+    busy: () => runInContext('authBusy', context) as boolean, leaving: () => runInContext('googleLeaving', context) as boolean, stallMs: () => runInContext('GOOGLE_STALL_MS', context) as number };
 }
 const googleOk: Reply = () => Response.json({ url: GOOGLE_URL, redirect: true });
 
@@ -133,6 +143,7 @@ describe('로그인 창 "Google로 계속하기"(O2)', () => {
       expect(d.location.assign, label).not.toHaveBeenCalled();
       expect(d.buttons.every(b => !b.disabled), label).toBe(true);
       expect(d.busy(), label).toBe(false);
+      expect(d.timers.size, label).toBe(0); // D27 타이머는 이동을 시작했을 때만
     }
   });
 
@@ -150,6 +161,49 @@ describe('로그인 창 "Google로 계속하기"(O2)', () => {
     await settle();
     expect(d.requests).toHaveLength(2);
     expect(d.location.assign).toHaveBeenCalledTimes(2);
+  });
+
+  it('D27 ① 이동을 시작했는데 페이지가 그대로면(브라우저 정지 · 이동 안 됨) 5초 뒤 버튼 · Esc 다시 됨 — 안내 문구 없음 · 입력 칸 그대로 · 다시 누르면 새 시작', async () => {
+    const d = dialog('#bookmarks', googleOk);
+    d.click('[data-login]', {});
+    d.els.authGoogle.fire('click');
+    await settle();
+    expect(d.location.assign).toHaveBeenCalledTimes(1);
+    expect([d.stallMs(), [...d.timers.values()].map(t => t.ms)]).toEqual([5000, [5000]]); // 이동 시작 때 타이머 1개
+    expect([d.busy(), d.leaving(), d.buttons.every(b => b.disabled), d.escBlocked()]).toEqual([true, true, true, true]); // 5초 전: 잠김 · Esc 막힘
+    d.runTimers(); // 5초가 지나도 페이지가 그대로
+    expect([d.busy(), d.leaving(), d.buttons.some(b => b.disabled), d.escBlocked()]).toEqual([false, false, false, false]); // 버튼 · Esc 다시 됨
+    expect([d.els.authError.textContent, d.timers.size, d.fields.email.disabled, d.fields.password.disabled]).toEqual(['', 0, false, false]);
+    d.els.authGoogle.fire('click'); // 다시 누르면 새 시작 · 새 타이머
+    await settle();
+    expect([d.requests.length, d.location.assign.mock.calls.length, d.timers.size, d.busy()]).toEqual([2, 2, 1, true]);
+  });
+
+  it('D27 ② 정상 이동: 페이지가 떠나면(pagehide) 타이머를 지워 아무것도 바꾸지 않음', async () => {
+    const d = dialog('', googleOk);
+    d.click('#userBtn', d.els.userBtn);
+    d.els.authGoogle.fire('click');
+    await settle();
+    d.pagehide(false);
+    expect(d.timers.size).toBe(0);
+    d.runTimers();
+    expect([d.busy(), d.leaving(), d.buttons.every(b => b.disabled)]).toEqual([true, true, true]); // 떠나는 페이지의 잠금은 그대로
+  });
+
+  it('D27 ③ 뒤로가기 복원: 떠날 때(pagehide persisted) 타이머 지움 → 복원(pageshow persisted)되면 잠금 풂 → 다시 누른 시도는 5초 전까지 잠김', async () => {
+    const d = dialog('', googleOk);
+    d.click('#userBtn', d.els.userBtn);
+    d.els.authGoogle.fire('click');
+    await settle();
+    d.pagehide(true);
+    expect(d.timers.size).toBe(0);
+    d.pageshow(true);
+    expect([d.busy(), d.leaving(), d.buttons.some(b => b.disabled), d.escBlocked(), d.timers.size]).toEqual([false, false, false, false, 0]);
+    d.els.authGoogle.fire('click');
+    await settle();
+    expect([d.timers.size, d.busy(), d.buttons.every(b => b.disabled), d.escBlocked()]).toEqual([1, true, true, true]);
+    d.pageshow(false); // 복원이 아닌 pageshow는 그대로
+    expect(d.busy()).toBe(true);
   });
 });
 

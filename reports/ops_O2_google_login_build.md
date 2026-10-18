@@ -145,3 +145,51 @@
 - 스크립트: `o2lib.mjs`(누출 검사 · `.env` · 가짜 Google 값) · `server.mjs`(next start + 세는 프록시) · `api.mjs`(12) · `ui.mjs`(13) · `diag-fetch.mjs`(10절 진단) · `db.mjs`(스냅숏 · 임시 계정 정리)
 - 결과: `api-fake.json` · `api-off.json` · `ui-result.json` · `ui-run.txt`(1차) · `ui-run2.txt`(2차) · `server-state-{fake,off}.json` · `server-log-{fake,off}.txt` · `request-count.json` · `request-log.json`(경로만, 쿼리 없음) · `db-snapshot-{before,after}.json` · `temp-account.json`(지운 임시 계정의 이메일 · id, 비밀번호 없음) · `widget-first.json`
 - 캡처 15장: `o2-360-dialog-login` · `o2-360-dialog-signup` · `o2-360-dialog-dark` · `o2-360-issue-shortcut` · `o2-360-return-cancel` · `o2-360-return-generic` · `o2-360-bookmarks-logout` · `o2-360-bookmarks-after-logout` · `o2-1280-dialog-login` · `o2-1280-bookmarks` · `o2-360-privacy-top` · `o2-360-privacy-contact` · `o2-360-privacy-contact-dark` · `o2-360-terms-top` · `o2-360-terms-contact`(.png). 직접 연 것: dialog-login · return-cancel · bookmarks-logout · 1280-dialog-login · privacy-contact · privacy-contact-dark
+
+## 13. 2026-10-18 — 범위 추가 D27(Google 이동 중 "정지" 뒤 창 잠김) 제작 · 재검증
+
+> 근거: O2 독립 심사 발견 1번(`reports/ops_O2_google_login_judge.md` 7절) → 사용자가 푸시 전에 고치기로 함(PLAN.md D27, `plan/PLAN_ops_O2_google_login.md` 끝 「범위 추가 (D27)」). `/list-accounts`는 그대로(D27). 출발 = HEAD `b2c9379`(O2 로컬 커밋, 미푸시). 커밋 · 푸시 안 함.
+
+### 13.1 바뀐 것
+- `ex12/public/index.html`(+17 −7): `:1099` `GOOGLE_STALL_MS = 5000` · `:1100` `googleStall` · `:1101` `googleUnlock()`(타이머 지움 · `googleLeaving` · `authBusy` false · 창의 버튼 4개 다시 됨 — 기존 bfcache 풀기와 같은 동작을 한곳으로). `googleSignIn()`은 `:1122` `location.assign` **뒤에** `googleLeaving = true` · `:1125` 타이머 시작(페이지가 그대로면 5초 뒤 `googleUnlock`). `:1134` `pagehide`(페이지가 실제로 떠남 · bfcache로 들어감)면 타이머 지움, `:1135` `pageshow` persisted면 `googleUnlock`(기존 동작 그대로). 안내 문구는 더하지 않음. 정상 이동 · 시작 실패 · 뒤로가기 복원 · 돌아온 화면 처리 코드는 그대로.
+- `ex12/test/google-ui.test.ts`(+3 테스트, 시작 실패 반복에 "타이머 0" 단언 1줄): VM에 가짜 `setTimeout` · `clearTimeout`(예약만 기록, `runTimers()`로 "그 시간이 지남") · `pagehide` · 창 `cancel`(Esc) 보내기를 더함.
+- 그 밖 변경 0: 이번 시작 전 SHA-256(`ex12` 추적 파일 + daily.yml 85개) 대비 바뀐 것은 위 2개뿐 — `server/auth.ts` · `bff.ts` · route · `server/db/*` · `drizzle/*` · `package.json` · lock · 위젯 · 하루 실행 파일 · `privacy.html` · `terms.html` · `openapi.yaml` · `next.config.mjs` · daily.yml **모두 같음**. 새 패키지 0. 작업 트리의 `PLAN.md` · `plan/PLAN_ops_O2_google_login.md` 변경은 코디네이터의 D27 기록(보존).
+
+### 13.2 정한 시간: 5초(5000ms)와 근거
+- 이 타이머는 "이동을 시작했는데 **페이지가 아직 그대로**"일 때만 일함. 정상 이동이면 새 페이지가 열리는 순간 `pagehide`가 와서 타이머를 지움(bfcache로 들어가도 같음) → 정상 이동에는 아무 변화 없음.
+- 정상 이동에서 페이지가 떠나는 때 = Google의 첫 응답이 오는 때(이름 풀이 · 연결 · TLS · 요청이 왕복 3~4번). 모바일 왕복 0.05~0.6초면 대략 2.5초 안 → 5초는 보통 연결의 2배 이상 여유. 아주 느린 연결에서 5초 전에 못 떠나더라도 **잠금이 먼저 풀릴 뿐 진행 중인 이동은 그대로 이어짐**(아래 "느린 이동"에서 실제로 확인: 이동을 5.8초 잡아 둠 → 5.05초에 풀림 → 놓아 주자 이동 완료).
+- 정지한 사람은 최대 5초만 기다림(오래 기다리게 하지 않음 — 주의가 흩어지는 10초보다 짧게).
+- 실측(로컬): 누름 → 잠김 3ms → 풀림 **5046ms**(시작 응답 약 46ms + 5000).
+- 안내 문구는 넣지 않음: "정지"는 사용자가 스스로 한 일이고, 느린 연결에서는 이동이 아직 진행 중일 수 있어 실패 문구가 틀린 말이 될 수 있음(새 문구 0).
+- 남는 드문 경우(기록만): 느린 이동 중 풀린 뒤 다시 누르면 새 시작이 먼저 이동을 대신함(새 상태 쿠키 · 새 이동 — 정상). 그 사이 첫 이동이 먼저 도착하면 상태가 맞지 않아 돌아온 화면에 일반 문구("Google 로그인을 완료하지 못했습니다…")가 나오고 다시 누르면 됨.
+
+### 13.3 테스트 · 빌드
+- `bash scripts/ex12-ubuntu.sh npm test` → **158/158**(17파일, 기존 155 + D27 3). `google-ui` 9: 기존 ①~④ 그대로 통과 + **D27 ①** 이동 시작 → 타이머 1개(5000) · 5초 전 잠김 · Esc(cancel) 막힘 → 시간 지남(페이지 그대로) → 버튼 · Esc 다시 됨 · 문구 없음 · 입력 칸 그대로 · 남은 타이머 0 → 다시 누르면 새 시작 · 새 타이머 **D27 ②** 정상 이동(`pagehide`) → 타이머 지움 · 아무것도 안 바뀜 **D27 ③** `pagehide` persisted → 타이머 지움 → `pageshow` persisted → 풀림 · 타이머 0 → 다시 누른 시도는 5초 전까지 잠김 · 복원 아닌 pageshow는 그대로 + ② 시작 실패 9경우 모두 타이머 0. `widget-ui` 8 · `account-ui` 6 그대로.
+- 실수 넣기 3가지(타이머 없음 · `pagehide` 지움 없음 · 풀 때 authBusy 그대로) → 모두 실패(2 · 2 · 3개), 원본 복원.
+- `npm run build`(next build + `tsc --noEmit`) 성공. 출력 누출 false.
+
+### 13.4 재검증(로컬 next start + 세는 프록시, Termux Chromium 155 CDP)
+Google 이동은 모두 브라우저 안에서 처리(CDP `Fetch` — 취소 = 브라우저 "정지"와 같은 상태, 정상 · 느린 이동 = CDP가 가짜 HTML로 답함) + `--host-resolver-rules`로 Google 이름 풀이 NOTFOUND. 이동이 잡혀 있는 동안에는 그 페이지 평가가 답하지 않으므로(10절) 페이지 안 기록기(`pagehide` · `pageshow` · 누름 · 잠김 바뀜 · Esc cancel)의 시각으로 판정. insights · favicon과 시작 실패 모의는 브라우저 안에서 답함(서버 0).
+
+| 줄 | 판정 | 근거 |
+|---|---|---|
+| D27 정지 뒤 다시 쓸 수 있음 | OK | 360: 버튼 → 시작 200 → Google 이동을 취소(정지) → 직후 같은 문서 · 창 열림 · 버튼 4개 잠김 · authBusy · googleLeaving · 입력 칸 쓸 수 있음 · 5초 전 Esc(사용자 활성화 뒤, cancel 취소 가능) **막힘** → 5초 뒤 버튼 4개 다시 됨 · authBusy · googleLeaving false · 문구 없음 → Esc **닫힘** → 다시 열어 없는 이메일 로그인 → 기존 문구 "이메일 또는 비밀번호를 확인해 주세요". 풀린 시각 = 누른 뒤 5046ms |
+| D27 느린 이동(이동 중 풀림) | OK | 이동을 잡아 둔 채 5.8초 → 5052ms에 풀림 → 놓아 주자 이동 완료(pagehide 5797ms, 풀림 뒤) → 뒤로 → 복원 · 버튼 됨 |
+| 회귀: 로그인 창(13①) | OK | 360 북마크 탭 "로그인" · 1280 헤더 "로그인": 버튼 위치 · 문구 · 지침 색 · G 로고 · 너비 가득 · 높이 40 · "또는 이메일로" · 기존 버튼 · 첫 초점 이메일 · 정책 링크 · 넘침 0 · 1280 창 400 |
+| 회귀: 정상 이동 · 뒤로가기 복원(bfcache) | OK | 버튼 → 가짜 Google 화면으로 이동(새 문서) → 6초 머묾 → 뒤로 → **pagehide persisted(142ms) → pageshow persisted(6287ms)**, 첫 풀림 = 복원 순간(떠난 동안 타이머가 풀지 않음) · 버튼 · authBusy · googleLeaving 정상 · 창 그대로, 그 뒤 5초 더 기다려도 변화 0(남은 타이머 0) |
+| 회귀: 시작 실패 | OK | 브라우저 안 모의 404 `PROVIDER_NOT_FOUND` · 429 · 500 · url이 Google 아님 → 표의 문구 그대로 · 버튼 다시 됨 · 이동 0, 404 뒤 5초 더 기다려도 문구 · 상태 그대로 |
+| 회귀: 돌아온 화면 문구(바로 연 탭) | OK | `/?login=google&error=access_denied#bookmarks` · `…error=account_not_linked` · `/?error=state_mismatch` → 화면 · 로그인 창 · 표의 문구 · 쿼리 지움 · 해시 그대로 · 기록 수 1 · error 값 화면 0 · 버튼 쓸 수 있음(3/3, 1차 실행) |
+| 회귀: VM · 빌드(9 · 11) | OK | 13.3 |
+| 안전 · 한도(14) | OK | 아래 |
+
+- 실행 2번(정직하게 남김): **1차 28검사 25 OK · 3 FAIL — 모두 측정 스크립트의 기대 오류**: ① 기록기의 누름 기록이 페이지 자신의 click 처리 뒤에 붙어 "잠김 시각"이 비어 보임(풀림 5049ms는 범위 안) ② ③ 가짜 Google 화면이 스스로 부른 `/favicon.ico` 2번을 Google 이동으로 셈(브라우저 안에서 답함 · 하나는 잡힌 채 뒤로 가며 버려짐 — 나간 요청 0). → 기록기를 문서 capture 단계로, 문서 아닌 Google 요청은 브라우저 안 404로, 셈은 이동(문서)만으로 고쳐 **탭 A만 2차 25/25 OK**(돌아온 화면 3줄은 1차에서 OK라 다시 하지 않음). 제품 코드는 두 실행 사이에 바뀌지 않음.
+- **로컬 요청 26/40**(이번 재검증 카운터, 시작 0): 1차 19(탭 A 7 = `/` · rankings · get-session · 시작 3 · 이메일 1, 바로 연 탭 3개 × 4) + 2차 7. 막힘 0 · 5xx 0. 시작(`/sign-in/social`) 10초 안 최대 2번. 서버 로그 = Next 시작 줄뿐(누출 false).
+- 외부: newsdata 0 · OpenAI 0 · **Google로 실제 나간 요청 0**(Google 호스트 요청 1차 5 · 2차 4 — 이동 문서 3번씩 + 가짜 화면의 favicon, 모두 CDP가 취소하거나 답함, DNS도 차단). 그 밖 외부 = cdn.jsdelivr.net(글꼴)뿐.
+- DB: 쓰기 없는 흐름(임시 계정 0). 읽기 전용 스냅숏이 제작 검증 뒤 스냅숏과 9표 건수 · 내용 해시 **같음**(articles 937 · issues 616 · collect_runs 90 · bookmarks 1 · folders 1 · user 1 · session 1 · account 1 · verification 0).
+- 프로세스: 내 서버(24321 → 24322 → 24342 → 24364)는 정지 파일로 끝, Chromium 2번은 띄우기 전 PID 목록과 비교해 새로 생긴 것 중 내 chrome의 자손 · 내 프로필만 정리(남은 0), 프로필 2개 삭제. 끝에 `curl` 3000 · 3001 · 9363 = 000, `ps`에 next-server · next start · server.mjs · 내 Chromium 0(일치한 것은 확인 명령을 돌린 내 셸 하나), 사용자 code-oss(PID 17320) 살아 있음.
+- 검증 21줄 합계는 그대로 **OK 14 · FAIL 0 · SKIP 7**(15~21 푸시 후 · 사용자 줄), D27 추가 줄 OK. 배포 줄(16번)에서 정지 상태도 같은 방법(이동 취소 → 5초)으로 볼 수 있음.
+
+### 13.5 추가로 보인 점
+- 잠긴 동안 Google 버튼만 흐려지고(opacity .38) 다른 버튼 3개(`chip-btn`)는 비활성 모양이 없어 그대로 보임 — O2 전부터의 꼴, 고치지 않음.
+- Esc 시험 전마다 창 안 입력 칸을 눌러 사용자 활성화를 줌: Chrome은 활성화가 없으면 cancel을 취소할 수 없는 상태로 보낼 수 있어, 그때는 잠김과 관계없이 닫혀 시험이 뜻을 잃음. 그래서 cancel이 취소 가능했는지(`cancelable`)를 함께 확인함.
+- 증거: `ex12/.data/o2-d27-20261018/`(git 무시) — `hashes-before.txt` · `hash-changed.txt` · `npm-test.txt` · `npm-build.txt` · `vitest-ui.txt` · `server.mjs`(한도 40) · `ui-d27.mjs` · `ui-d27-result-run1.json` · `ui-d27-result-run2.json` · `ui-d27-run1.txt` · `ui-d27-run2.txt` · `request-log.json` · `server-log-fake.txt` · 캡처 `d27-360-stop-locked` · `d27-360-stop-unlocked` · `d27-360-bfcache-restored` · `d27-360-start-404` · `d27-1280-dialog` · `d27-360-return-cancel`(.png). DB 스냅숏 `ex12/.data/o2-build-20261018/db-snapshot-d27-after.json`.
