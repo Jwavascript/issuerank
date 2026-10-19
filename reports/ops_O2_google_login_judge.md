@@ -281,3 +281,52 @@ Termux Chromium 155 headless + CDP. Google 차단 두 겹: ① 모든 요청을 
   2. 사용자 커밋 · 푸시 승인. 커밋 대상 = D27 두 파일 + 문서.
   3. 배포 줄 15 · 16 · 20(9절 절차). 16번에서 정지 상태도 같은 방법(이동 취소 → 약 5초 뒤 풀림)으로 볼 수 있음.
   4. 사용자 17 · 18 · 21(19는 선택).
+
+## 12. 2026-10-19 10:09 KST — 배포 줄 15 · 16 · 20 판정(푸시 f2ea39b 뒤)
+
+> 전제: 사용자 승인으로 O2 커밋(`b2c9379` · `573c894` D27)과 기록 커밋을 포함해 `f2ea39b`까지 푸시했고, Vercel 재배포가 끝남(코디네이터 확인 — 그 요청은 이 절 카운터 밖). D26의 "O1 17번 확인 뒤 푸시"는 사용자가 17번을 창 밖 관찰로 인정한 뒤라 충족(`ops_O1_widget_judge.md` 14절). 작업 트리 깨끗 · `main` = `origin/main`.
+> 9절 절차대로 배포 주소 `https://issuerank-kappa.vercel.app`에서 새 심사 스크립트로 실행함. **배포 요청 27/40**(새 카운터: Node 14 · 브라우저 13, 막힘 0 · 429 0 · 5xx 0).
+> **판정: 15 · 16 · 20 모두 OK → 합계 OK 17 · FAIL 0 · SKIP 4(17 · 18 · 21 사용자, 19 선택) → PASS 보류.**
+
+| # | 판정 | 근거 |
+|---|---|---|
+| 15 배포 API | **OK** | 12/12 검사. 세부는 아래 15번 목록 |
+| 16 배포 화면(CDP 360) | **OK** | 12/12 검사. 세부는 아래 16번 목록 |
+| 20 문의처 · 개인 이메일(배포 부분) | **OK** | 저장소 부분(5절)에 이어 배포 부분도 OK. 세부는 아래 20번 목록 |
+
+- **15 배포 API**(Node fetch):
+  - `POST /api/auth/sign-in/social`(Origin = 배포 주소, 본문 3칸) → **200**(404 `PROVIDER_NOT_FOUND` 아님) · no-store · `{url, redirect:true}`.
+  - 주소 `accounts.google.com/o/oauth2/v2/auth` · 칸 8개(`access_type · prompt · nonce` 없음). **`redirect_uri` = `https://issuerank-kappa.vercel.app/api/auth/callback/google` 정확히**. scope `openid email profile` · S256 · state 32 · challenge 43 · `include_granted_scopes=true`.
+  - `client_id`는 `.apps.googleusercontent.com`으로 끝남(값은 적지 않음 — 길이 72, 심사 가짜 값 아님).
+  - 쿠키 1개 **`__Secure-better-auth.oauth_state` · Secure · HttpOnly · SameSite=Lax · Path=/ · Max-Age=600**(값 640자).
+  - 그 쿠키로 `?state=…&error=access_denied` → **302 `Location: /?login=google&error=access_denied`(Vercel도 상대 주소 그대로)** · no-store · 상태 쿠키 만료 · 세션 쿠키 0.
+  - 쿠키 없이 `?state=x&code=y` → 302 `/?error=state_mismatch` · no-store.
+  - 닫은 경로 5개 모두 404(대조 `list-accounts` 401). `/api/rankings` · `/api/widget` 200(date 2026-10-19, 30개).
+- **16 배포 화면**(Termux Chromium 155, 360×800):
+  - ① `/#bookmarks` 비로그인: 로그인 안내 · 하단 한 줄 · 휴대폰 로그아웃 줄 숨김 · 넘침 0. "로그인" → 창: 버튼이 첫 요소 · 문구 · 지침 색 · G 4색 20×20 · 높이 40 · 너비 가득 · "또는 이메일로" · 기존 버튼 · 첫 초점 이메일 · 정책 링크 · 창 안 이메일 0 · 넘침 0.
+  - ③ 버튼 → 시작 요청 1번(본문 3칸 `/?login=google#bookmarks`) · 200 → **Google 이동 1번을 Fetch에서 잡아 Aborted**. redirect_uri = 배포 콜백 · scope 3개 · client_id 접미사만 확인.
+  - ③ 막은 직후 같은 문서 · 버튼 4개 잠김 · authBusy · googleLeaving. 브라우저 쿠키 `__Secure-better-auth.oauth_state` Secure · HttpOnly · Lax · 남은 약 10분 · 세션 쿠키 0.
+  - 참고(D27 배포 반영): 그 "정지" 상태에서 시작 응답 뒤 **5011ms**에 버튼이 다시 됨 · 문구 없음 · 창 그대로.
+  - ⑤ 돌아온 주소를 바로 엶(서버에 콜백을 보내지 않음): `/?login=google&error=access_denied#bookmarks` → 북마크 화면 + 창 + "Google 로그인을 취소했습니다", `/?error=state_mismatch` → "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요", `/?login=google&error=account_not_linked` → "이미 가입된 이메일입니다. 처음 가입한 방법으로 로그인해 주세요". 세 경우 모두 로그인 모드 · 첫 초점 · 쿼리 지움 · 해시 그대로 · 기록 수 그대로 · error 값 화면 0 · 버튼 됨.
+  - JS 예외 0. 캡처 3장(창 · 취소 화면 · 연결 안 됨 화면), 1장은 직접 열어 확인.
+- **20 배포 부분**:
+  - 배포 `/privacy` · `/terms` 200 · 자리표시자 0. 이메일 꼴은 `jwavascript@gmail.com` 두 번(mailto + 글자)뿐이고 모두 `#contact` 문의처 절 안.
+  - 배포 `/` 이메일 꼴 0 · 자리표시자 0.
+  - 세 본문 SHA-256 = 저장소 `privacy.html` · `terms.html` · `index.html`(D27 포함판).
+- **Vercel `GOOGLE_*` 설정**: 시작이 404 `PROVIDER_NOT_FOUND`가 아닌 200이고, 주소의 `client_id`가 `.apps.googleusercontent.com` 꼴이라 **두 값이 Production에 들어가 동작하는 것으로 보임**. 다만 client_id · secret이 Google 콘솔의 그 클라이언트와 맞는지, 배포 콜백이 승인된 리디렉션 URI에 있는지는 실제 Google 요청 없이는 알 수 없음 → 17(실제 로그인) · 18(설정 전달)에서 확인.
+- **외부 · DB · 정리**:
+  - newsdata 0 · OpenAI 0 · **Google 0**. 서버 쪽: code가 붙은 콜백은 쿠키 없이만 보내 토큰 교환 0. 브라우저 쪽: Google 이동 문서 1번은 Aborted + 이름 풀이 NOTFOUND.
+  - `/_vercel/insights/*` · `/favicon.ico` 5번은 브라우저 안 404로 답함. 배포 요청과 Analytics 방문 기록에 넣지 않음.
+  - 그 밖 외부 = `cdn.jsdelivr.net`(글꼴)뿐.
+  - DB 읽기 전용 스냅숏: 9표 건수 · 내용 해시 전후 같음, 행 단위 변화 0(articles 1105 · issues 754 · collect_runs 96 · bookmarks 1 · folders 1 · user 1 · session 1 · account 1 · verification 0). 임시 계정 0, 실제 Google 계정 행 0.
+  - 내 Chromium 1벌(9 PID)만 종료 · 프로필 삭제 · 9380 = 000. 저장소 안 임시 DB 도구 폴더 삭제.
+  - code-oss는 이번 작업 전에 사용자가 다시 띄워 PID 30879로 살아 있음(이전 17320은 사용자 재시작, 내 종료 아님).
+- **남은 것(사용자 줄)**: 17(PC · 폰 실제 Google 로그인, 테스트 사용자 계정) · 18(Google Auth Platform 대상 · 범위 · redirect URI · 브랜딩 전달, 게시 상태는 "테스트") · 21(정책 문안 확인, 법률 검토 권장) · 19(선택, Vercel Logs). 20 OK로 게시 조건 중 문의처는 충족했고, 21 확인 뒤 게시 → 18 다시.
+
+## 13. 사용자 확인 결과 (2026-10-19, 사용자 전달 · 코디네이터 기록)
+
+- **17번(실제 Google 로그인)**: 사용자가 PC에서 Google로 로그인한 뒤 모바일에서 이어서 로그인, 북마크 연동(같은 목록) 확인 → 핵심(AC-06-3 · AC-08-3) OK. 취소 · 이메일 계정과 같은 주소 시도 · 동의 화면 표시 이름 · 폰 로그아웃은 전달받지 않음(참고 — 자동 검증 13 · 16번에서 확인됨).
+- **18번(Google 설정)**: 승인된 리디렉션 URI = `https://issuerank-kappa.vercel.app/api/auth/callback/google`(15번 배포 응답의 redirect_uri와 같음), 사용자 표현 "게시상태 외부". 대상 "외부"인지 게시 상태 "프로덕션"인지 확인 요청 중. 범위 3개는 15번 배포 응답(scope openid email profile)으로 확인.
+- **21번(정책 문안)**: 미확인 — 게시(프로덕션) 전 확인 규칙 유지.
+
+판정: 17 OK(사용자 확인) · 18 부분(게시 상태 확인 대기) · 21 SKIP → O2 **PASS 보류**(남은 것: 18 게시 상태 · 21 문안 확인).
