@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: 이슈랭크 API
-  version: 0.3.0
-  description: 화면(index.html)과 홈 화면 위젯이 서버에 바라는 랭킹 · 위젯 · 북마크 · 폴더 API 계약.
+  version: 0.4.0
+  description: 화면(index.html)과 홈 화면 위젯 · 인스타 카드 페이지(card.html)가 서버에 바라는 랭킹 · 위젯 · 카드 · 북마크 · 폴더 API 계약.
 
 servers:
   - url: http://localhost:3000
@@ -366,6 +366,82 @@ paths:
               example:
                 message: 해당 날짜의 랭킹 데이터가 없습니다
 
+  /api/card:
+    get:
+      operationId: getCard
+      summary: 인스타 "오늘의 이슈" 카드 이미지(1080×1350 PNG)
+      description: >-
+        로그인 · 쿠키 없이 부르는 공개 API. 그날 /api/widget 순서(섹션 1위들 → 나머지)의 앞 6개를 그린다(hide로 뺀 id는 건너뛰고 다음 순서로 채움, 항목이 적으면 있는 만큼).
+        날짜 · 제목(그림 문자 제거, 34자 넘으면 33자 + …, 자른 끝 공백은 지움) · 섹션 · 사이트 주소 · 수집 시각 · 출처 문구만 넣고, 본문 · 요약 · 연관기사 수 · 원문 이미지 · 언론사 로고는 넣지 않는다.
+        PNG를 끝까지 만든 뒤 응답한다(렌더가 실패하면 500).
+      parameters:
+        - $ref: '#/components/parameters/CardDate'
+        - $ref: '#/components/parameters/CardHide'
+      responses:
+        '200':
+          description: 카드 PNG(4:5 세로, 밝은 카드 하나)
+          headers:
+            Cache-Control:
+              description: CDN이 지역마다 300초 보관한다(Vercel은 클라이언트에 s-maxage를 뺀 값을 준다). 실패 응답에는 붙지 않는다.
+              schema: { type: string, const: 'public, max-age=0, s-maxage=300' }
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/CardBadRequest'
+        '404':
+          $ref: '#/components/responses/CardNotFound'
+        '500':
+          description: 카드 렌더 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 카드를 만들 수 없습니다
+        '502':
+          $ref: '#/components/responses/CardUnavailable'
+
+  /api/card/caption:
+    get:
+      operationId: getCardCaption
+      summary: 카드와 같은 6개 · 인스타 캡션
+      description: >-
+        /api/card와 같은 쿼리 · 같은 날짜 규칙 · 같은 6개(같은 순서)를 JSON으로 준다. items의 title은 다듬기 전 원문 제목이다.
+        caption은 날짜 줄 · 번호 6줄([섹션] 제목, 그림 문자 제거, 100자 넘으면 99자 + …, 자른 끝 공백은 지움) · 사이트 안내 · 출처 문구 · 해시태그 5개로 된 2,200자 이하 글이다.
+      parameters:
+        - $ref: '#/components/parameters/CardDate'
+        - $ref: '#/components/parameters/CardHide'
+      responses:
+        '200':
+          description: 카드 데이터와 캡션
+          headers:
+            Cache-Control:
+              description: /api/card와 같음
+              schema: { type: string, const: 'public, max-age=0, s-maxage=300' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardCaption'
+              example:
+                date: '2026-10-07'
+                dateLabel: 10월 7일 수요일
+                updatedLabel: '10.7 오전 6:00 수집'
+                items:
+                  - id: '2026-10-07-pol-0'
+                    section: pol
+                    title: 내년도 예산안 국회 상임위 심사 본격화
+                hidden: []
+                caption: "10월 7일 오늘의 이슈 — 어제 가장 많이 보도된 뉴스\n\n1. [정치] 내년도 예산안 국회 상임위 심사 본격화\n\n섹션별 순위 · 3줄 요약 · 원문 링크는 프로필 링크의 이슈랭크에서 볼 수 있어요.\n기사 제목 출처: 각 언론사(newsdata.io 수집). 순위는 연관기사 수 기준 참고 지표입니다.\n\n#오늘의이슈 #뉴스 #헤드라인 #시사 #이슈랭크"
+        '400':
+          $ref: '#/components/responses/CardBadRequest'
+        '404':
+          $ref: '#/components/responses/CardNotFound'
+        '502':
+          $ref: '#/components/responses/CardUnavailable'
+
   /api/bookmarks:
     get:
       security:
@@ -596,6 +672,42 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/AuthError' }
+    CardBadRequest:
+      description: 날짜 형식 · 미래 날짜(기존 /api/rankings 문구) · hide가 4개 이상 · 그날 목록에 없는 id · 중복. 캐시 헤더 없음
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          examples:
+            badFormat: { summary: 형식이 잘못된 날짜, value: { message: 날짜는 YYYY-MM-DD 형식으로 입력해 주세요 } }
+            future: { summary: 오늘 이후 날짜, value: { message: 오늘 이후 날짜는 조회할 수 없습니다 } }
+            badHide: { summary: 잘못된 hide, value: { message: 요청 형식이 올바르지 않습니다 } }
+    CardNotFound:
+      description: 그 날짜의 랭킹 없음(date를 생략했는데 저장된 랭킹이 하나도 없을 때 포함). 캐시 헤더 없음
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 해당 날짜의 랭킹 데이터가 없습니다 }
+    CardUnavailable:
+      description: DB 준비 · 조회 실패. 캐시 헤더 없음
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: API 서버에 연결할 수 없습니다 }
+  parameters:
+    CardDate:
+      name: date
+      in: query
+      required: false
+      description: 카드 날짜(KST, YYYY-MM-DD). 생략하면 가장 최근 수집일. 오늘(KST) 이후면 400.
+      schema: { type: string, format: date }
+      example: '2026-10-07'
+    CardHide:
+      name: hide
+      in: query
+      required: false
+      description: 카드에서 뺄 이슈 id를 쉼표로(최대 3개, 중복 없음, 그날 /api/widget items에 있는 id). 뺀 줄은 다음 순서 이슈로 채운다.
+      schema: { type: string }
+      example: '2026-10-07-pol-0,2026-10-07-eco-1'
   schemas:
     AuthError:
       type: object
@@ -749,6 +861,42 @@ components:
           type: string
           pattern: '^/\?issue='
           description: 사이트에서 그 이슈 상세를 여는 경로(/?issue={id})
+
+    CardCaption:
+      type: object
+      required: [date, dateLabel, updatedLabel, items, hidden, caption]
+      properties:
+        date:
+          type: string
+          format: date
+          description: 카드 날짜(랭킹 date = 수집한 날)
+        dateLabel:
+          type: string
+          description: 카드 오른쪽 위 날짜({월}월 {일}일 {요일}, 예 10월 19일 월요일)
+        updatedLabel:
+          type: string
+          description: 같은 날 /api/widget의 updatedLabel(예 10.19 오전 6:34 수집)
+        items:
+          type: array
+          minItems: 1
+          maxItems: 6
+          description: 카드와 같은 줄 · 같은 순서(원문 제목)
+          items:
+            type: object
+            required: [id, section, title]
+            properties:
+              id: { $ref: '#/components/schemas/IssueId' }
+              section: { $ref: '#/components/schemas/SectionKey' }
+              title: { type: string }
+        hidden:
+          type: array
+          maxItems: 3
+          description: 요청 hide의 id(보낸 순서)
+          items: { $ref: '#/components/schemas/IssueId' }
+        caption:
+          type: string
+          maxLength: 2200
+          description: 인스타그램 캡션(줄바꿈 포함, 해시태그 5개)
 
     Bookmark:
       allOf:

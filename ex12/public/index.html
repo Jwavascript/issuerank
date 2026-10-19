@@ -364,7 +364,8 @@ main { overflow-x: clip; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 /* 이메일·비밀번호 인증 */
-.auth-dialog { width: min(400px, calc(100vw - 32px)); box-sizing: border-box; border: 1px solid #ddd; border-radius: 16px; padding: 24px; color: #222; }
+/* 로그인 창은 늘 밝은 색: 창 안 버튼이 쓰는 토큰도 :root 밝은 값으로 고정(다크 모드 hover에서 --hover #222220 위 #222 글자가 묻히던 것) */
+.auth-dialog { width: min(400px, calc(100vw - 32px)); box-sizing: border-box; border: 1px solid #ddd; border-radius: 16px; padding: 24px; color: #222; background: #ffffff; --hover: #efede9; --line: #e7e4df; }
 .auth-dialog::backdrop { background: rgb(0 0 0 / 35%); }
 .auth-dialog h2 { margin: 0 0 20px; }
 .auth-dialog label { display: block; margin-top: 14px; font-size: 14px; }

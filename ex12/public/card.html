@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>오늘의 이슈 카드 · 이슈랭크</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --text: #161616; --muted: #6f6b65; --faint: #a29e97;
+  --line: #e7e4df; --hover: #efede9; --ink: #161616; --ink-text: #ffffff;
+  --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121211; --surface: #1a1a19; --text: #ecebe8; --muted: #9b978f; --faint: #6a675f;
+    --line: #2b2a27; --hover: #222220; --ink: #ecebe8; --ink-text: #121211;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font);
+  font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+.wrap { max-width: 580px; margin: 0 auto; padding: 28px 16px 56px; }
+.brand { margin: 0; font-size: 14px; font-weight: 700; color: var(--muted); }
+h1 { margin: 4px 0 6px; font-size: 24px; line-height: 1.3; letter-spacing: -.02em; }
+h2 { margin: 28px 0 8px; font-size: 17px; }
+.meta { margin: 0; color: var(--muted); font-size: 14px; }
+.notice { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 14px; }
+.notice button { margin-left: 8px; }
+.preview { display: block; width: 100%; max-width: 540px; height: auto; aspect-ratio: 4 / 5; margin: 16px 0 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border: 0; border-radius: 8px;
+  background: var(--ink); color: var(--ink-text); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn.sub { background: var(--hover); color: var(--text); border: 1px solid var(--line); }
+.btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
+.btn:disabled { opacity: .4; cursor: default; }
+.status { min-height: 21px; margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+.rows { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.rows li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.rows .no { flex: none; width: 18px; font-weight: 700; }
+.rows .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.rows .sec { color: var(--muted); font-size: 13px; }
+.hidden-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+.caption {
+  display: block; width: 100%; height: 260px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; resize: vertical;
+  background: var(--surface); color: var(--text); font: 13px/1.55 var(--font); white-space: pre-wrap;
+}
+ol.steps { margin: 0; padding-left: 22px; }
+ol.steps li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="brand">이슈랭크</p>
+  <h1>오늘의 이슈 카드</h1>
+  <p class="meta" id="meta" aria-live="polite">불러오는 중…</p>
+  <p class="notice" id="stale" hidden></p>
+  <p class="notice" id="error" role="alert" hidden>카드를 불러오지 못했습니다<button type="button" class="btn sub small" id="retry">다시 시도</button></p>
+
+  <section id="card" hidden>
+    <img class="preview" id="preview" alt="" width="1080" height="1350">
+    <div class="actions">
+      <a class="btn" id="save" href="#">이미지 저장</a>
+      <button type="button" class="btn sub" id="copy">캡션 복사</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+
+    <h2>카드 줄</h2>
+    <ul class="rows" id="rows"></ul>
+    <p class="hidden-row" id="hiddenRow" hidden><span id="hiddenCount"></span><button type="button" class="btn sub small" id="restore">되돌리기</button></p>
+
+    <h2>캡션</h2>
+    <textarea class="caption" id="caption" readonly spellcheck="false" aria-label="캡션"></textarea>
+  </section>
+
+  <h2>올리는 순서</h2>
+  <ol class="steps">
+    <li><b>이미지 저장</b>을 누릅니다(안 되면 이미지를 길게 눌러 저장).</li>
+    <li><b>캡션 복사</b>를 누릅니다.</li>
+    <li>인스타그램 › 새 게시물 › 저장한 이미지 › 비율이 4:5(세로)인지 확인 › 캡션 붙여넣기 › 공유.</li>
+  </ol>
+</main>
+<script>
+// 운영자용 카드 페이지(O3 · D28): 캡션 API를 먼저 받고 그 date로 카드 PNG를 붙임(두 요청이 같은 날짜). 빼기는 최대 3개(AC-12-4)
+const MAX_HIDE = 3;
+const $ = id => document.getElementById(id);
+const state = { date: null, hide: [], caption: '', seq: 0 };
+const kstToday = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const shortDate = date => { const [, m, d] = date.split('-').map(Number); return `${m}월 ${d}일`; };
+const SECTION_NAMES = { pol: '정치', eco: '경제', soc: '사회', cul: '생활·문화', wor: '세계', it: 'IT·과학' };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// ?date=…&hide=id,id (첫 요청은 날짜 없이 = 최근 수집일)
+function cardQuery() {
+  const parts = [];
+  if (state.date) parts.push(`date=${encodeURIComponent(state.date)}`);
+  if (state.hide.length) parts.push(`hide=${state.hide.map(encodeURIComponent).join(',')}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+function showError() {
+  $('error').hidden = false;
+  $('meta').textContent = '';
+}
+
+async function load() {
+  const seq = ++state.seq;
+  $('error').hidden = true;
+  $('status').textContent = '';
+  let data;
+  try {
+    const res = await fetch(`/api/card/caption${cardQuery()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    data = await res.json();
+  } catch {
+    if (seq === state.seq) showError();
+    return;
+  }
+  if (seq !== state.seq) return;
+  render(data);
+}
+
+function render(data) {
+  state.date = data.date;
+  state.hide = data.hidden.slice();
+  state.caption = data.caption;
+  $('meta').textContent = `${data.dateLabel} · ${data.updatedLabel}`;
+  const stale = data.date !== kstToday();
+  $('stale').hidden = !stale;
+  $('stale').textContent = stale ? `아직 오늘 카드가 없습니다. 마지막 카드: ${shortDate(data.date)}` : '';
+  const src = `/api/card${cardQuery()}`;
+  $('preview').src = src;
+  $('preview').alt = `${shortDate(data.date)} 오늘의 이슈 카드`;
+  $('save').href = src;
+  $('save').setAttribute('download', `issuerank-${data.date}.png`);
+  const full = state.hide.length >= MAX_HIDE;
+  $('rows').innerHTML = data.items.map((it, i) => `<li><span class="no">${i + 1}</span>`
+    + `<span class="t"><span class="sec">${esc(SECTION_NAMES[it.section] || it.section)}</span> ${esc(it.title)}</span>`
+    + `<button type="button" class="btn sub small" data-hide="${esc(it.id)}"${full ? ' disabled' : ''}>빼기</button></li>`).join('');
+  $('hiddenRow').hidden = state.hide.length === 0;
+  $('hiddenCount').textContent = `뺀 이슈 ${state.hide.length}개 ·`;
+  $('caption').value = data.caption;
+  $('card').hidden = false;
+}
+
+// 한 줄 빼기 → 같은 날짜로 다시 받음(다음 순서 이슈가 채워짐). 3개 뒤에는 버튼이 비활성
+function hideItem(id) {
+  if (state.hide.length >= MAX_HIDE || state.hide.includes(id)) return;
+  state.hide = [...state.hide, id];
+  return load();
+}
+
+function restore() {
+  state.hide = [];
+  return load();
+}
+
+async function copyCaption() {
+  try {
+    await navigator.clipboard.writeText(state.caption);
+    $('status').textContent = '복사했습니다';
+  } catch {
+    const box = $('caption');
+    box.focus();
+    box.select();
+    box.setSelectionRange(0, box.value.length);
+    $('status').textContent = '복사하지 못했습니다. 아래 글을 길게 눌러 복사해 주세요';
+  }
+}
+
+// download 속성을 모르는 브라우저는 저장 대신 안내
+function saveImage(event) {
+  if ('download' in document.createElement('a')) return;
+  event.preventDefault();
+  $('status').textContent = '이미지를 길게 눌러 저장해 주세요';
+}
+
+$('rows').addEventListener('click', event => {
+  const button = event.target.closest('button[data-hide]');
+  if (button && !button.disabled) hideItem(button.dataset.hide);
+});
+$('restore').addEventListener('click', () => restore());
+$('copy').addEventListener('click', () => copyCaption());
+$('save').addEventListener('click', saveImage);
+$('retry').addEventListener('click', () => load());
+$('preview').addEventListener('error', () => { $('card').hidden = true; showError(); });
+load();
+</script>
+</body>
+</html>
