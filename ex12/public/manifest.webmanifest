@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "이슈랭크",
+  "short_name": "이슈랭크",
+  "description": "어제 가장 많이 보도된 뉴스 — 섹션별 순위 · 3줄 요약 · 원문 링크",
+  "lang": "ko",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#f7f7f5",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

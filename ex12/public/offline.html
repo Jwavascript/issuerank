@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>이슈랭크</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --text: #161616; --muted: #6f6b65; --faint: #a29e97;
+  --line: #e7e4df; --hover: #efede9; --ink: #161616; --ink-text: #ffffff;
+  --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121211; --surface: #1a1a19; --text: #ecebe8; --muted: #9b978f; --faint: #6a675f;
+    --line: #2b2a27; --hover: #222220; --ink: #ecebe8; --ink-text: #121211;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font);
+  font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 480px; margin: 0 auto; padding: 72px 16px 56px; }
+.brand { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 14px; font-weight: 700; color: var(--muted); }
+.brand svg { width: 18px; height: 18px; flex: none; color: var(--ink); }
+h1 { margin: 20px 0 8px; font-size: 22px; line-height: 1.35; letter-spacing: -.02em; }
+.note { margin: 0; color: var(--muted); font-size: 14px; }
+.btn {
+  margin-top: 20px; height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--ink); color: var(--ink-text);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="brand"><svg viewBox="0 0 40 40" fill="currentColor" aria-hidden="true"><rect width="24" height="40" rx="3"/><rect x="26" width="14" height="24" rx="3"/><rect x="26" y="26" width="14" height="14" rx="3" opacity=".45"/></svg>이슈랭크</p>
+  <h1>인터넷에 연결되어 있지 않습니다</h1>
+  <p class="note">연결되면 다시 시도해 주세요. 랭킹은 매일 새벽 갱신됩니다.</p>
+  <button type="button" class="btn" id="retry">다시 시도</button>
+</main>
+<script>
+// 오프라인 안내(O4 · D29): 서비스 워커가 화면 탐색이 실패했을 때 대신 보여 줌. 다시 시도 = 지금 주소 새로 고침
+document.getElementById('retry').addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>

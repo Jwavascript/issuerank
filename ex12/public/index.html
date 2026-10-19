@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>이슈랭크</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="description" content="어제 가장 많이 보도된 뉴스를 섹션별 순위와 AI 3줄 요약으로 봅니다">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="이슈랭크">
+<meta property="og:title" content="이슈랭크 — 어제 가장 많이 보도된 뉴스">
+<meta property="og:description" content="섹션별 순위 · AI 3줄 요약 · 원문 링크">
+<meta property="og:image" content="https://issuerank-kappa.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="이슈랭크 — 어제 가장 많이 보도된 뉴스">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 :root {
@@ -196,6 +212,7 @@ main { overflow-x: clip; }
 .src { display: inline-flex; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--muted); text-decoration: none; gap: 4px; align-items: center; }
 .src:hover { color: var(--text); }
 .compact .src { display: none; }
+.src + .src { margin-left: 14px; }
 
 .bm {
   width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--faint);
@@ -284,6 +301,10 @@ main { overflow-x: clip; }
 .site-foot { padding: 0 16px 32px; text-align: center; font-size: 12px; color: var(--faint); }
 .site-foot a { color: var(--muted); text-decoration: none; }
 .site-foot a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+/* 맨 아래 공유 · 앱 설치 줄(O4): 기존 정책 링크 줄 위 */
+.site-foot .foot-row { margin-bottom: 6px; }
+.site-foot button { color: var(--muted); }
+.site-foot button:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 2px; }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
@@ -384,6 +405,9 @@ main { overflow-x: clip; }
 .auth-or { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; color: #6f6b65; font-size: 13px; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: #ddd; }
 .auth-legal { margin: 16px 0 0; text-align: center; font-size: 12px; color: #6f6b65; }
+/* 링크 복사 창(O4): 복사가 막혔을 때 직접 복사. 창 = 로그인 창 꼴(늘 밝은 색) · 글 상자 = 로그인 창 입력 칸 꼴 */
+.share-note { margin: 0; font-size: 14px; }
+.share-text { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-top: 12px; border: 1px solid #aaa; border-radius: 8px; font: inherit; color: #222; background: #ffffff; resize: none; }
 </style>
 </head>
 <body>
@@ -406,6 +430,10 @@ main { overflow-x: clip; }
       </button>
     </nav>
     <div class="header-right">
+      <button type="button" class="pill-btn" id="installBtn" aria-label="이슈랭크 앱 설치" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        <span class="lbl">앱 설치</span>
+      </button>
       <button class="pill-btn" data-goto="bookmarks" id="bmNav" aria-label="북마크">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3.8h12v17l-6-4.2-6 4.2z"/></svg>
         <span class="lbl">북마크</span><span class="cnt num" id="bmBadge"></span>
@@ -483,7 +511,7 @@ main { overflow-x: clip; }
     </div>
   </section>
 </main>
-<footer class="site-foot"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/privacy#contact">문의</a></footer>
+<footer class="site-foot"><div class="foot-row"><button type="button" data-share-site>이슈랭크 공유</button><span id="installFoot"> · <a href="/widget#app" id="installLink">앱 설치</a></span></div><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/privacy#contact">문의</a></footer>
 
 <div class="tip" id="tip" role="tooltip"></div>
 <div class="scrim" id="scrim"></div>
@@ -503,6 +531,12 @@ main { overflow-x: clip; }
     <div class="auth-actions"><button type="submit" id="authSubmit" class="chip-btn">로그인</button><button type="button" id="authSwitch" class="chip-btn">회원가입</button><button type="button" id="authClose" class="chip-btn">닫기</button></div>
   </form>
   <p class="auth-legal"><a href="/terms" target="_blank" rel="noopener">이용약관</a> · <a href="/privacy" target="_blank" rel="noopener">개인정보처리방침</a></p>
+</dialog>
+<dialog id="shareDialog" class="auth-dialog" aria-labelledby="shareTitle">
+  <h2 id="shareTitle">링크 복사</h2>
+  <p class="share-note" id="shareNote">복사하지 못했습니다. 아래 글을 길게 눌러 복사해 주세요</p>
+  <textarea id="shareText" class="share-text" rows="3" readonly spellcheck="false" aria-labelledby="shareNote"></textarea>
+  <div class="auth-actions"><button type="button" id="shareClose" class="chip-btn">닫기</button></div>
 </dialog>
 <script>
 /* ─────────────── Data ─────────────── */
@@ -624,6 +658,7 @@ function itemHTML(it, opts = {}) {
       <h3><a href="${it.url}" target="_blank" rel="noopener">${esc(it.title)}</a></h3>
       ${summaryHTML(it.summary)}
       <a class="src" href="${it.url}" target="_blank" rel="noopener">기사 원문 ${ICON_EXT}</a>
+      <button type="button" class="src" data-share="${it.id}" aria-label="이 이슈 공유">공유</button>
     </div>
     <button class="bm ${on ? 'on' : ''}" data-bm="${it.id}" aria-pressed="${on}" aria-label="${on ? '북마크 해제' : '북마크'}">${ICON_BM}</button>
   </li>`;
@@ -863,6 +898,7 @@ function openDrawer(id) {
     <div class="drawer-foot">
       <a class="btn-primary" href="${it.url}" target="_blank" rel="noopener">기사 원문 ${ICON_EXT}</a>
       <button class="btn-ghost bm-wide ${on ? 'on' : ''}" data-bm="${it.id}" aria-pressed="${on}">${ICON_BM}<span>${on ? '북마크됨' : '북마크'}</span></button>
+      <button type="button" class="btn-ghost" data-share="${it.id}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span>공유</span></button>
     </div>`;
   drawer.classList.add('show'); scrim.classList.add('show'); drawer.setAttribute('aria-hidden', 'false');
   tip.classList.remove('show');
@@ -959,6 +995,78 @@ function toast(msg, action, fn) {
   if (action) toastEl.querySelector('button').onclick = () => { toastEl.classList.remove('show'); fn(); };
   toastEl.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3600);
+}
+
+/* ─────────────── Share · install (O4) ─────────────── */
+// 공유(D29): 휴대폰(손가락이 주 입력 + Web Share)은 공유 창, 그 밖은 링크 복사 → 복사도 안 되면 직접 복사 창.
+// 주소 앞은 배포 주소 고정(widget.js BASE와 같음 — 로컬 · 고유 배포 주소를 퍼뜨리지 않음). 이슈 주소 = /s?issue={id}(O1 바로가기 그대로, 측정 경로 /s).
+// 보내는 글 = 섹션 · 제목 원문 · 주소뿐(본문 · 요약 · 연관기사 수 · 원문 URL 없음)
+const SHARE_BASE = 'https://issuerank-kappa.vercel.app';
+const SITE_SHARE = { title: '이슈랭크', text: '어제 가장 많이 보도된 뉴스 — 섹션별 순위 · 3줄 요약', url: `${SHARE_BASE}/s` };
+// 랭킹에 없으면 북마크 카드(목록 · 북마크 화면의 카드 버튼)
+function issueShare(id) {
+  const it = issueById(id) || findBookmark(id);
+  return it ? { title: '이슈랭크', text: `[${SEC[it.section].name}] ${it.title}`, url: `${SHARE_BASE}/s?issue=${encodeURIComponent(it.id)}` } : null;
+}
+// 누른 순간 부름(앞에 await 없음 — 공유 창은 사용자 동작 안에서만 열림). 취소(AbortError)면 아무것도 안 함, 그 밖 실패는 복사로
+function share(data) {
+  if (!data) return;
+  if (typeof navigator.share === 'function' && navigator.canShare?.(data) !== false && matchMedia('(pointer: coarse)').matches) {
+    navigator.share(data).catch(e => { if (e?.name !== 'AbortError') void copyShare(data); });
+    return;
+  }
+  void copyShare(data);
+}
+async function copyShare(data) {
+  const text = `${data.text}\n${data.url}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('링크를 복사했습니다');
+  } catch { openShareDialog(text); }
+}
+const shareDialog = document.getElementById('shareDialog');
+function openShareDialog(text) {
+  const box = document.getElementById('shareText');
+  box.value = text;
+  if (!shareDialog.open) shareDialog.showModal();
+  box.focus(); box.select(); box.setSelectionRange(0, text.length);
+}
+document.getElementById('shareClose').addEventListener('click', () => shareDialog.close());
+
+// 설치(D29): 설치 이벤트(beforeinstallprompt — Chrome 계열만, iOS 없음)를 받았을 때만 헤더 `앱 설치`. 이벤트는 한 번만 부를 수 있어 누르면 결과와 상관없이 숨김.
+// 맨 아래 `앱 설치`는 이벤트가 있으면 같은 설치 창, 없으면 링크 그대로 /widget#app 안내. 이미 앱(standalone)으로 열렸으면 설치 UI 전부 숨김
+const installBtn = document.getElementById('installBtn');
+let installEvent = null;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+document.getElementById('installFoot').hidden = standalone();
+function promptInstall() {
+  const e = installEvent;
+  installEvent = null;
+  installBtn.hidden = true;
+  e.prompt().catch(() => {});
+}
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  if (standalone()) return;
+  installEvent = e;
+  installBtn.hidden = false;
+});
+addEventListener('appinstalled', () => {
+  installEvent = null;
+  installBtn.hidden = true;
+  toast('앱을 설치했습니다');
+});
+installBtn.addEventListener('click', () => { if (installEvent) promptInstall(); });
+document.getElementById('installLink').addEventListener('click', e => {
+  if (!installEvent) return;
+  e.preventDefault();
+  promptInstall();
+});
+
+// 서비스 워커(D29, sw.js): 기기에는 오프라인 안내 하나만 저장. 화면이 다 뜬 뒤 등록하고, API가 없거나 실패하면 조용히 넘어감
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  addEventListener('load', () => { navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {}); });
 }
 
 /* ─────────────── Navigation ─────────────── */
@@ -1152,6 +1260,8 @@ document.addEventListener('click', e => {
     return popFor === id ? closePop() : openPop(b, id);
   }
   if ((b = el('[data-save]'))) return save(popFor, b.dataset.save);
+  if ((b = el('[data-share]'))) return share(issueShare(b.dataset.share));
+  if (el('[data-share-site]')) return share(SITE_SHARE);
   if ((b = el('[data-zoom]'))) { state.zoom = b.dataset.zoom || null; closeDrawer(); renderMap(); return; }
   if ((b = el('.tile'))) return openDrawer(b.dataset.id);
   if (el('[data-close]') || e.target === scrim) return closeDrawer();
@@ -1230,6 +1340,7 @@ async function start() {
   document.fonts?.ready.then(() => { placePill(); drawMap(); });
 }
 start();
+registerServiceWorker();
 </script>
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
 <script defer src="/_vercel/insights/script.js"></script>
