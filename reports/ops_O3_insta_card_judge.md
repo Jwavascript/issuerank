@@ -102,3 +102,7 @@ PLAN과 다른 점(제작 보고 6절, 판정에 영향 없음): include 키 `'/
 - 로컬 3000: 48/100(서버 쪽 기록). 3000 밖 로컬 직접 요청 0. 외부: GitHub 글꼴 zip 1회(26MB, 대조용)만. newsdata 0 · OpenAI 0 · Meta 0 · Google 0. redocly는 `--offline`(받기 0).
 - DB: 읽기만(심사 SQL은 `read only` 트랜잭션), 9표 해시 전후 같음.
 - 프로세스: 띄우기 전 `ps -ef` 저장. 내가 띄운 것 = proot 서버 1회(setsid 그룹 17982 → npm 18003 → sh 18158 → next-server 18159) · Chromium 1회(내 프로필, 끝에 `Browser.close` + 그룹 TERM). 끝 확인: curl 3000 · 9333 = 000, `ps`에 next-server · next start · 내 chromium 0, 작업 전 목록에 없던 프로세스 = 확인 셸 · 원래 있던 루프의 `sleep 2`뿐, code-oss(7243 등 electron 16개) 살아 있음. Chromium 프로필 · 내려받기 폴더 · 글꼴 폴더 · 빈 cwd 폴더 삭제. `ex12/.next`는 심사의 깨끗한 빌드 산출물(git 제외).
+
+## 배포 줄 15 (2026-10-19, 코디네이터 확인 · 사용자 요청으로 로그인 버튼 수정은 재확인 없이 함께 배포)
+
+커밋 b59329d 푸시 후 약 30초에 배포(`/card.html` 본문 SHA-256 = 로컬). 배포 요청 6: `/api/card/caption` 200(date 2026-10-19, 6항목) · `/api/card` 200 image/png 146,046B 1080×1350, 첫 요청 MISS 1,577ms · 10초 뒤 HIT 481ms · 클라이언트 cache-control `public, max-age=0`(s-maxage 없음) · 캡션 6개 = `/api/widget` 앞 6개 · `/card` 200. 글꼴 포함 함수가 Vercel에서 정상 동작(함수 크기 · 500KB 한도 문제 없음). **15 OK** → 합계 OK 15 · FAIL 0 · SKIP 3(16 다음 날 아침 · 17 사용자 휴대폰 · 18 약관 캡처). 로그인 창 버튼 대비 수정(D28 외 사용자 요청)은 제작 측정만 있고 독립 재확인은 사용자 결정으로 생략.
