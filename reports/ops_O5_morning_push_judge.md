@@ -8,7 +8,7 @@
 ## 판정
 
 **PASS 보류**(2026-10-20 14:13~14:24 KST 줄 8 재확인 뒤 — 11절). 처음 판정(13:58)은 FAIL(줄 8 — 받는 푸시 서비스 검사 우회)이었고, 제작이 고친 한 줄을 심사 절차로 다시 확인해 OK로 바꿈. 위반 0.
-**합계: OK 17 · FAIL 0 · SKIP 7**(18 · 19 푸시 후, 20 코디네이터, 21 · 22 · 24 사용자, 23 iPhone) — SKIP이 남아 PASS 아님.
+**합계: OK 20 · FAIL 0 · SKIP 4**(21 · 22 · 24 사용자, 23 iPhone) — SKIP이 남아 PASS 아님. 줄 20은 코디네이터가 14:34에 OK(13절). 배포 줄 18 · 19는 푸시 `249c5d7` · Vercel 배포 뒤 2026-10-20 14:29~14:31 KST에 OK(12절). (재확인 직후 14:24: OK 17 · FAIL 0 · SKIP 7.)
 (처음 판정 13:58: FAIL — OK 16 · FAIL 1 · SKIP 7.)
 - 커밋 전 고칠 것: **없음**(7절 1 필수 · 7절 2 선택 모두 고침 확인 — 11절). 남은 것은 낮음 · 참고(7절 3~8).
 - 코디네이터 판단 C2: **적절**(641~1199px 글자 꺾임 해결, 640px 이하 · 1221px 이상 변화 0, 회귀는 아주 긴 이름의 1200~1220px뿐) — 8절.
@@ -82,9 +82,9 @@
 | 15 로컬 브라우저(CDP) | [OK] | 5.6(폭 표 넘침 0 · 상태 · 다크 · v1 → v2 · deliverPushMessage · 회귀 · D20) — 참고 2건(7절 5 · 8절) |
 | 16 로컬 발송 경로(실제 DB) | [OK] | 5.3 끝 |
 | 17 안전 · 한도 | [OK] | 10절 |
-| 18 배포 정적 · API | [SKIP — 푸시 후] | 9절 절차 |
-| 19 배포 브라우저 | [SKIP — 푸시 후] | 9절 절차 |
-| 20 워크플로 연결 | [SKIP — 코디네이터, 푸시 뒤 10:00~24:00 KST] | 9절 절차 |
+| 18 배포 정적 · API | [OK](10-20 14:29, 12절) | 배포 요청 11/20: 정적 5 = 저장소 바이트 · sw.js 헤더 3 · POST 204 → 실제 DB 행 1 → DELETE 204 → 행 0 · 403 · 400 · 400(constructor) · 413 |
+| 19 배포 브라우저 | [OK](10-20 14:31, 12절) | 배포 요청 10/25(NetLog): SW v2 activated · 캐시 v2 offline.html · 설치 오류 [] · 360 · 320 넘침 0 · deliverPushMessage → 알림 1 · 종 켜기/끄기(구독 API는 로컬 204) · 바깥 0 |
+| 20 워크플로 연결 | [OK] 코디네이터 2026-10-20 14:34 KST | 13절(run 39375573798 · 키 확인 OK · 보내지 않음: 10:00 지남 · 요청 0) |
 | 21 Android 실제 | [SKIP — 사용자 확인 대기] | 계획 순서 1~5 · 7 |
 | 22 다음 날 아침 실제 발송 | [SKIP — 사용자 + 기록] | 계획 순서 6 |
 | 23 iPhone | [SKIP — iPhone 기기 없음] | — |
@@ -203,13 +203,14 @@
 `bash scripts/ex12-ubuntu.sh env NODE_OPTIONS=--import=./.data/judge-o5-20261020/jguard.mjs JUDGE_GUARD_FILE=/workspace/capstone/ex12/.data/judge-o5-20261020/guard-ssrf2.jsonl npx tsx .data/judge-o5-20261020/j-ssrf.mts`
 기대: `proto constructor` · `proto __proto__` = null · `apiPostDelete` 400/400 · `apiVsServiceMismatch` [] · `sendCheck.sentTo` = `ok-judge` 하나 · `검사 실패 삭제 6`. 그다음 `npm test`(새 테스트 포함 통과) · `npm run build`. 이 세 가지가 맞으면 줄 8 OK → **PASS 보류**(로컬 서버 · 브라우저 · DB 다시 할 필요 없음 — 바뀌는 곳은 검사 함수 하나). 7절 2를 같이 고치면 `j-yaml.cjs`를 다시 돌려 run 줄이 `npm run --silent push -- "${args[@]}"`인지만.
 ② **Secret 등록(커밋 · 푸시 전, 값 출력 0)**: `grep -c '^VAPID_PRIVATE_KEY=' ex12/.env` = 1 → `grep '^VAPID_PRIVATE_KEY=' ex12/.env | cut -d= -f2- | tr -d '\r\n' | gh secret set VAPID_PRIVATE_KEY --repo Jwavascript/issuerank` → `gh secret list --repo Jwavascript/issuerank`에 `VAPID_PRIVATE_KEY`(오늘 날짜) · `DATABASE_URL`이 이름 · 날짜로만 보이면 등록 확인. 값이 코드 공개 키와 짝인지는 ⑤의 첫 실행 `키 확인 OK`로 확인(다르면 `VAPID 키가 코드의 공개 키와 다릅니다` · 종료 2 · 발송 0 → 다시 등록). Vercel env 추가 0.
-③ **배포 줄 18**(배포 Ready 뒤 · 06:30~10:00 KST 피함 · 배포 Node ≤ 20요청): 정적 5(`/sw.js` 헤더 3 = O4 · 본문 = 저장소 v2 / `/p` = index.html / `/icons/badge-96.png` 200 image/png 바이트 같음 / `/widget` · `/privacy` = 파일) + API 9(Origin `https://issuerank-kappa.vercel.app` · endpoint `https://fcm.googleapis.com/fcm/send/o5-deploy-{uuid}` · 스크립트가 만든 키: POST 204 → 읽기 전용 SQL 행 1 · 키 같음 → 같은 endpoint 다른 키 POST 204 → 행 1 · 키 바뀜 → DELETE 204 → 행 0 → Origin 없음 403 → `evilpush.apple.com` 400 → `https://constructor/x` 400(①을 고친 판인지) → 4,097B 413) = 14요청. finally에서 `%o5-deploy-%` 행만 지우고 남은 0 · 9표 스냅숏 전후 비교(세션 수는 실제 사용자 때문에 바뀔 수 있음 — 그때는 해당 표만 기록).
-④ **배포 줄 19**(CDP ≤ 25 — NetLog `HTTP_TRANSACTION_SEND_REQUEST` BEGIN만 셈): 새 프로필 · `--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE issuerank-kappa.vercel.app"` · 페이지에서 `/_vercel/insights/*` 막기 · 문서 전 가짜 pushManager(`jfake.mjs` 꼴, 진짜 subscribe 0) + 페이지 CDP Fetch로 `*/api/push/subscriptions*`는 로컬에서 204(배포 요청 · DB 0). 360 `/`(≈ 8: html · rankings · get-session · manifest · icon · sw.js · offline.html) → SW v2 activated · 캐시 `issuerank-v2: [/offline.html]` · `Page.getInstallabilityErrors` [] · 헤더 넘침 0 · 종 34×32 `off` → `Browser.grantPermissions(notifications)` → **페이지 세션에서** `ServiceWorker.enable` · `ServiceWorker.deliverPushMessage`(registrationId는 `workerRegistrationUpdated`에서) 아침 JSON 1번 → `getNotifications()` 1(제목 · tag · data.url `/p`, 아이콘 · 배지 ≈ 2요청) → 종 누름 → on → 바로 다시 누름 → off(토스트 단추는 3.6초 안에) → 320으로 바꿔 넘침 0(다시 읽지 않음) ≈ 12~16요청. 배포 호스트 밖 요청 0 · 프로필 삭제.
+③ **(끝 — 10-20 14:29 OK, 12절) 배포 줄 18**(배포 Ready 뒤 · 06:30~10:00 KST 피함 · 배포 Node ≤ 20요청): 정적 5(`/sw.js` 헤더 3 = O4 · 본문 = 저장소 v2 / `/p` = index.html / `/icons/badge-96.png` 200 image/png 바이트 같음 / `/widget` · `/privacy` = 파일) + API 9(Origin `https://issuerank-kappa.vercel.app` · endpoint `https://fcm.googleapis.com/fcm/send/o5-deploy-{uuid}` · 스크립트가 만든 키: POST 204 → 읽기 전용 SQL 행 1 · 키 같음 → 같은 endpoint 다른 키 POST 204 → 행 1 · 키 바뀜 → DELETE 204 → 행 0 → Origin 없음 403 → `evilpush.apple.com` 400 → `https://constructor/x` 400(①을 고친 판인지) → 4,097B 413) = 14요청. finally에서 `%o5-deploy-%` 행만 지우고 남은 0 · 9표 스냅숏 전후 비교(세션 수는 실제 사용자 때문에 바뀔 수 있음 — 그때는 해당 표만 기록).
+④ **(끝 — 10-20 14:31 OK, 12절) 배포 줄 19**(CDP ≤ 25 — NetLog `HTTP_TRANSACTION_SEND_REQUEST` BEGIN만 셈): 새 프로필 · `--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE issuerank-kappa.vercel.app"` · 페이지에서 `/_vercel/insights/*` 막기 · 문서 전 가짜 pushManager(`jfake.mjs` 꼴, 진짜 subscribe 0) + 페이지 CDP Fetch로 `*/api/push/subscriptions*`는 로컬에서 204(배포 요청 · DB 0). 360 `/`(≈ 8: html · rankings · get-session · manifest · icon · sw.js · offline.html) → SW v2 activated · 캐시 `issuerank-v2: [/offline.html]` · `Page.getInstallabilityErrors` [] · 헤더 넘침 0 · 종 34×32 `off` → `Browser.grantPermissions(notifications)` → **페이지 세션에서** `ServiceWorker.enable` · `ServiceWorker.deliverPushMessage`(registrationId는 `workerRegistrationUpdated`에서) 아침 JSON 1번 → `getNotifications()` 1(제목 · tag · data.url `/p`, 아이콘 · 배지 ≈ 2요청) → 종 누름 → on → 바로 다시 누름 → off(토스트 단추는 3.6초 안에) → 320으로 바꿔 넘침 0(다시 읽지 않음) ≈ 12~16요청. 배포 호스트 밖 요청 0 · 프로필 삭제.
 ⑤ **줄 20(코디네이터, 푸시 뒤 10:00~24:00 KST에만)**: `gh workflow run push.yml --repo Jwavascript/issuerank`(코드 비움) 1번 → `gh run list --workflow push.yml --repo Jwavascript/issuerank -L 1` → 그 실행 요약: 초록 · `아침 알림 {날짜} · {HH:MM} KST` · `키 확인 OK` · `구독 n · 이미 보냄 n · 대상 n` · `보내지 않음: 10:00 지남`(Actions라 `로컬 실행` 줄 없음) · 요청 0 · daily 실행 · daily.yml 그대로. 00:00~10:00에는 빈 코드 수동 실행 금지(03:30~10:00이면 기다렸다가 실제로 보냄). `-f test_code=`는 사용자가 코드를 준 뒤에만(그 기기에 실제 알림).
 ⑥ 사용자 줄 21 · 22 · 24 · iPhone 23은 계획 "사용자 확인 순서" 그대로 + C2 확인(태블릿 · 좁은 PC 창 641~1199px 아이콘(+숫자)).
 
 ## 10. 요청 · 비용 · 정리
 
+- 배포(12절, 새 별도 카운터): 줄 18 Node **11/20** · 줄 19 CDP **10/25**(NetLog) · 배포 호스트 밖 0 · 시험 행 `judge-o5-deploy-` 1(곧바로 API로 지움, 끝 0행).
 - **로컬 3000: 86/100**(처음 심사 82 + 11절 재확인 4 · 심사 별도 카운터, 503 · 차단 0). 처음 심사 82의 나눔: Node 18(줄 14) · CDP A 1회차 8 · A 2회차 21(첫 로드 5 · push 전달 중 아이콘/배지 9 · POST 1 · `/widget` 3 · DELETE 1 · sw.js 확인 등 2) · A2 1회차 6 · 2회차 17(로드 5 · `/widget#push` 4 · 다시 로드 5 · Google `sign-in/social` 1(404 → 안내 문구) · 탐색 뒤 sw.js 확인 등 2) · B 12(v1 첫 로드 8 · update 2 · 배지 등 2) · C · D · E · F 0. 3001 직접 0(끝 확인 curl은 연결 거부).
 - 바깥: newsdata · OpenAI · Google · Kakao · 배포 주소 · GitHub API 0 · **실제 푸시 서비스 0 · 진짜 subscribe 0**(가짜가 원형 함수를 바꾸고 원래 함수는 한 번도 부르지 않음). Chromium = `MAP * ~NOTFOUND`(바깥 시도 = jsdelivr 글꼴 CSS뿐) · next 서버 바깥 연결 = DB 2(가드 기록) · Node 심사 스크립트 = DB · 127.0.0.1 · tsx 파이프만, fetch 바깥 시도 0 · npm 내려받기 0(`npx --offline`, 이미 있는 캐시).
 - DB: 시작 · 끝 스냅숏(읽기 전용) 9표 + push_subscriptions + 마이그레이션 기록 **건수 · 내용 md5 모두 같음**(articles 1279 · issues 897 · collect_runs 102 · bookmarks 2 · folders 2 · user 2 · session 2 · account 1 · verification 0 · push 0 · 기록 8). 시험 행 = `judge-o5-` 5개(API 1 · 종 1 · 발송 3) — API DELETE 1 · 종 끄기 DELETE 1 · 제품 410 처리 1 · `cleanup` 2로 모두 지움, 남은 0. 임시 계정 0.
@@ -237,7 +238,51 @@
 - **요청 · 쓰기 · 정리**: 로컬 3000 이번 4(누계 **86/100**) · 바깥 0(newsdata · OpenAI · Google · Kakao · 배포 · GitHub API · 푸시 서비스 · 진짜 subscribe 0) · DB 쓰기 0(시험 행 0, 읽기 전용 `judge-rows` 1번 — push_subscriptions 0행) · 서버(proot 23749 → j-server 23771 → next-server 23812) 멈춤 표지로 종료 · curl 3000 · 3001 = 000 · next-server · j-server · 내 chromium 0 · code-oss 30854 살아 있음 · 임시 `wfsim/tmp-*` 지움(요약 · 단계 스크립트 · 가드 기록은 증거로 남김).
 - **판정 바뀜**: 줄 8 [FAIL] → [OK] · 1절 SSRF wrong → done · 7절 1 · 2 고침 확인 → **PASS 보류(OK 17 · FAIL 0 · SKIP 7)**. 남은 발견 = 7절 3(낮음 · 설계: 404/410 아닌 오류가 계속되는 행은 안 지워짐) · 4(C2 — 낮음 · 참고) · 5 · 6 · 7(참고).
 
+## 12. 배포 줄 18 · 19 (2026-10-20)
+
+- 때 · 대상: 2026-10-20 14:28~14:32 KST(06:30~10:00 피함), `https://issuerank-kappa.vercel.app`(Production). 코디네이터: 커밋 `249c5d7`(O5 전체 — 11절에서 재확인한 작업 트리 그대로, 로컬 HEAD = `249c5d7` · 작업 트리 깨끗 확인) 푸시 · Vercel 배포 success 14:26 · GitHub Secret `VAPID_PRIVATE_KEY` 등록 14:25(이름 · 날짜만). 심사는 줄 18 · 19만(줄 20 push 수동 실행 0 · Actions 0 · GitHub API 0).
+- DB(읽기 전용 스냅숏, 시작 14:28:37 · 끝 14:31:36): 9표 + push_subscriptions + 마이그레이션 기록 건수 · 내용 md5 **모두 같음**(push_subscriptions 0행 → 0행, 11절 뒤 심사 끝 스냅숏과도 같음).
+
+### 줄 18 [OK] — Node fetch, 배포 요청 **11/20**(`j-deploy18.mjs`, 가드: 배포 호스트 · DB만 허용, 기대와 다르면 멈추는 꼴 — 멈춤 0)
+
+| 요청 | 결과(기록한 머리 값) |
+|---|---|
+| `GET /sw.js` | 200 · `Content-Type: application/javascript; charset=utf-8` · `Cache-Control: no-cache, no-store, must-revalidate` · `Content-Security-Policy: default-src 'self'; script-src 'self'` · `Content-Encoding: br` · `x-vercel-cache: MISS` · `age: 0` · 본문 3,603B = 저장소 파일(`issuerank-v2` · push 처리 있음) |
+| `GET /p` | 200 · `text/html; charset=utf-8` · `public, max-age=0, must-revalidate` · br · MISS · 85,686B = `index.html`(rewrite) |
+| `GET /icons/badge-96.png` | 200 · `image/png` · `public, max-age=0, must-revalidate` · MISS · 611B = 저장소 |
+| `GET /widget` · `GET /privacy` | 200 · `text/html; charset=utf-8` · `public, max-age=0, must-revalidate` · br · MISS · 9,509B · 8,417B = 저장소 |
+| `POST /api/push/subscriptions`(Origin = 배포 주소, `…/judge-o5-deploy-{uuid}` · 스크립트 키) | 204 · 본문 0 · `no-store` · Set-Cookie 0 → **실제 DB 행 1**(키 같음 · last_sent_on null) |
+| `DELETE`(같은 endpoint) | 204 · `no-store` → **실제 DB 행 0**(API 삭제 — DB 직접 삭제 대비 길은 쓰지 않음) |
+| Origin 없음 POST | 403 · `{"message":"요청 형식이 올바르지 않습니다"}` · no-store |
+| `https://evilpush.apple.com/…` POST | 400 · 같은 문구 · no-store |
+| `https://constructor/…` POST | 400 · 같은 문구 · no-store(11절 수정이 배포됨) |
+| 4,097B 본문 POST | 413 · 같은 문구 · no-store |
+
+- 시험 행: `judge-o5-deploy-` **1행만**(약 1초 살아 있음 · 그 행으로 발송 0) → API DELETE로 지움 → 끝에 push_subscriptions 0행 · judge 0. 바깥: fetch · 연결 = 배포 호스트 11 · 6연결 + DB 1뿐(가드 기록, 차단 0).
+- 참고: 로컬 next start는 `text/html; charset=UTF-8` · `public, max-age=0`, Vercel은 `text/html; charset=utf-8` · `public, max-age=0, must-revalidate` — 플랫폼 기본 차이(본문은 같음).
+
+### 줄 19 [OK] — CDP, 배포 요청 **10/25**(`j-deploy19.mjs`, NetLog `HTTP_TRANSACTION_SEND_REQUEST` BEGIN만 셈)
+
+- 설정: Termux Chromium 155 headless · **새 프로필**(끝에 삭제 확인) · `--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE issuerank-kappa.vercel.app"` · `--disable-quic` · 페이지에서 `/_vercel/*` 막음 · 문서 전 가짜 pushManager(진짜 subscribe 0) · 구독 API는 페이지 CDP Fetch로 로컬 204(배포 요청 · DB 행 0) · Google 버튼 · 로그인 누르지 않음.
+- 360×800 `/`: SW scope `/` · `/sw.js` · **activated** · controller 있음 · 캐시 = `issuerank-v2: [/offline.html]` · `Page.getInstallabilityErrors` = [] · manifest 오류 0 · 타일 30 · 헤더 넘침 0 · 전환 버튼 34px(한 줄) · 헤더 설치 숨김 · 종 34×32 `off` · `아침 알림 받기`.
+- `Browser.grantPermissions(notifications)` → **페이지 세션** `ServiceWorker.deliverPushMessage`(아침 JSON) → `getNotifications()` **1**: 제목 `오늘의 뉴스가 도착했어요` · body '' · tag `issuerank-daily` · data.url `/p` · icon `https://issuerank-kappa.vercel.app/icons/icon-192.png` · badge `…/icons/badge-96.png` · lang ko · actions 0.
+- 종: 누름 → subscribe 1(`userVisibleOnly: true` · 키 65B = 코드 공개 키 · userActivation true · click 틱) → `on` · `아침 알림 끄기` · `아침 알림을 켰습니다` → 다시 누름 → unsubscribe 1 → `off` · `아침 알림을 껐습니다` + `다시 켜기`. 가로챈 요청 = POST(Origin = 배포 주소 · keys 있음) · DELETE 각 1 — 배포로 안 감.
+- 320(다시 읽지 않음): 넘침 0 · 전환 34px · 종 34×32. 그림 `deploy19-360.png` · `deploy19-320.png`.
+- 배포 요청 10 = `/` · `/api/rankings` · `/api/auth/get-session` · `/manifest.webmanifest` · `/icons/icon-192.png` ×3(파비콘 · manifest · 알림 아이콘) · `/sw.js` · `/offline.html` · `/icons/badge-96.png`. **배포 호스트 밖으로 보낸 요청 0**(jsdelivr 글꼴 CSS는 이름 풀이에서 막힘). JS 예외 0.
+
+### 정리
+
+- 프로세스: Chromium 10471 하나(`Browser.close` + 내 그룹만, `mineAfter` []) · CDP 9541 = 000 · 내 chromium · next 0 · 새로 남은 것 = 사용자 `usb-bookmarks` 자식 · 확인 셸뿐 · code-oss 30854 살아 있음. 프로필 · NetLog(scratchpad `judge-o5-deploy/`) 삭제. 결과 파일 누출 검사 false.
+- 남은 줄: **20(코디네이터)** — 푸시 뒤 10:00~24:00 KST에 빈 코드로 1번(9절 ⑤, 기대 `키 확인 OK` · `보내지 않음: 10:00 지남` · 요청 0) · 21 · 22 · 24(사용자) · 23(iPhone).
+
+## 13. 줄 20 (코디네이터, 2026-10-20)
+
+- 14:33 KST(10:00~24:00 창 안) `gh workflow run push.yml --repo Jwavascript/issuerank`(test_code 비움) 1번 → run `39375573798`(workflow_dispatch · headSha `249c5d7`, 05:33:57Z 시작 · 05:34:22Z 끝) **success**, 단계 8개 모두 success(checkout · setup-node · `npm ci` · `npm run push`).
+- `npm run push` 출력(= 실행 요약 본문): `아침 알림 2026-10-20 · 14:34 KST` · `키 확인 OK`(Secret `VAPID_PRIVATE_KEY`로 계산한 공개 키 = 코드 공개 키) · `구독 0 · 이미 보냄 0 · 대상 0` · `보내지 않음: 10:00 지남` → 발송 요청 0. 기기 코드 · endpoint · 키 0(로그도 같음).
+- 참고(낮음, 고치지 않음): 출력 맨 앞에 `.env not found. Continuing without it.` 두 줄 — Actions에는 `.env`가 없어 생기는 안내(비밀 · 코드 없음)이고 요약에도 들어감.
+- daily 실행 · daily.yml 변화 0(이번 실행은 push만). → **줄 20 OK. 합계 OK 20 · FAIL 0 · SKIP 4(21 · 22 · 24 사용자, 23 iPhone) → PASS 보류.**
+
 ## 사용자 할 일
 
-1. (끝 — 10-20 제작 수정 · 심사 재확인 OK, 11절) → 코디네이터가 Secret 등록 · 커밋 · 푸시 · 배포 줄 18 · 19 · 20을 진행(계획 Q6 승인 범위, 9절 ②~⑤).
+1. (끝 — 10-20 제작 수정 · 심사 재확인 OK(11절) · 코디네이터 Secret 등록 14:25 · 커밋 `249c5d7` 푸시 · Vercel 배포 14:26 · 배포 줄 18 · 19 OK(12절)) → 남은 코디네이터 줄 20(push 수동 실행 1번, **10:00~24:00 KST에만**, 9절 ⑤).
 2. 그 뒤 계획 "사용자 확인 순서" 1~8(종 → 기기 코드 → 시험 알림 → 누르기 → 다음 날 아침 → 끄기 → `/privacy` 문안) + C2 확인(641~1199px 아이콘). iPhone이 생기면 23.
