@@ -23,6 +23,7 @@ export type Store = {
   deleteBookmark(userId: string, issueId: string): Promise<boolean>;                 // 해제, 없으면 false
   folders(userId: string): Promise<Folder[]>;                                      // 폴더 목록(만든 순) + 개수
   createFolder(userId: string, name: string): Promise<Folder>;                       // 폴더 만들기
+  deleteFolder(userId: string, folderId: string): Promise<boolean>;                 // 폴더 삭제(O6 · D31): 그 사용자의 그 폴더 북마크 → 폴더를 함께 지움, 없거나 남의 폴더면 false(쓰기 0)
   savePushSubscription(sub: PushSubscriptionIn, allowNew: boolean): Promise<boolean>; // 같은 endpoint면 키만 갱신(행 하나), 새 endpoint는 allowNew일 때만 넣음. 썼으면 true
   deletePushSubscription(endpoint: string): Promise<void>;                          // 그 endpoint 행 삭제(없어도 됨)
   pushSubscriptionCount(): Promise<number>;                                         // 구독 행 전체 수(상한 비교)

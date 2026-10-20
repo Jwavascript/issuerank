@@ -34,6 +34,10 @@ export const folderCreate = z.object({
   name: z.string({ error: FOLDER_NAME }).trim().min(1, { error: FOLDER_NAME }).max(16, { error: FOLDER_NAME }),
 }, { error: BAD_REQUEST });
 
+// DELETE /api/folders/{folderId} 경로 칸(O6 · D31): f + 숫자 1~9자리(메모리 샘플 f1~f3) 또는 f + 소문자 UUID(createFolder의 f${randomUUID()}).
+// openapi.yaml pattern과 같은 식. 틀리면 400 BAD_REQUEST(저장소 호출 0)
+export const FOLDER_ID = /^f(?:[0-9]{1,9}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
 // 검사 실패 시 첫 위반의 메시지로 400
 export const validate = <T extends z.ZodType>(target: 'json' | 'query', schema: T) =>
   zValidator(target, schema, (result, c) => {

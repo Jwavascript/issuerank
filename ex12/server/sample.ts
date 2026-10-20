@@ -175,6 +175,14 @@ export const memoryStore: Store = {
     folders.push(folder);
     return withCount(folder);
   },
+  // 폴더 삭제(O6): 그 사용자 · 그 id 폴더가 없으면 false, 있으면 그 사용자 · 그 폴더 북마크 → 폴더를 지우고 true(db/store.ts와 같은 결과)
+  deleteFolder: async (userId, folderId) => {
+    const i = folders.findIndex(f => f.userId === userId && f.id === folderId);
+    if (i < 0) return false;
+    bookmarks.splice(0, bookmarks.length, ...bookmarks.filter(b => !(b.userId === userId && b.card.folderId === folderId)));
+    folders.splice(i, 1);
+    return true;
+  },
   savePushSubscription: async (sub, allowNew) => {
     const row = pushRows.get(sub.endpoint);
     if (row) { row.p256dh = sub.p256dh; row.auth = sub.auth; return true; }

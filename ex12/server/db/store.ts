@@ -94,6 +94,18 @@ export function dbStore(db: Db): Store {
       return { id, name, count: 0 };
     },
 
+    // 폴더 삭제(O6 · D31), 한 트랜잭션: 그 사용자의 그 폴더 행을 FOR UPDATE로 잠가 읽음(없거나 남의 폴더면 false · 쓰기 0) → 그 사용자 · 그 폴더 북마크 → 폴더.
+    // bookmarks.folder_id FK 두 개가 ON DELETE 지정 없음이라 북마크를 먼저 지움. 잠근 사이 다른 기기의 같은 폴더 저장은 기다렸다가 FK 오류로 실패(지우기는 실패 0),
+    // 중간 실패면 모두 되돌림. 조건에 user_id + 복합 FK(user_id, folder_id)가 같은 사용자 북마크만 허용 → 다른 사용자 행 영향 0
+    deleteFolder: async (userId, folderId) => db.transaction(async tx => {
+      const [row] = await tx.select({ id: folders.id }).from(folders)
+        .where(and(eq(folders.id, folderId), eq(folders.userId, userId))).for('update');
+      if (!row) return false;
+      await tx.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.folderId, folderId)));
+      await tx.delete(folders).where(and(eq(folders.id, folderId), eq(folders.userId, userId)));
+      return true;
+    }),
+
     // 아침 알림 구독(O5): endpoint unique — 있으면 키만 갱신(created_at · last_sent_on 그대로), 없으면 allowNew일 때만 새 행(id UUID)
     savePushSubscription: async (sub, allowNew) => {
       if (allowNew) {
