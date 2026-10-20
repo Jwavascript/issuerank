@@ -13,7 +13,9 @@
     "collect": "tsx --env-file-if-exists=.env server/collect.ts",
     "group": "tsx --env-file-if-exists=.env server/group.ts",
     "summarize": "tsx --env-file-if-exists=.env server/summarize.ts",
-    "daily": "tsx --env-file-if-exists=.env server/daily.ts"
+    "daily": "tsx --env-file-if-exists=.env server/daily.ts",
+    "push": "tsx --env-file-if-exists=.env server/push.ts",
+    "push:keys": "tsx server/push-keys.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.7",

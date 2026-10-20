@@ -1,4 +1,4 @@
-// 테이블 5개(Drizzle). summary · articles.description · articles.issue_id · collect_runs.message 말고 모두 NOT NULL. RLS는 켜기만 함(정책 없음):
+// 테이블 6개(Drizzle). summary · articles.description · articles.issue_id · collect_runs.message · push_subscriptions.last_sent_on 말고 모두 NOT NULL. RLS는 켜기만 함(정책 없음):
 // 서버는 테이블 주인으로 접속해 영향 없고, Supabase Data API(anon 키)로는 못 읽음
 import { date, foreignKey, integer, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema';
@@ -59,6 +59,17 @@ export const collectRuns = pgTable('collect_runs', {
   message: text('message'), // ok면 null
   articleCount: integer('article_count').notNull(),
   finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
+}).enableRLS();
+
+// 아침 알림 구독(O5 · D30, 0007): 기기 하나 = 1행(로그인 없이 · 계정 · IP · user agent 칸 없음). endpoint unique = 같은 기기는 키만 갱신(이 고유 키가 인덱스).
+// last_sent_on = 그날(KST) 보낸 표시(재실행해도 하루 1통). 끄면 그 행을 지우고, 푸시 서비스가 404 · 410을 주면 발송 명령이 지움
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: text('id').primaryKey(), // UUID
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSentOn: date('last_sent_on', { mode: 'string' }),
 }).enableRLS();
 
 // ex10 인증 테이블은 공식 Better Auth CLI로 별도 생성한다.

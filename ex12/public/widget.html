@@ -73,6 +73,15 @@ li { margin: 8px 0; overflow-wrap: anywhere; }
     <li><b>iPhone(Safari)</b>: Safari로 이슈랭크를 열고 <b>공유(□↑) › 홈 화면에 추가 › 추가</b>를 누릅니다. iOS 16.4 이상은 Chrome 등 다른 브라우저의 공유 메뉴에서도 됩니다. 홈 화면 앱은 Safari와 로그인이 따로라 앱에서 다시 로그인해야 할 수 있습니다.</li>
   </ul>
 
+  <h2 id="push">아침 알림</h2>
+  <p>매일 아침 그날 랭킹이 준비되면(대개 6:30~8:00, 10시까지) "오늘의 뉴스가 도착했어요" 알림을 한 번 보냅니다. 누르면 이슈랭크 첫 화면이 열립니다.</p>
+  <ul class="app-steps">
+    <li><b>Android(Chrome)</b>: 이슈랭크(Chrome 또는 설치한 앱) 오른쪽 위 <b>종 모양 버튼</b> → <b>허용</b>. 다시 누르면 끕니다. 차단했다면 Chrome 주소창 왼쪽 아이콘 › 권한(또는 설정 › 사이트 설정 › 알림)에서 이슈랭크를 허용으로 바꾼 뒤 다시 누릅니다. Android 13 이상은 휴대폰 설정 › 앱 › Chrome(또는 이슈랭크) › 알림도 켜져 있어야 합니다.</li>
+    <li><b>iPhone</b>: iOS 16.4 이상에서 위 <b>앱으로 설치</b>로 홈 화면에 추가한 이슈랭크 앱을 열고 오른쪽 위 <b>종 모양 버튼</b>을 누릅니다. Safari 탭에서는 알림을 켤 수 없습니다.</li>
+    <li><b>카카오톡 · 인스타그램 앱 안 브라우저</b>: 알림을 받을 수 없습니다. 메뉴에서 다른 브라우저(Chrome · Safari)로 열어 켜 주세요.</li>
+  </ul>
+  <p class="status" id="pushState" role="status"></p>
+
   <h2>iPhone</h2>
   <ol>
     <li>App Store에서 <b>Scriptable</b>(무료, iOS 15.5 이상)을 설치합니다.</li>
@@ -114,6 +123,23 @@ copyBtn.addEventListener('click', async () => {
     copyMsg.textContent = '길게 눌러 복사해 주세요';
   }
 });
+</script>
+<script>
+// 아침 알림(O5) 이 기기 상태 한 줄(서버 요청 0): 구독이 있으면 기기 코드 = SHA-256(endpoint) 16진수 앞 8자(시험 알림 수동 실행에 넣는 값, 비밀 아님)
+const pushState = document.getElementById('pushState');
+if (!('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window)) {
+  pushState.textContent = '이 브라우저에서는 아침 알림을 받을 수 없습니다';
+} else {
+  navigator.serviceWorker.getRegistration()
+    .then(reg => (reg ? reg.pushManager.getSubscription() : null))
+    .then(async sub => {
+      if (!sub) { pushState.textContent = '이 기기: 아침 알림 꺼짐'; return; }
+      const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sub.endpoint)));
+      const code = Array.from(hash.slice(0, 4), b => b.toString(16).padStart(2, '0')).join('');
+      pushState.textContent = `이 기기: 아침 알림 켜짐 · 기기 코드 ${code}(시험 알림용)`;
+    })
+    .catch(() => { pushState.textContent = '이 기기: 아침 알림 꺼짐'; });
+}
 </script>
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
 <script defer src="/_vercel/insights/script.js"></script>

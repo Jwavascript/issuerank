@@ -118,7 +118,7 @@ describe('manifest · 아이콘 · OG 그림 (AC-13-1 · 13-4)', () => {
 function loadSw() {
   const listeners: Record<string, (event: unknown) => void> = {};
   const log: string[] = [];
-  const stored = new Map<string, string[]>([['issuerank-v0', ['/old.html']], ['other', ['/x']]]);
+  const stored = new Map<string, string[]>([['issuerank-v0', ['/old.html']], ['issuerank-v1', ['/offline.html']], ['other', ['/x']]]);
   const cacheOf = (name: string) => ({
     add: vi.fn(async (url: string) => { log.push(`add ${name} ${url}`); stored.get(name)!.push(url); }),
     addAll: vi.fn(async (urls: string[]) => { log.push(`addAll ${name} ${urls.join(',')}`); stored.get(name)!.push(...urls); }),
@@ -161,14 +161,14 @@ function loadSw() {
 }
 
 describe('서비스 워커 sw.js (AC-13-2)', () => {
-  it('install: issuerank-v1에 /offline.html 1개 · skipWaiting / activate: v1만 남음 · claim', async () => {
+  it('install: issuerank-v2에 /offline.html 1개 · skipWaiting / activate: v2만 남음(옛 v1 삭제) · claim', async () => {
     const sw = loadSw();
     await sw.lifecycle('install');
-    expect(sw.log).toEqual(['open issuerank-v1', 'add issuerank-v1 /offline.html', 'skipWaiting']);
-    expect(sw.stored.get('issuerank-v1')).toEqual(['/offline.html']);
+    expect(sw.log).toEqual(['open issuerank-v2', 'add issuerank-v2 /offline.html', 'skipWaiting']);
+    expect(sw.stored.get('issuerank-v2')).toEqual(['/offline.html']);
     await sw.lifecycle('activate');
-    expect(sw.log.slice(3)).toEqual(['delete issuerank-v0', 'delete other', 'claim']);
-    expect([...sw.stored.keys()]).toEqual(['issuerank-v1']);
+    expect(sw.log.slice(3)).toEqual(['delete issuerank-v0', 'delete issuerank-v1', 'delete other', 'claim']);
+    expect([...sw.stored.keys()]).toEqual(['issuerank-v2']);
   });
 
   it('같은 출처 HTML 탐색 4곳만 respondWith(성공 = 그 응답 그대로 · 실패 = offline.html), 나머지 0 · cache.put 0 · caches.match는 실패 대체에서만', async () => {
@@ -201,8 +201,8 @@ describe('서비스 워커 sw.js (AC-13-2)', () => {
       for (const req of untouched) expect((await sw.dispatch(req)).calls, `${req.method} ${req.mode} ${req.url}`).toBe(0);
     }
     expect(sw.log).toEqual([]); // fetch · match · put 0
-    expect([...sw.stored.keys()]).toEqual(['issuerank-v1']);
-    expect(sw.stored.get('issuerank-v1')).toEqual(['/offline.html']);
+    expect([...sw.stored.keys()]).toEqual(['issuerank-v2']);
+    expect(sw.stored.get('issuerank-v2')).toEqual(['/offline.html']);
   });
 });
 
@@ -277,10 +277,10 @@ describe('offline.html · index.html · widget.html (AC-13-2 · 13-4)', () => {
     const page = read('public/widget.html');
     expect(pwaTags(page)).toEqual(PWA_TAGS);
     expect(ogOf(page)).toEqual(ogTable('이슈랭크 — 홈 화면 앱 · 위젯 설치', 'iPhone · Android 홈 화면에서 오늘의 헤드라인을 봅니다'));
-    const app = page.indexOf('<h2 id="app">앱으로 설치</h2>'), iphone = page.indexOf('<h2>iPhone</h2>');
+    const app = page.indexOf('<h2 id="app">앱으로 설치</h2>'), push = page.indexOf('<h2 id="push">');
     expect(app).toBeGreaterThan(page.indexOf('<p class="note">'));
-    expect(iphone).toBeGreaterThan(app);
-    expect(text(page.slice(app, iphone))).toBe('앱으로 설치 '
+    expect(push).toBeGreaterThan(app);
+    expect(text(page.slice(app, push))).toBe('앱으로 설치 '
       + 'Android(Chrome): Chrome으로 이슈랭크(https://issuerank-kappa.vercel.app)를 열고 오른쪽 위 설치 아이콘(또는 맨 아래 앱 설치)을 누른 뒤 설치를 누릅니다. 보이지 않으면 더보기(⋮)에서 앱 설치 또는 홈 화면에 추가를 고릅니다. 카카오톡 등 앱 안 브라우저에는 설치 메뉴가 없을 수 있으니 Chrome으로 여세요. '
       + 'iPhone(Safari): Safari로 이슈랭크를 열고 공유(□↑) › 홈 화면에 추가 › 추가를 누릅니다. iOS 16.4 이상은 Chrome 등 다른 브라우저의 공유 메뉴에서도 됩니다. 홈 화면 앱은 Safari와 로그인이 따로라 앱에서 다시 로그인해야 할 수 있습니다.');
     const android = page.slice(page.indexOf('<h2>Android</h2>'), page.indexOf('</main>'));

@@ -4,11 +4,13 @@ import { rankings } from './routes/rankings';
 import { widgetRoute } from './routes/widget';
 import { bookmarksRoute } from './routes/bookmarks';
 import { foldersRoute } from './routes/folders';
+import { pushRoute } from './routes/push';
 import { BAD_REQUEST } from './schemas';
 import type { Issue, Ranking, Widget } from './ranking';
 
 export type Bookmark = Issue & { folderId: string; savedAt: string };
 export type Folder = { id: string; name: string; count: number };
+export type PushSubscriptionIn = { endpoint: string; p256dh: string; auth: string }; // 아침 알림 구독(O5) 한 기기
 
 // 저장소: 라우트는 이 함수들만 부름. 메모리 구현은 sample.ts(테스트), DB 구현은 db/store.ts(api 서버)
 export type Store = {
@@ -21,9 +23,12 @@ export type Store = {
   deleteBookmark(userId: string, issueId: string): Promise<boolean>;                 // 해제, 없으면 false
   folders(userId: string): Promise<Folder[]>;                                      // 폴더 목록(만든 순) + 개수
   createFolder(userId: string, name: string): Promise<Folder>;                       // 폴더 만들기
+  savePushSubscription(sub: PushSubscriptionIn, allowNew: boolean): Promise<boolean>; // 같은 endpoint면 키만 갱신(행 하나), 새 endpoint는 allowNew일 때만 넣음. 썼으면 true
+  deletePushSubscription(endpoint: string): Promise<void>;                          // 그 endpoint 행 삭제(없어도 됨)
+  pushSubscriptionCount(): Promise<number>;                                         // 구독 행 전체 수(상한 비교)
 };
 
-// Hono 앱(라우트 4개 · onError). 서버는 index.ts가 띄우고, 테스트는 app.request로 바로 부름
+// Hono 앱(라우트 5개 · onError). 서버는 index.ts가 띄우고, 테스트는 app.request로 바로 부름
 export type SessionEnv = { Variables: { userId: string } };
 type Auth = {
   handler: (request: Request) => Promise<Response>;
@@ -40,6 +45,7 @@ export function createApp(store: Store, auth?: Auth) {
   });
   app.route('/api/rankings', rankings(store));
   app.route('/api/widget', widgetRoute(store));
+  app.route('/api/push/subscriptions', pushRoute(store)); // 아침 알림 구독(O5): 로그인 없이 기기 단위
   // JSON 검사와 저장소 접근보다 먼저 서버 세션을 검증한다.
   app.use('/api/*', async (c, next) => {
     if (!/^\/api\/(bookmarks|folders)(\/|$)/.test(c.req.path)) return next();

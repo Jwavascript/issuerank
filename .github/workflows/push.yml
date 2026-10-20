@@ -1,0 +1,57 @@
+# 아침 알림(O5 · D30 · AC-14-2): 하루 실행(daily)이 끝나면(성공 · 일부 실패 · 멈춤 · 취소 모두) 시작해, KST 오늘 랭킹이 있을 때
+# 06:30~10:00 KST에 구독한 기기마다 하루 1통(npm run push — 06:30 전이면 기다림 · 10:00 뒤 · 새 랭킹 없음 = 그날 안 보냄).
+# 보낼지는 daily 실행 결과가 아니라 DB로 정함. daily.yml · 하루 실행 코드는 바꾸지 않음 → 발송이 실패해도 daily 결과 · 종료 코드 그대로, 이 실행만 빨갛게 됨
+# 수동 실행(Run workflow): test_code를 비우면 아침 규칙 그대로, 기기 코드(8자, /widget#push에 보임)를 넣으면 그 기기에만 [시험] 알림 1통
+# 실행 요약은 공개(저장소가 공개) — 출력은 숫자 · 상태 코드 · 문구뿐(endpoint · 키 · 기기 코드 0), Secrets 값은 Actions가 로그에서 가림
+name: push
+
+on:
+  workflow_run:
+    workflows: [daily]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      test_code:
+        description: '시험 알림을 받을 기기 코드(8자 16진수, /widget#push). 비우면 아침 규칙'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200 # 06:30까지 최대 180분 기다림 + 준비 · 발송
+    defaults:
+      run:
+        working-directory: ex12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ex12/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: npm run push
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          TEST_CODE: ${{ inputs.test_code }}
+        # 입력값은 env로만 받아 따옴표로 넘김(run 줄에 직접 넣지 않음). pipefail(shell: bash 기본)로 tee 뒤에도 push 종료 코드를 받고,
+        # 실패해도 출력을 실행 요약에 붙인 뒤 그 코드로 끝냄(daily.yml과 같은 꼴)
+        run: |
+          set +e
+          args=()
+          if [ -n "$TEST_CODE" ]; then args=(--test "$TEST_CODE"); fi
+          npm run --silent push -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/push.log"
+          code=$?
+          { printf '```\n'; cat "$RUNNER_TEMP/push.log"; printf '```\n'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"

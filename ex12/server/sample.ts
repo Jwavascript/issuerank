@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { buildRanking, buildWidget, findCard, SECTIONS, type IssueRow, type SectionKey } from './ranking';
 import type { Bookmark, Store } from './app';
+import type { PushRow, PushStore } from './push-run';
 
 // 섹션당 7개 풀에서 날짜별로 5개를 뽑아 랭킹 후보 구성
 const POOL: Record<SectionKey, [string, string[]][]> = {
@@ -134,6 +135,9 @@ const folders: { id: string; name: string; userId: string }[] = [];
 let nextBookmarkNo = 1;
 const bookmarks: { userId: string; sequence: number; card: Bookmark }[] = [];
 const withCount = (f: { id: string; name: string; userId: string }) => ({ id: f.id, name: f.name, count: bookmarks.filter(b => b.userId === f.userId && b.card.folderId === f.id).length });
+// 아침 알림 구독(O5): endpoint → 행(넣은 순). 구독 API(memoryStore)와 발송(memoryPushStore)이 같이 씀, 처음엔 비어 있음
+const pushRows = new Map<string, PushRow>();
+const pushRowById = (id: string) => [...pushRows.values()].find(r => r.id === id);
 
 // 실제 DB에서는 쓰지 않는다. 명시적인 fixture 사용자만 샘플을 소유한다.
 export function resetSample() {
@@ -142,6 +146,7 @@ export function resetSample() {
   nextBookmarkNo = 1;
   bookmarks.splice(0, bookmarks.length, ...rows.bookmarks.map(b => ({ userId: b.userId, sequence: nextBookmarkNo++,
     card: { ...findCard(b.issueId, rows.issues)!, folderId: b.folderId, savedAt: b.createdAt } })));
+  pushRows.clear();
 }
 
 export const memoryStore: Store = {
@@ -169,6 +174,34 @@ export const memoryStore: Store = {
     const folder = { id: `f${randomUUID()}`, userId, name };
     folders.push(folder);
     return withCount(folder);
+  },
+  savePushSubscription: async (sub, allowNew) => {
+    const row = pushRows.get(sub.endpoint);
+    if (row) { row.p256dh = sub.p256dh; row.auth = sub.auth; return true; }
+    if (!allowNew) return false;
+    pushRows.set(sub.endpoint, { id: randomUUID(), ...sub, lastSentOn: null });
+    return true;
+  },
+  deletePushSubscription: async endpoint => { pushRows.delete(endpoint); },
+  pushSubscriptionCount: async () => pushRows.size,
+};
+
+// 발송 명령의 메모리 저장소(테스트가 씀): db/store.ts pushStore와 같은 규칙
+export const memoryPushStore: PushStore = {
+  list: async () => [...pushRows.values()].map(r => ({ ...r })),
+  mark: async (id, day) => {
+    const row = pushRowById(id);
+    if (!row || row.lastSentOn === day) return false;
+    row.lastSentOn = day;
+    return true;
+  },
+  revert: async (id, day, previous) => {
+    const row = pushRowById(id);
+    if (row && row.lastSentOn === day) row.lastSentOn = previous;
+  },
+  remove: async id => {
+    const row = pushRowById(id);
+    if (row) pushRows.delete(row.endpoint);
   },
 };
 

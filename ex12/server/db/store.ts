@@ -2,16 +2,18 @@
 // 수집 저장소(collect.ts용): collectStore가 articles · collect_runs를 읽고 씀. 무엇을 지우고 넣을지는 newsdata.ts가 정함
 // 묶기 저장소(group.ts용): groupStore가 articles · issues · bookmarks를 읽고 issues · articles.issue_id를 씀. 무엇을 지우고 넣을지는 grouping.ts가 정함
 // 요약 저장소(summarize.ts용): summaryStore가 그날 issues · 묶인 articles를 읽고 issues.summary를 씀. 대상 · 검사는 summary.ts가 정함
+// 아침 알림(O5): 구독 API는 dbStore의 저장 · 삭제 · 개수, 발송 명령(push.ts)은 pushStore(목록 · 그날 표시 · 되돌림 · 삭제)로 push_subscriptions를 씀
 import { randomUUID } from 'node:crypto';
-import { and, asc, count, desc, eq, inArray, lt, lte, max, notInArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, lte, max, ne, notInArray, or, sql } from 'drizzle-orm';
 import type { Store } from '../app';
 import type { GroupStore } from '../grouping';
 import type { CollectStore } from '../newsdata';
+import type { PushStore } from '../push-run';
 import type { SummaryStore } from '../summary';
 import { buildRanking, buildWidget, findCard, SECTIONS, type IssueRow } from '../ranking';
 import { kstToday } from '../sample';
 import type { Db } from './client';
-import { articles, bookmarks, collectRuns, folders, issues } from './schema';
+import { articles, bookmarks, collectRuns, folders, issues, pushSubscriptions } from './schema';
 
 // DB 행 → 랭킹 후보 행(발행 시각은 ISO 문자열로)
 const toRow = (r: typeof issues.$inferSelect): IssueRow => ({ ...r, latestPublishedAt: r.latestPublishedAt.toISOString() });
@@ -90,6 +92,48 @@ export function dbStore(db: Db): Store {
       const id = `f${randomUUID()}`;
       await db.insert(folders).values({ id, userId, name });
       return { id, name, count: 0 };
+    },
+
+    // 아침 알림 구독(O5): endpoint unique — 있으면 키만 갱신(created_at · last_sent_on 그대로), 없으면 allowNew일 때만 새 행(id UUID)
+    savePushSubscription: async (sub, allowNew) => {
+      if (allowNew) {
+        await db.insert(pushSubscriptions).values({ id: randomUUID(), ...sub })
+          .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { p256dh: sub.p256dh, auth: sub.auth } });
+        return true;
+      }
+      return (await db.update(pushSubscriptions).set({ p256dh: sub.p256dh, auth: sub.auth })
+        .where(eq(pushSubscriptions.endpoint, sub.endpoint)).returning({ id: pushSubscriptions.id })).length > 0;
+    },
+
+    deletePushSubscription: async endpoint => {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    },
+
+    pushSubscriptionCount: async () => (await db.select({ n: count() }).from(pushSubscriptions))[0]?.n ?? 0,
+  };
+}
+
+// 발송 명령(push.ts)용: 구독 전부(상한 5,000이라 한 번에) · 그날 표시(보내기 전) · 되돌림 · 삭제. 무엇을 언제 할지는 push-run.ts가 정함
+export function pushStore(db: Db): PushStore {
+  return {
+    list: async () => db.select({
+      id: pushSubscriptions.id, endpoint: pushSubscriptions.endpoint, p256dh: pushSubscriptions.p256dh,
+      auth: pushSubscriptions.auth, lastSentOn: pushSubscriptions.lastSentOn,
+    }).from(pushSubscriptions).orderBy(asc(pushSubscriptions.createdAt), asc(pushSubscriptions.id)),
+
+    // 아직 그날 표시가 아닐 때만 그날로(겹친 실행이 먼저 표시했으면 false → 보내지 않음)
+    mark: async (id, day) => (await db.update(pushSubscriptions).set({ lastSentOn: day })
+      .where(and(eq(pushSubscriptions.id, id), or(isNull(pushSubscriptions.lastSentOn), ne(pushSubscriptions.lastSentOn, day))))
+      .returning({ id: pushSubscriptions.id })).length > 0,
+
+    // 그날 표시를 전 값으로(그사이 다른 값이 되었으면 그대로)
+    revert: async (id, day, previous) => {
+      await db.update(pushSubscriptions).set({ lastSentOn: previous })
+        .where(and(eq(pushSubscriptions.id, id), eq(pushSubscriptions.lastSentOn, day)));
+    },
+
+    remove: async id => {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, id));
     },
   };
 }

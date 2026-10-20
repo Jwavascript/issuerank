@@ -7,7 +7,9 @@ const nextConfig = {
       { source: '/card', destination: '/card.html' },
       // 측정 경로(O4 · D29): 설치 앱 시작 주소 /app · 공유 주소 /s(?issue=) — 화면은 / 와 같은 index.html
       { source: '/app', destination: '/index.html' },
-      { source: '/s', destination: '/index.html' }];
+      { source: '/s', destination: '/index.html' },
+      // 측정 경로(O5 · D30): 아침 알림을 누르면 /p(첫 화면, ?issue= 없음)
+      { source: '/p', destination: '/index.html' }];
   },
   // 서비스 워커 · manifest 파일 헤더(O4 · D29, public 파일에도 적용). 다른 경로 헤더는 그대로
   async headers() {

@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: 이슈랭크 API
-  version: 0.4.0
-  description: 화면(index.html)과 홈 화면 위젯 · 인스타 카드 페이지(card.html)가 서버에 바라는 랭킹 · 위젯 · 카드 · 북마크 · 폴더 API 계약.
+  version: 0.5.0
+  description: 화면(index.html)과 홈 화면 위젯 · 인스타 카드 페이지(card.html)가 서버에 바라는 랭킹 · 위젯 · 카드 · 북마크 · 폴더 · 아침 알림 구독 API 계약.
 
 servers:
   - url: http://localhost:3000
@@ -646,6 +646,69 @@ paths:
                   value:
                     message: 요청 형식이 올바르지 않습니다
 
+  /api/push/subscriptions:
+    post:
+      operationId: subscribePush
+      summary: 아침 알림 구독(이 기기, O5)
+      description: >-
+        로그인 · 쿠키 없이 기기 단위. 본문은 브라우저 PushSubscription.toJSON() 그대로이고 다른 칸 · expirationTime은 무시한다.
+        검사 순서는 Origin(화면 주소 = BETTER_AUTH_URL의 origin일 때만) → 본문 크기(4,096B 이하) → JSON · 칸 → endpoint → 키 → 저장.
+        endpoint는 https:이고 호스트가 fcm.googleapis.com · updates.push.services.mozilla.com(정확히) 또는 *.push.apple.com · *.notify.windows.com(점부터 접미사)일 때만 받는다
+        (포트 표기 · 사용자 정보 · IP 주소 · localhost · # · 공백 없음, 2,048자 이하). 같은 endpoint를 다시 보내면 키만 갱신한다(행 하나).
+        모든 응답은 Cache-Control no-store이고 쿠키를 만들지 않는다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushSubscriptionIn'
+            example:
+              endpoint: 'https://fcm.googleapis.com/fcm/send/example-device-token'
+              expirationTime: null
+              keys:
+                p256dh: BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4
+                auth: BTBZMqHH6r4Tts7J_aSIgg
+      responses:
+        '204':
+          description: 저장됨(새 기기 · 이미 있는 기기 모두, 본문 없음)
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+        '400': { $ref: '#/components/responses/PushBadRequest' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+        '503':
+          description: 새 endpoint인데 구독이 이미 5,000개(이미 있는 기기의 키 갱신은 됨)
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 지금은 알림을 켤 수 없습니다
+    delete:
+      operationId: unsubscribePush
+      summary: 아침 알림 해지(이 기기, O5)
+      description: >-
+        그 endpoint의 행을 지운다. 없어도 204(여러 번 같아도 됨). Origin · 크기 · endpoint 검사는 구독과 같다.
+        알림 권한을 끄거나 데이터를 지운 기기의 행은 다음 발송 때 푸시 서비스의 404 · 410으로 지워진다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushSubscriptionRef'
+            example:
+              endpoint: 'https://fcm.googleapis.com/fcm/send/example-device-token'
+      responses:
+        '204':
+          description: 지웠거나 원래 없음(본문 없음)
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+        '400': { $ref: '#/components/responses/PushBadRequest' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -693,6 +756,30 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
           example: { message: API 서버에 연결할 수 없습니다 }
+    PushBadRequest:
+      description: 깨진 JSON · 칸 없음 · 받지 않는 endpoint(호스트 · 형식) · 키 형식(p256dh 65B 곡선 위의 점 · auth 16B)
+      headers:
+        Cache-Control: { schema: { type: string, const: no-store } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 요청 형식이 올바르지 않습니다 }
+    PushForbidden:
+      description: Origin 머리가 없거나 화면 주소와 다름(다른 사이트의 스크립트로 구독 · 해지 못 함)
+      headers:
+        Cache-Control: { schema: { type: string, const: no-store } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 요청 형식이 올바르지 않습니다 }
+    PushTooLarge:
+      description: 본문이 4,096B보다 큼
+      headers:
+        Cache-Control: { schema: { type: string, const: no-store } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 요청 형식이 올바르지 않습니다 }
   parameters:
     CardDate:
       name: date
@@ -945,6 +1032,41 @@ components:
           description: 글자 수는 앞뒤 공백을 뺀 뒤 코드 포인트로 셈(😀 1개 = 1자)
           minLength: 1
           maxLength: 16
+
+    PushSubscriptionIn:
+      description: 브라우저 PushSubscription.toJSON() 꼴. endpoint · keys만 쓰고 다른 칸은 무시한다
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: 푸시 서비스 주소(https:, 받는 호스트 4종 — /api/push/subscriptions post 설명)
+        expirationTime:
+          type: [number, 'null']
+          description: 무시함
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh:
+              type: string
+              pattern: '^[A-Za-z0-9_-]+={0,2}$'
+              description: base64url 65B(첫 바이트 0x04 · P-256 곡선 위의 점)
+            auth:
+              type: string
+              pattern: '^[A-Za-z0-9_-]+={0,2}$'
+              description: base64url 16B
+
+    PushSubscriptionRef:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          maxLength: 2048
 
     Error:
       type: object

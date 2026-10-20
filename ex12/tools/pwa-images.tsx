@@ -1,4 +1,4 @@
-// PWA 아이콘 5개 + 사이트 공통 OG 그림 1개(O4 · D29): next/og ImageResponse(O3와 같음 — 새 패키지 0)로 한 번 그려 저장소에 둠.
+// PWA 아이콘 5개 + 사이트 공통 OG 그림 1개(O4 · D29) + 알림 배지 1개(O5 · D30): next/og ImageResponse(O3와 같음 — 새 패키지 0)로 한 번 그려 저장소에 둠.
 // 런타임 라우트가 아니라 정적 파일(public/)이라 배포에서 함수 호출 0. 글꼴 = 저장소 Noto Sans KR(OFL, O3)
 // 실행(ex12, 래퍼): npx tsx tools/pwa-images.tsx [출력 폴더 — 기본 public]
 // 실행 중 fetch는 data:(Satori 내장 yoga.wasm)만 통과, 그 밖은 기록하고 던짐 → 하나라도 있으면 파일을 쓰지 않고 실패(바깥 요청 0)
@@ -53,6 +53,15 @@ function FullIcon({ size, mark }: { size: number; mark: number }) {
   );
 }
 
+// 알림 배지(O5 · D30) 96×96: 투명 바탕 + 흰 마크(한 변 75%). Android 상태 표시줄은 알파만 씀(불투명 타일 아이콘을 쓰면 흰 사각형으로만 보임)
+function Badge({ size }: { size: number }) {
+  return (
+    <div style={{ display: 'flex', width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Mark size={Math.round(size * 0.75)} color={WHITE} />
+    </div>
+  );
+}
+
 // 사이트 공통 OG 1200×630: 날짜 · 기사 제목 · 숫자 없음(정적이라 날마다 같은 그림)
 function OgImage() {
   return (
@@ -81,6 +90,7 @@ const IMAGES: { file: string; size: [number, number]; node: ReactElement }[] = [
   { file: 'icons/maskable-512.png', size: [512, 512], node: <FullIcon size={512} mark={0.4} /> },
   { file: 'icons/apple-touch-icon.png', size: [180, 180], node: <FullIcon size={180} mark={0.5} /> },
   { file: 'og.png', size: [1200, 630], node: <OgImage /> },
+  { file: 'icons/badge-96.png', size: [96, 96], node: <Badge size={96} /> },
 ];
 
 async function main() {

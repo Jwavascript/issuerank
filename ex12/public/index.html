@@ -116,6 +116,13 @@ a { color: inherit; }
 .pill-btn:hover { background: var(--hover); color: var(--text); }
 .pill-btn[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--ink-text); }
 .pill-btn .cnt { font-size: 12px; opacity: .7; }
+/* 아침 알림 종(O5): 모든 폭에서 글자 없는 아이콘 34×32. 상태 = data-push(off 선 종 · on 칠한 종 · blocked 선 종 + 사선 · unsupported 흐리게) */
+#pushBtn { padding: 0 9px; text-decoration: none; }
+#pushBtn .slash { display: none; }
+#pushBtn[data-push="on"] { color: var(--text); }
+#pushBtn[data-push="on"] .bell { fill: currentColor; }
+#pushBtn[data-push="blocked"] .slash { display: inline; }
+#pushBtn[data-push="unsupported"] { opacity: .55; }
 .avatar { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--ink-text); font-size: 11px; display: grid; place-items: center; }
 
 /* ── Views & transition ───────────────── */
@@ -383,6 +390,12 @@ main { overflow-x: clip; }
   .map { height: 760px; }
   .drawer { top: auto; height: 82vh; width: 100%; border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(100%); }
 }
+/* 헤더 종(O5)이 들어갈 폭: 900px 미만 설치 버튼은 아이콘만 · 400px 이하 헤더 설치 숨김(맨 아래 앱 설치가 같은 일) · 340px 이하 간격 2px씩 */
+/* 1199px 이하는 설치 · 북마크 글자도 숨김(아이콘 + 숫자, 이름은 aria-label) — 종이 들어가 글자가 버튼 안에서 꺾이던 것(10-20 코디네이터 결정 C2) */
+@media (max-width: 1199px) { #installBtn .lbl, #bmNav .lbl { display: none; } }
+@media (max-width: 899px) { #installBtn .lbl { display: none; } .header-right { gap: 6px; } }
+@media (max-width: 400px) { #installBtn { display: none !important; } }
+@media (max-width: 340px) { .header-inner { gap: 8px; } .switch button { padding: 6px 10px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 /* 이메일·비밀번호 인증 */
 /* 로그인 창은 늘 밝은 색: 창 안 버튼이 쓰는 토큰도 :root 밝은 값으로 고정(다크 모드 hover에서 --hover #222220 위 #222 글자가 묻히던 것) */
@@ -434,6 +447,9 @@ main { overflow-x: clip; }
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
         <span class="lbl">앱 설치</span>
       </button>
+      <a class="pill-btn" id="pushBtn" href="/widget#push" data-push="unsupported" aria-label="아침 알림 — 켜는 방법 안내" title="아침 알림 — 켜는 방법 안내">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="bell" d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path class="slash" d="M3 3l18 18"/></svg>
+      </a>
       <button class="pill-btn" data-goto="bookmarks" id="bmNav" aria-label="북마크">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3.8h12v17l-6-4.2-6 4.2z"/></svg>
         <span class="lbl">북마크</span><span class="cnt num" id="bmBadge"></span>
@@ -995,6 +1011,87 @@ function toast(msg, action, fn) {
   if (action) toastEl.querySelector('button').onclick = () => { toastEl.classList.remove('show'); fn(); };
   toastEl.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3600);
+}
+
+/* ─────────────── Push (O5) ─────────────── */
+// 아침 알림(D30 · AC-14-1 · 14-4): 헤더 종(#pushBtn) 하나로 이 기기 구독 켜기 · 끄기(로그인 없이 기기 단위). 상태 = data-push(off · on · blocked · unsupported),
+// 처음 그릴 때는 unsupported(링크 /widget#push) → 지원하면 바로 고침. 권한은 누를 때만: 꺼짐을 누른 순간 앞에 await 없이 subscribe(권한 창은 이것이 띄움)
+// 서버 = POST · DELETE /api/push/subscriptions(본문 = toJSON() · { endpoint }). PUSH_KEY = server/push-config.ts VAPID_PUBLIC_KEY와 같은 값(테스트가 비교)
+const PUSH_KEY = 'BH8iVJ-iq1b6TqxcnK4kkV0R7ZuD_qeF0zHKgA864mWlRbhi3qlBuQD8d-N95LThbBc-OuraowXCbrzLfWS-AN0';
+const PUSH_LABEL = { off: '아침 알림 받기', on: '아침 알림 끄기', blocked: '아침 알림 차단됨 — 해제 방법 보기', unsupported: '아침 알림 — 켜는 방법 안내' };
+const pushBtn = document.getElementById('pushBtn');
+const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let pushReg = null, pushSub = null, pushBusy = false;
+function setPush(value) {
+  pushBtn.dataset.push = value;
+  pushBtn.setAttribute('aria-label', PUSH_LABEL[value]);
+  pushBtn.title = PUSH_LABEL[value];
+}
+// base64url 공개 키 → 65바이트(applicationServerKey)
+function pushKey() {
+  const s = PUSH_KEY.replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+}
+// 켜기: 누른 같은 틱에 subscribe → 서버 저장(204) → 켜짐. 서버가 받지 않으면 브라우저 구독도 지워 상태를 맞춤
+function pushOn() {
+  if (pushBusy) return;
+  pushBusy = true;
+  let pending;
+  try { pending = pushReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: pushKey() }); }
+  catch (e) { pending = Promise.reject(e); }
+  pending.then(async sub => {
+    try {
+      await api('/push/subscriptions', { method: 'POST', body: JSON.stringify(sub.toJSON()) });
+      pushSub = sub;
+      setPush('on');
+      toast('아침 알림을 켰습니다');
+    } catch (e) {
+      await sub.unsubscribe().catch(() => {});
+      pushSub = null;
+      setPush('off');
+      toast(e.status === 400 ? '이 브라우저에서는 아침 알림을 켤 수 없습니다' : e.status === 503 ? '지금은 아침 알림을 켤 수 없습니다' : '알림을 켜지 못했습니다. 잠시 후 다시 시도해 주세요');
+    }
+  }, e => {
+    // 권한 거절(서버 요청 0): 차단(denied)이면 차단 상태, 창만 닫았으면 꺼짐 그대로
+    const denied = Notification.permission === 'denied';
+    setPush(denied ? 'blocked' : 'off');
+    toast(denied || e?.name === 'NotAllowedError' ? '알림이 허용되지 않았습니다' : '알림을 켜지 못했습니다. 잠시 후 다시 시도해 주세요');
+  }).finally(() => { pushBusy = false; });
+}
+// 끄기: unsubscribe → 서버 행 삭제(실패해도 끈 것 — 서버 행은 다음 발송의 404 · 410으로 지워짐) → 꺼짐 + 다시 켜기
+function pushOff() {
+  pushBusy = true;
+  const sub = pushSub;
+  sub.unsubscribe().catch(() => {})
+    .then(() => api('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}))
+    .then(() => {
+      pushSub = null;
+      setPush('off');
+      toast('아침 알림을 껐습니다', '다시 켜기', pushOn);
+    })
+    .finally(() => { pushBusy = false; });
+}
+pushBtn.addEventListener('click', e => {
+  const value = pushBtn.dataset.push;
+  if (value === 'unsupported') return; // 링크 그대로 /widget#push 안내
+  e.preventDefault();
+  if (pushBusy) return;
+  if (value === 'blocked') return toast('알림이 차단되어 있습니다', '방법 보기', () => location.assign('/widget#push'));
+  if (!pushReg) return toast('잠시 후 다시 눌러 주세요');
+  if (value === 'on' && pushSub) return pushOff();
+  pushOn();
+});
+// 지원하면: 권한 상태로 바로 고친 뒤 등록이 준비되면 이 기기 구독이 있는지로 켜짐 · 꺼짐(처리 중이면 그대로)
+if (pushSupported) {
+  setPush(Notification.permission === 'denied' ? 'blocked' : 'off');
+  navigator.serviceWorker.ready
+    .then(reg => { pushReg = reg; return reg.pushManager.getSubscription(); })
+    .then(sub => {
+      if (pushBusy || pushSub) return;
+      pushSub = sub;
+      setPush(Notification.permission === 'denied' ? 'blocked' : sub && Notification.permission === 'granted' ? 'on' : 'off');
+    })
+    .catch(() => {});
 }
 
 /* ─────────────── Share · install (O4) ─────────────── */
