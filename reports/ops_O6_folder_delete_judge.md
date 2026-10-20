@@ -9,7 +9,7 @@
 
 ## 0. 판정
 
-**PASS 보류 — OK 8 / FAIL 0 / SKIP 2**(9 배포 = 푸시 후 코디네이터 · 10 사용자 확인). 위반 0. **커밋 전에 고칠 것 없음.** 발견한 점은 모두 낮음 · 참고(7절). 보완(코디네이터 판단) = 적절, 부작용은 낮은 참고 2개(8절).
+**PASS 보류 — OK 9 / FAIL 0 / SKIP 1**(10 사용자 확인만 남음 — 2026-10-20 18:12 배포 줄 9 OK, 12절). 처음 심사 때는 OK 8 / FAIL 0 / SKIP 2(9 배포 · 10 사용자). 위반 0. **커밋 전에 고칠 것 없음**(그 뒤 커밋 `ae4b31b` 푸시 · 배포 반영). 발견한 점은 모두 낮음 · 참고(7절). 보완(코디네이터 판단) = 적절, 부작용은 낮은 참고 2개(8절).
 
 ## 1. PLAN 항목별
 
@@ -76,10 +76,10 @@
 | 6 브라우저 버튼 · 창 | **[OK]** | 실제 서버 Chromium 155(새 프로필): 360 밝게 · 어둡게 · 1280 · 창 · Esc · 바깥 · 여백 · 단축키 · 취소 모두 OK(1절 화면 줄들) |
 | 7 브라우저 삭제 흐름 · 회귀 | **[OK]** | 실제 서버: D(잡아 둠) · F(Node 먼저 → 404) · G(500 · 502 · 네트워크, 서버 안 감) · 회귀(1280 6px · 헤더 360/641/1100/1199/1280 · 어제 목록 · 팝오버 · 공유 · `/?issue=` · SW · 오프라인 안내 · 다시 연결 · 쿠키 없는 문맥 로그인 창 · Google 버튼) OK. **빈 E는 첫 실행 FAIL → 심사 스크립트 오류**(상태가 바뀌자마자 = 다시 받기 전에 읽음, 실제 서버 GET이 가짜 서버보다 느림) → 기다림을 토스트 문구로 고쳐 빈 폴더 E2로 실제 서버 다시 **6/6 OK**(토스트 · 전체 · 초점 · 칩 줄 맨 앞 · 요청 · DB). 가짜 서버로 같은 흐름 63/63 · AC-10 회귀 11/11 · 이슈맵/상세창 4/4 · 어둡게 창 2/2 |
 | 8 안전 · 한도(로컬) | **[OK]** | 10절: 3000 = 75/100 · 바깥 0 · 누출 false · 끝 스냅숏 = 시작 · 임시 계정 행 0 · 소유 프로세스 0 · code-oss 30854 살아 있음 |
-| 9 배포 | **[SKIP — 푸시 후 · 코디네이터]** | 9절 절차 · 스크립트(가짜 서버로 흐름만 확인 14요청 7/7) |
+| 9 배포 | **[OK]**(2026-10-20 18:11:50~18:12:00, 12절) | 처음 심사 땐 [SKIP — 푸시 후]. 커밋 `ae4b31b` 배포에서 `j-deploy9.mjs` 20/20 · 요청 14/20 · 임시 계정 `o6-deploy-` 1개 정리 남은 0 · 스냅숏 같음 · 바깥 = 배포 · DB뿐 |
 | 10 휴대폰 실제 | **[SKIP — 사용자 확인 대기]** | 제작 보고 11절 문장 그대로 |
 
-**합계 OK 8 / FAIL 0 / SKIP 2 → PASS 보류**(SKIP이 남아 PASS 아님).
+**합계 OK 9 / FAIL 0 / SKIP 1 → PASS 보류**(10 사용자 줄이 남아 PASS 아님. 처음 심사 합계 = OK 8 / FAIL 0 / SKIP 2).
 
 ## 6. 지켜야 할 것(위반 점검)
 
@@ -111,6 +111,8 @@
 
 ## 9. 푸시 후 절차 — 배포 줄 9(코디네이터, 그대로 실행)
 
+> 2026-10-20 18:11~18:12 KST 코디네이터 요청으로 심사가 이 절차를 다듬은 스크립트로 실행 → 줄 9 [OK](12절).
+
 전제: 사용자 줄만 남았으므로(D31 Q3) 코디네이터 커밋 · 푸시 → Vercel 배포 완료 확인(대시보드 Ready — 기다리는 동안 배포 요청을 쓰지 않음) → **04:00~10:00 KST 밖**(스크립트도 막음).
 
 ```bash
@@ -137,3 +139,29 @@ node --import ./ex12/.data/judge-o6-20261020/jguard.mjs ex12/.data/judge-o6-2026
 ## 11. 심사 스크립트 · 증거(`ex12/.data/judge-o6-20261020/`)
 
 `jlib.mjs`(비밀값 · 안전 출력) · `jsafe.mjs`(안전 실행) · `jguard.mjs`(바깥 연결 감시 · 차단) · `jscope.mjs`(범위 · 불변 → `scope-start.json` · `scope-end.json`) · `j-api.mts`(API 독립, HEAD 판 비교는 `git archive HEAD ex12/server | tar -x -C head-src` 뒤 실행) · `j-api500.mts` · `j-vm.mjs` · `jserver.mjs`(next start 3001 + 세는 프록시 3000) · `jdb.mjs`(스냅숏 · 정리, `JUDGE_TEMP_PREFIX`) · `jdb-insert.mjs` · `j-real.mts` · `jcdp.mjs` · `j-ui.mjs mock|real` · `j-ui-e.mjs` · `j-ui-ac10.mjs` · `j-ui-map.mjs` · `j-ui-dark.mjs` · `j-netlog.mjs` · `jmock.mts`(가짜 서버 3200) · `j-deploy9.mjs`(줄 9) / 결과 `*-result.json` · `npm-test.out` · `npm-build.out` · `redocly-*.out` · `openapi-{head,work}.{yaml,json}` · `db-snap-*.json` · `db-cleanup.json` · `request-log.json` · `server-runs.json` · `guard-*.jsonl` · 스크린샷 `ui-real-*.png` · `ui-mock-*.png`.
+
+## 12. 배포 줄 9 (2026-10-20)
+
+- 요청: 코디네이터(18:08 KST 이후) — 커밋 `ae4b31b`(심사한 작업 트리 그대로 + 문서) 푸시 · Vercel 배포 완료(코디네이터 확인: GitHub 커밋 상태 success, 18:08 KST). 같은 푸시에 O5 기록 커밋 `8a457de` · `f13f749`(문서만). 심사는 **배포 줄 9만** 실행(GitHub API 호출 0 — 배포 상태는 코디네이터 확인을 따름).
+- 실행 전 확인(18:10): HEAD `ae4b31b` · 작업 트리 깨끗함(`git status` 0줄) · 코드 7 + 테스트 2 파일 sha256 = 심사 때 지문(`scope-start.json`)과 모두 같음 → 배포된 커밋 = 심사한 코드.
+- 스크립트: 9절 `j-deploy9.mjs`를 다듬음(기대와 다르면 그 줄에서 멈추고 finally 정리 · 가입 응답 200이면 쿠키 확인 전에 user id를 정리 파일에 · id를 못 받으면 이메일로 찾아 정리 · 헤더 요약은 쿠키 이름 · 속성만 · 누출 검사 뒤 파일 삭제) → 가짜 서버로 다시 시험 운전(14요청 10/10, DB · 배포 0) → 실제 1번.
+- 실행: 18:11:50~18:12:00 KST(04:00~10:00 밖), Termux node + 바깥 연결 감시기(허용 = `issuerank-kappa.vercel.app` · DB). Origin = 배포 주소. **결과 20/20 OK · 멈춤 없음 · 요청 14/20**(새 별도 카운터).
+
+| # | 요청 | 상태 · 머리 요약 | 판정 |
+|---|---|---|---|
+| ① | `GET /` | 200 · `text/html; charset=utf-8` · `public, max-age=0, must-revalidate` · 92,942B = 저장소 `ex12/public/index.html` 바이트 | OK |
+| ② | 쿠키 없이 `DELETE /api/folders/f1` | 401 · `no-store` · `{"message":"로그인이 필요합니다"}` | OK |
+| ③ | `POST /api/auth/sign-up/email`(`o6-deploy-<uuid>@example.invalid`) | 200 · `no-store` · Set-Cookie `__Secure-better-auth.session_token; Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=Lax`(값 기록 0) | OK |
+| ④ | `GET /api/rankings?date=2026-10-19` | 200 · `public, max-age=0, must-revalidate`(오늘 제외 · 1번에 찾음) | OK |
+| ⑤⑥ | `POST /api/folders` 배포A · 배포B, `POST /api/bookmarks` 2개(A) | 201 × 4 · `no-store` · id = `f` + 소문자 UUID / DB 임시 행 `[배포A 2, 배포B 0]` | OK |
+| ⑦ | `DELETE /api/folders/{A}` | **204 · `no-store` · 본문 0 · content-type 없음** / DB 임시 행 `[배포B 0]` · 북마크 0(A의 2개 함께 지워짐) | OK |
+| ⑧ | `GET /api/folders` · `GET /api/bookmarks` | 200 · `no-store` · `[배포B 0]` · `[]` | OK |
+| ⑨ | `DELETE {A}` 다시 · `DELETE /api/folders/bad` · `DELETE {B}` | 404 `폴더를 찾을 수 없습니다` · 400 `요청 형식이 올바르지 않습니다` · 204 — 모두 `no-store` / DB 임시 폴더 0 | OK |
+
+- 모든 응답 `x-vercel-cache: MISS` · 쿠키는 ③에서만. 머리 이름 = `cache-control` · `content-type`(204 없음) · `date` · `server` · `strict-transport-security` · `x-matched-path` · `x-vercel-cache` · `x-vercel-id`(+ 본문 있는 응답의 `transfer-encoding` · 일부 `content-encoding` · GET의 `age`). 결과 `ex12/.data/judge-o6-20261020/j-deploy9-result.json`.
+- DB(운영 DB = 로컬과 같음): 준비 뒤 · DELETE 4번(⑦ · ⑨ 3개) 뒤마다 **임시 계정 밖 folders · bookmarks 해시 = 시작**(5/5). 쓰기 = 18:11:53~18:11:58, 그 임시 계정 행뿐.
+- 정리(finally, 18:11:58): 이메일 표지 `o6-deploy-` 확인 뒤 그 user_id 행만 한 트랜잭션 — 지움 bookmarks 0 · folders 0(이미 API로 지움) · session 1 · account 1 · user 1 → **남은 0**(user · session · account · folders · bookmarks · verification · `o6-deploy-` 이메일). 정리 파일 `temp-deploy-account.json` 삭제(누출 검사 뒤).
+- 스냅숏: 시작(18:11:52) = 끝(18:12:00) — 9표 + push_subscriptions + 마이그레이션 건수 · 내용 md5 **같음**(임시 계정 행 제외): issues 897 · articles 1,279 · collect_runs 102 · folders 2 · bookmarks 2 · user 2 · session 3 · account 1 · verification 0 · push_subscriptions 1 · 마이그레이션 8. 실제 사용자 폴더 id로 보낸 요청 0.
+- 바깥: 감시기 기록 = `fetch issuerank-kappa.vercel.app` 14 · TCP 연결 배포 주소 2(재사용) · DB 1뿐. newsdata · OpenAI · Google · Kakao · 푸시 서비스 · GitHub API 0. 누출 검사: 결과 · 감시기 기록 · ps 파일 false.
+- 프로세스: 띄운 것 = node 스크립트 하나(끝나며 종료) · 서버 · 브라우저 0. 끝 확인: ps에 j-deploy9 · next · 내 chromium · tsx · proot 0 · code-oss 30854 살아 있음.
+- **줄 9 [OK] → 합계 OK 9 / FAIL 0 / SKIP 1 → PASS 보류**(남은 것 = 10 사용자 휴대폰 확인, 제작 보고 11절 문장). 커밋 · 푸시 0(이 절과 HANDOFF O6 줄은 작업 트리에만).
