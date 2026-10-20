@@ -7,8 +7,8 @@
 
 ## 판정
 
-**PASS 보류** — 로컬 줄 1~13 모두 OK, 위반 0. 남은 것 = 14 · 15(푸시 후) · 16 · 17(사용자 확인) · 18(iPhone 기기 없음) · 19(기록만).
-**합계: OK 13 · FAIL 0 · SKIP 5 + 19 기록만.**
+**PASS 보류** — 로컬 줄 1~13 OK, 배포 줄 14 · 15 OK(푸시 `8aaf6bd`, 2026-10-19 18:01~18:05 KST — 아래 "배포 줄 14 · 15" 절), 위반 0. 남은 것 = 16 · 17(사용자 확인) · 18(iPhone 기기 없음) · 19(기록만).
+**합계: OK 15 · FAIL 0 · SKIP 3 + 19 기록만**(로컬 심사 때 OK 13 · SKIP 5 → 배포 줄 2개 OK).
 **커밋 전에 고쳐야 할 것: 없음**(7절은 모두 낮음 · 참고).
 
 ## 1. PLAN 항목별
@@ -86,8 +86,8 @@ PLAN과 다른 점(판정 영향 없음): 줄 11의 v2 바꾸기를 CDP Fetch �
 | 11 로컬 캐시 · 오프라인 · 업데이트(CDP) | [OK] | A: 상세창 · `#list` · `#bookmarks`(비로그인 안내 · 페이지 fetch 401) · `/s?issue=2026-10-19-eco-2`(그 이슈 상세 · 경로 `/s` · 쿼리 지움) · `/widget#app` 뒤 캐시 = v1 offline.html 하나, `/api/*` fromServiceWorker 전부 false, SW가 보낸 요청 = 탐색 HTML · offline.html뿐 / **내 프록시만 닫음(연결 거부, 그동안 3000 도착 0)** → 네 곳 모두 안내 · 주소 그대로 · 가로 스크롤 0 · 페이지 `fetch('/api/rankings')` = TypeError / 다시 열고 `다시 시도` 실제 클릭 → 이슈맵 30 / **v2**(B): 표지 파일이 있을 때만 내 프록시가 `const CACHE = 'issuerank-v1';` 한 곳을 v2로(압축 없이 받아서) → `update()` = updated · controllerchange · 캐시 = `[["issuerank-v2",["/offline.html"]]]` · 꺼진 동안 새 탭 `/app` = v2 캐시의 안내. 아래 5.2 |
 | 12 로컬 화면 · 공유 · 설치 UI(CDP) | [OK] | B 1280 · 360(아래 5.1 · 5.3) + D. 원시 행 중 검사 가정이 틀린 6행은 5.4에 근거와 함께 적음 |
 | 13 안전 · 한도(로컬) | [OK] | 3000 누계 **100/100**(상한에서 포트 닫힘 — 넘지 않음, 9절) · newsdata · OpenAI · Kakao · Google 0(next-server 바깥 연결 = DB 3 · local뿐, 브라우저 바깥 = 이름 풀이 막힌 jsdelivr 글꼴 CSS · 막힌 Google 이동 시도뿐, 응답 0) · 누출 검사(`ex12/.env` 비밀 4값 + DB 비밀번호 · 사용자명 · 호스트 = 8개, `BETTER_AUTH_URL` 제외) 증거 88파일 · 테스트/빌드 로그 · 서버 로그 모두 false · DB 9표 건수 · 내용 해시 전후 같음(임시 계정 1 정리) · 소유 프로세스 0 · code-oss 30854 살아 있음 |
-| 14 배포 정적 · 헤더 | [SKIP — 푸시 후] | 8절 1 |
-| 15 배포 설치 가능 · 오프라인 | [SKIP — 푸시 후] | 8절 2 |
+| 14 배포 정적 · 헤더 | [OK] 14/14(푸시 뒤) | 아래 "배포 줄 14 · 15" 절 — 배포 요청 14/15 |
+| 15 배포 설치 가능 · 오프라인 | [OK](푸시 뒤) | 아래 "배포 줄 14 · 15" 절 — 배포 요청 21/25 |
 | 16 Android 실제 | [SKIP — 사용자 확인] | 계획 표 그대로 |
 | 17 카카오톡 공유 · 미리보기 | [SKIP — 사용자 확인] | 계획 표 그대로 |
 | 18 iPhone | [SKIP — iPhone 기기 없음] | — |
@@ -154,7 +154,49 @@ PLAN과 다른 점(판정 영향 없음): 줄 11의 v2 바꾸기를 CDP Fetch �
 
 ## 사용자 할 일
 
-1. 커밋 · 푸시 승인(커밋 대상 = ex12 바뀐 3 + 새 13: `tools/pwa-images.tsx` · `public/manifest.webmanifest` · `public/sw.js` · `public/offline.html` · `public/og.png` · `public/icons/*.png` 5 · `test/pwa.test.ts` · `test/share-ui.test.ts` + 문서: 제작 보고 · 이 심사 보고 · HANDOFF · PLAN.md 10절 메모 1줄. 계획 문서는 이미 HEAD `9a83c20`에 있음).
-2. 푸시 뒤 배포 줄 14 · 15(8절, 역할이 실행).
+1. (완료 — 푸시 `8aaf6bd`) 커밋 · 푸시 승인(커밋 대상 = ex12 바뀐 3 + 새 13: `tools/pwa-images.tsx` · `public/manifest.webmanifest` · `public/sw.js` · `public/offline.html` · `public/og.png` · `public/icons/*.png` 5 · `test/pwa.test.ts` · `test/share-ui.test.ts` + 문서: 제작 보고 · 이 심사 보고 · HANDOFF · PLAN.md 10절 메모 1줄. 계획 문서는 이미 HEAD `9a83c20`에 있음).
+2. (완료 — 2026-10-19 18:01~18:05 KST, 14 · 15 OK, 맨 아래 절) 푸시 뒤 배포 줄 14 · 15(8절, 역할이 실행).
 3. Android 16(설치 · 아이콘 마스크 · 주소창 없는 창 · 상태 표시줄 색 · 비행기 모드 오프라인 · 앱 안 로그인 · 실제 메뉴 이름) · 카카오톡 17(나와의 채팅으로 이슈 · 사이트 공유 → 메시지 · 미리보기 · 링크 열기 · PC 붙여 넣기, 옛 미리보기면 카카오 공유 디버거) 결과 · 캡처 전달. iPhone이 생기면 18, (선택) 며칠 뒤 19.
 4. 알아 둘 것: 배포 뒤 `sw.js` · `offline.html`을 바꾸는 배포는 `issuerank-v2`로 올림(옛 캐시 정리 동작은 이번에 두 방향 모두 확인). 문제가 생기면 같은 주소 `/sw.js`를 fetch 처리 없는 판으로 바꿔 배포(계획 "업데이트" 줄).
+
+## 배포 줄 14 · 15 (2026-10-19)
+
+- 대상: `https://issuerank-kappa.vercel.app`(Production, 푸시 `8aaf6bd` — 코디네이터 확인: GitHub 커밋 상태 Vercel success 17:58 KST). 로컬 HEAD = `8aaf6bd` · 작업 트리 깨끗, 제품 파일 sha256 = 심사한 작업 트리. 실행 18:01~18:05 KST. 줄마다 새 카운터. DB는 id 정할 때 읽기 1번(읽기 전용 트랜잭션: 최근 수집일 2026-10-19 · pol 1위 `2026-10-19-pol-1`)뿐
+- 스크립트 `ex12/.data/judge-o4-20261019/deploy14.mjs` · `deploy15.mjs` · `netlog-count.mjs`, 결과 `deploy14-result.json` · `deploy15-result.json` · `deploy15-run3-result.json` · `deploy15-netlog-counts.txt`
+
+### 줄 14 [OK] — Node fetch 14요청(≤ 15)
+
+멈춤 조건(manifest Content-Type · sw.js 헤더 3개) 모두 통과 → 끝까지 실행. 모든 응답 200, 본문 · 바이트 = 저장소 파일, Set-Cookie 0.
+
+| 경로 | Content-Type | Cache-Control | x-vercel-cache · age | 그 밖 |
+|---|---|---|---|---|
+| `/manifest.webmanifest` | `application/manifest+json; charset=utf-8`(Vercel이 charset을 붙임 — 기대 "application/manifest+json으로 시작" 충족) | `public, max-age=0, must-revalidate` | MISS · 0 | 본문 = 파일 |
+| `/sw.js` | `application/javascript; charset=utf-8` | `no-cache, no-store, must-revalidate` | MISS · 0 | CSP `default-src 'self'; script-src 'self'` · br · 본문 = 파일 — **headers() 3개가 Vercel 정적 파일에도 붙음** |
+| `/offline.html` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | MISS · 0 | 본문 = 파일 |
+| `/icons/*.png` 5 · `/og.png` | `image/png` | `public, max-age=0, must-revalidate` | MISS · 0 | 바이트 · sha256 = 파일, IHDR 192 · 512 · 192 · 512 · 180 · og 1200×630 |
+| `/` · `/app` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | MISS · 0 | 본문 = index.html · og:image = `https://issuerank-kappa.vercel.app/og.png` |
+| `/s` · `/s?issue=2026-10-19-pol-1` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | HIT · 0 | 본문 = index.html · og:image 같음 |
+| `/widget` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | MISS · 0 | 본문 = widget.html |
+
+### 줄 15 [OK] — CDP, 배포 요청 21(≤ 25)
+
+새 프로필 하나를 세 번 띄움(Termux Chromium 155 headless, `--disable-quic` · DoH 끔 · `/_vercel/*` 페이지에서 막음 · Google 버튼 · 로그인 누르지 않음). 배포 요청 수 = Chromium NetLog(Default — 쿠키 · 인증값 없음)에서 배포 호스트로 실제 보낸 요청(`HTTP_TRANSACTION_SEND_REQUEST` BEGIN) 수 — 서비스 워커 스크립트 · SW 안 fetch까지 셈.
+
+| 단계 | 결과 | 배포 요청 |
+|---|---|---|
+| ① `MAP * ~NOTFOUND, EXCLUDE issuerank-kappa.vercel.app`, 360×800 `/` | 첫 화면 타일 30 · `isSecureContext` · `Page.getAppManifest` url = 배포 manifest · 오류 0 · 받은 본문 = 파일 · **HTTPS `Page.getInstallabilityErrors` = `[]`** · SW activated · scope `https://issuerank-kappa.vercel.app/` · script `/sw.js` · updateViaCache none · 진짜 `beforeinstallprompt` 655ms 도착 → 헤더 설치 아이콘 보임 / 터치 에뮬레이션(coarse) + 가짜 share로 상세창 공유 1번 → 클릭 안에서 1회 · 값 = `{ title: '이슈랭크', text: '[정치] {제목 원문}', url: 'https://issuerank-kappa.vercel.app/s?issue=2026-10-19-pol-1' }`(그 페이지 데이터로 만든 기대값과 같음) / 새로 고침 → controller = 배포 `/sw.js` · 문서 SW 경유 · 캐시 = `[["issuerank-v1",["https://issuerank-kappa.vercel.app/offline.html"]]]` · `/api/*` 4응답 fromServiceWorker false · JS 예외 0 | 14(`/` 2 · rankings 2 · get-session 2 · manifest 2 · icon-192 3 · sw.js 2 · offline.html 1) |
+| ② 같은 프로필, `MAP issuerank-kappa.vercel.app 127.0.0.1:9, MAP * ~NOTFOUND` | `/` · `/app` 둘 다 오프라인 안내(`인터넷에 연결되어 있지 않습니다` · `다시 시도`) · 주소 그대로 · 가로 스크롤 0 · 캐시 그대로 · JS 예외 0 | 0 |
+| ③ 같은 프로필, ①의 규칙 | `/` 평소 화면(타일 30 · 제목 `오늘 가장 많이 보도된 이슈`) · controller 있음 · 문서 SW 경유 · JS 예외 0 | 7(`/` · rankings · get-session · manifest · icon-192 2 · sw.js 1) |
+
+- NetLog: 배포 호스트 밖으로 보낸 요청 0(세 번 모두). 이름 풀이 시도 = 배포 호스트(①③) · 규칙의 `~notfound`(jsdelivr 글꼴 CSS 등 막힘)뿐. newsdata · OpenAI · Kakao · Google 0(Google 버튼 · 로그인 안 누름, accounts.google · kakaocdn · googleapis 요청 0).
+- 캡처(직접 봄): `deploy15-360-drawer.png`(배포 상세창 `기사 원문 · 북마크 · 공유` 한 줄) · `deploy15-360-offline.png`(배포 주소 막힘 → 오프라인 안내).
+- 심사 절차 기록: 첫 실행의 NetLog 집계가 요청마다 이벤트 3개(BEGIN · END · HTTP/2 헤더)를 세어 ①을 42로 잘못 보고 ③을 한도 때문에 건너뜀 → 같은 NetLog를 BEGIN만 세도록 고쳐 다시 집계(① 14 · ② 0, `deploy15-netlog-counts.txt`), 같은 프로필로 ③만 다시 실행(7). 브라우저가 보낸 실제 요청 수는 이 고침과 무관(합계 21). `deploy15-result.json`의 ① 목록 · 합계 42는 이 잘못 센 값.
+- 참고: 탐색 뒤 sw.js 업데이트 확인(①의 sw.js 2번째 · ③의 sw.js)과 페이지마다 manifest · 아이콘이 요청에 포함 — 7절 1과 같음. 배포 `/s` · `/s?issue=`는 CDN HIT, 나머지 정적 파일은 첫 요청 MISS.
+
+### 배포 줄 요청 · 정리
+
+- 배포 요청: 줄 14 = **14/15**(Node fetch, 리디렉트 0) · 줄 15 = **21/25**(NetLog). 로컬 3000 요청 0.
+- 프로세스: Chromium ① 19754 · ② 20177 · ③ 21538(+ NetLog 플래그 시험 1회, data: 페이지만 · 네트워크 0) — 각각 `Browser.close` + 내 프로세스 그룹 TERM/KILL, 끝 확인 CDP 9491 · 9492 = 000, `ps`에 내 chromium · next 0, 새로 생긴 프로세스 = 확인 셸 · 원래 있던 `sleep 2`뿐, code-oss 30854 살아 있음. 넓은 패턴 kill 0.
+- 프로필 `profile-deploy15` · NetLog 파일 3개(세션 scratchpad) 삭제. DB 쓰기 0 · 임시 계정 0.
+- 남은 것: 사용자 16(Android 실기기) · 17(카카오톡) · 18(iPhone) · 19(기록만) → **PASS 보류 유지**.
+
