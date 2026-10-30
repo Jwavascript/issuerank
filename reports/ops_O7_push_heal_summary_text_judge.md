@@ -124,3 +124,22 @@ missing · wrong 0. 계획에 없던 내부 세부(제작 보고 3절 1 `pushRep
 - DB(실제, 안전 실행): 시작 스냅숏 11:56:47 → 쓰기 11:58:06~11:58:15 · 12:27:12~12:28 KST(04:00~10:00 밖) → 끝 스냅숏 12:29:39 = 시작(9표 + push_subscriptions + 마이그레이션 11항목 건수 · 내용 해시 같음). 쓴 곳 = `push_subscriptions`의 `https://fcm.googleapis.com/fcm/send/o7-judge-{uuid}-{1|2|3}` **3개 endpoint**, 동시에 남은 것 최대 2(④ 순간) → finally에서 그 endpoint만 지움 · **남은 `o7-judge-` 0**(`o7-build-` · `o7-deploy-` 0, push 전체 0). 실제 사용자 데이터 쓰기 0. 출력 = 건수 · 해시 앞부분 · bool만, 누출 false.
 - 프로세스: 띄우기 전 PID 목록 저장(`ps-before-*.txt`) · 내 것만 종료(가짜 서버 · next 서버 2번은 표지 파일로 스스로 끝냄, Chromium은 `Browser.close` 뒤 내 자손만 — 매번 남은 0) · 넓은 패턴 kill 0. 끝 확인 12:38: `curl` 3000 · 3001 · 3100 · CDP 9471 · 9472 · 9481 · 9491 = **000** · ps에 next-server · next start · 내 chromium · proot 0 · **code-oss 24593 살아 있음** · 프로필 · NetLog 삭제 · HEAD 사본(`head/`) · 바꾼 사본(`mut/`) · 시험 운전 `endpoints-deploy.json` 삭제 · scratchpad 내 임시 파일 0.
 - 심사 스크립트 · 증거: `ex12/.data/judge-o7-20261030/`(`jscope.mjs` · `japi.mts` · `jreal.mts` · `jlocal.mjs` · `jvm-ui.mjs` · `jvm-sw.mjs` · `jvm-summary.mjs` · `jmut*.mjs` · `jserver.mjs` · `jmock.mts` · `jcdp.mjs` · `jfake.mjs` · `juilib.mjs` · `jui-mock.mjs` · `jui-real.mjs` · `jdeploy12.mjs` · `jdeploy13.mjs` · 결과 `*-result*.json` · 그림 9장).
+
+## 12. 배포 확인(2026-10-30 12:49~12:52 KST, 푸시 `2ff7fad` 뒤 — 심사 보고 10절 절차 그대로)
+
+- 실행 전: HEAD = origin/main = `2ff7fad` · 작업 트리 깨끗 · 코드 · 테스트 13파일 sha256 = 심사 지문(`scope-end.json`) · 보호 103 = HEAD · `1b71cf7..2ff7fad` = 심사한 코드 13 + 문서 11(코디네이터 문서 손질 포함, 코드 변화 0). Vercel 배포 완료(코디네이터: GitHub 상태 success 12:48:47). 시각 12:49(04:00~10:00 밖). 심사 스크립트는 시험 운전 판 그대로(수정 0).
+- **줄 12 [OK]**(12:50:22~12:50:29, `jdeploy12.mjs` 8/8, 배포 Node 요청 **7/20**, 안전 실행 누출 false · `deploy12-result.json`)
+  - `/sw.js` 200 · 머리 3개 = O5(`application/javascript; charset=utf-8` · `no-cache, no-store, must-revalidate` · CSP `default-src 'self'; script-src 'self'`) · Referrer-Policy가 `no-referrer` 아님(SW fetch의 Origin 유지) · 본문 = 저장소 `sw.js`(v3) / `/` = 저장소 index.html 바이트.
+  - POST `o7-deploy-{uuid}-1` → **201 `{"created":true}`** · application/json · no-store · Set-Cookie 0 · DB 행 1 → 같은 것 다시 **204** · 본문 0 · 행 1 → DELETE **204** · 행 0 → Origin 없이 POST **403** · 행 0.
+  - `/api/rankings?date=2026-10-29`(첫 요청)에 summary null 2 → 줄 13 id `2026-10-29-pol-5`.
+  - 바깥: 배포 호스트(fetch 7 · TLS 연결 2) + DB 연결 1뿐(차단기 기록 `guard-deploy12.jsonl`).
+  - DB: 쓰기 12:50:25~12:50:29 · 시험 endpoint 1개(`o7-deploy-…-1`)만 · DELETE로 0 → finally 지운 수 0 · 남은 `o7-deploy-` 0 · push 전체 0 · 9표 + push_subscriptions + 마이그레이션 스냅숏 시작 = 끝(차이 0).
+- **줄 13 [OK]**(12:50:51~12:51:01, `jdeploy13.mjs` 5/5, 배포 요청 **18/25**(NetLog `HTTP_TRANSACTION_SEND_REQUEST`) · `deploy13-result.json`)
+  - 새 프로필 360 · 배포 호스트 밖 이름 풀이 막음 · QUIC 끔 · `/_vercel/*` 막음 · 문서 전 가짜 pushManager(진짜 subscribe 0) · `/api/push/`는 페이지 CDP Fetch가 받아 응답(서버 · DB에 안 감).
+  - `/` → SW activated · `issuerank-v3: [/offline.html]` · 설치 오류 [] · 종 off · push 요청 0.
+  - 가짜 구독 a + 표시 on → 새로 고침 → `POST a 201 → DELETE a 204 → POST b 204`(가로챔) · 세 요청 Origin = `https://issuerank-kappa.vercel.app` · subscribe 1(granted · 활성화 없음) · requestPermission 0 · 종 on · 토스트 0.
+  - `/?issue=2026-10-29-pol-5` → 상세창 **`요약 없음 · 원문을 확인해 주세요`**(기울임) · 옛 문구 0 · 넘침 0(그림 `deploy13-drawer-360.png`).
+  - 응답 받은 화면 요청 호스트 = 배포 호스트뿐 · 막힌 시도 = `cdn.jsdelivr.net`(이름 풀이 실패) · NetLog 이름 = 배포 호스트 · `~notfound`뿐 · TCP = 배포 호스트 주소 1개(NAT64 `[64:ff9b::…]:443`) · JS 예외 0 · Node 쪽 연결 = 127.0.0.1(CDP)뿐.
+- 정리(12:51:42 확인): `o7-deploy-` · `o7-judge-` 0 · push 전체 0 · Chromium(31027) `Browser.close` 뒤 내 자손 0 · 프로필 · NetLog 삭제 · `curl` CDP 9491 · 3000 · 3001 · 3100 = 000 · ps에 chromium · next · proot 0 · **code-oss 24593 살아 있음** · 비밀값 누출 검사(결과 · 기록 7파일) false.
+- 요청: 배포 Node 7 · CDP 18 · 로컬 0 · 바깥 0(배포 호스트 · DB 말고, 진짜 subscribe · 실제 푸시 서비스 · GitHub API 0).
+- **새 합계: OK 13 · FAIL 0 · SKIP 1(14 사용자) → PASS 보류.** 남은 것 = 사용자 줄 14(휴대폰에서 앱 열기 → 열자마자 종 모양 · 뜬 토스트 → 꺼짐이면 한 번 켜기 · 차단이면 `방법 보기`대로 허용 뒤 켜기 → 다음 날 06:30~10:00 `오늘의 뉴스가 도착했어요` + 코디네이터가 그날 push 요약 `구독 ≥ 1 · 보냄 ≥ 1` 확인, 계획 "사용자 확인" 문장).
