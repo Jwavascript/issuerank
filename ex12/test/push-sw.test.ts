@@ -126,9 +126,10 @@ describe('notificationclick', () => {
   });
 });
 
-it('캐시 판 = issuerank-v2 · O4 install · activate · fetch 처리 그대로(HEAD 문장 3개가 글자 그대로 있음)', () => {
+it('캐시 판 = issuerank-v3 · O4 install · activate · fetch 처리 그대로(HEAD 문장 3개가 글자 그대로 있음)', () => {
   const sw = readFileSync('public/sw.js', 'utf8');
-  expect(sw).toContain("const CACHE = 'issuerank-v2';");
+  expect(sw).toContain("const CACHE = 'issuerank-v3';");
+  expect(sw).not.toContain("'issuerank-v2'");
   expect(sw).not.toContain("'issuerank-v1'");
   for (const line of [
     "  event.waitUntil(caches.open(CACHE).then(cache => cache.add(OFFLINE)).then(() => self.skipWaiting()));",

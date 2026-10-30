@@ -183,12 +183,13 @@ export const memoryStore: Store = {
     folders.splice(i, 1);
     return true;
   },
+  // 아침 알림 구독(O5 · O7): 같은 endpoint = 키만 갱신 'updated' · 새 endpoint = allowNew일 때만 'created' · 상한이면 null(db/store.ts와 같은 결과)
   savePushSubscription: async (sub, allowNew) => {
     const row = pushRows.get(sub.endpoint);
-    if (row) { row.p256dh = sub.p256dh; row.auth = sub.auth; return true; }
-    if (!allowNew) return false;
+    if (row) { row.p256dh = sub.p256dh; row.auth = sub.auth; return 'updated'; }
+    if (!allowNew) return null;
     pushRows.set(sub.endpoint, { id: randomUUID(), ...sub, lastSentOn: null });
-    return true;
+    return 'created';
   },
   deletePushSubscription: async endpoint => { pushRows.delete(endpoint); },
   pushSubscriptionCount: async () => pushRows.size,

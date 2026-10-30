@@ -118,7 +118,7 @@ describe('manifest · 아이콘 · OG 그림 (AC-13-1 · 13-4)', () => {
 function loadSw() {
   const listeners: Record<string, (event: unknown) => void> = {};
   const log: string[] = [];
-  const stored = new Map<string, string[]>([['issuerank-v0', ['/old.html']], ['issuerank-v1', ['/offline.html']], ['other', ['/x']]]);
+  const stored = new Map<string, string[]>([['issuerank-v0', ['/old.html']], ['issuerank-v1', ['/offline.html']], ['issuerank-v2', ['/offline.html']], ['other', ['/x']]]);
   const cacheOf = (name: string) => ({
     add: vi.fn(async (url: string) => { log.push(`add ${name} ${url}`); stored.get(name)!.push(url); }),
     addAll: vi.fn(async (urls: string[]) => { log.push(`addAll ${name} ${urls.join(',')}`); stored.get(name)!.push(...urls); }),
@@ -161,14 +161,14 @@ function loadSw() {
 }
 
 describe('서비스 워커 sw.js (AC-13-2)', () => {
-  it('install: issuerank-v2에 /offline.html 1개 · skipWaiting / activate: v2만 남음(옛 v1 삭제) · claim', async () => {
+  it('install: issuerank-v3에 /offline.html 1개 · skipWaiting / activate: v3만 남음(옛 v1 · v2 삭제) · claim', async () => {
     const sw = loadSw();
     await sw.lifecycle('install');
-    expect(sw.log).toEqual(['open issuerank-v2', 'add issuerank-v2 /offline.html', 'skipWaiting']);
-    expect(sw.stored.get('issuerank-v2')).toEqual(['/offline.html']);
+    expect(sw.log).toEqual(['open issuerank-v3', 'add issuerank-v3 /offline.html', 'skipWaiting']);
+    expect(sw.stored.get('issuerank-v3')).toEqual(['/offline.html']);
     await sw.lifecycle('activate');
-    expect(sw.log.slice(3)).toEqual(['delete issuerank-v0', 'delete issuerank-v1', 'delete other', 'claim']);
-    expect([...sw.stored.keys()]).toEqual(['issuerank-v2']);
+    expect(sw.log.slice(3)).toEqual(['delete issuerank-v0', 'delete issuerank-v1', 'delete issuerank-v2', 'delete other', 'claim']);
+    expect([...sw.stored.keys()]).toEqual(['issuerank-v3']);
   });
 
   it('같은 출처 HTML 탐색 4곳만 respondWith(성공 = 그 응답 그대로 · 실패 = offline.html), 나머지 0 · cache.put 0 · caches.match는 실패 대체에서만', async () => {
@@ -201,8 +201,8 @@ describe('서비스 워커 sw.js (AC-13-2)', () => {
       for (const req of untouched) expect((await sw.dispatch(req)).calls, `${req.method} ${req.mode} ${req.url}`).toBe(0);
     }
     expect(sw.log).toEqual([]); // fetch · match · put 0
-    expect([...sw.stored.keys()]).toEqual(['issuerank-v2']);
-    expect(sw.stored.get('issuerank-v2')).toEqual(['/offline.html']);
+    expect([...sw.stored.keys()]).toEqual(['issuerank-v3']);
+    expect(sw.stored.get('issuerank-v3')).toEqual(['/offline.html']);
   });
 });
 

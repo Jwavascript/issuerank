@@ -41,15 +41,18 @@ export const pushRoute = (store: Store) => {
       return c.json({ message: BAD_REQUEST }, 400);
     }
     const sub = { endpoint: body.endpoint as string, p256dh: keys.p256dh as string, auth: keys.auth as string };
+    let saved: 'created' | 'updated' | null;
     try {
       // 5,000행이면 새 endpoint만 막음(같은 endpoint의 키 갱신은 됨)
       const allowNew = (await store.pushSubscriptionCount()) < MAX_SUBSCRIPTIONS;
-      if (!(await store.savePushSubscription(sub, allowNew))) return c.json({ message: FULL }, 503);
+      saved = await store.savePushSubscription(sub, allowNew);
+      if (!saved) return c.json({ message: FULL }, 503);
     } catch {
       console.error('PUSH_SAVE_FAILED');
       return c.text('Internal Server Error', 500);
     }
-    return c.body(null, 204);
+    // 새 endpoint 행 = 201 { created: true }(화면은 이미 있던 기기 구독인데 201이면 서버에서 지워진 것으로 보고 구독을 새로 만듦 — O7 · D32) · 이미 있던 endpoint = 204
+    return saved === 'created' ? c.json({ created: true }, 201) : c.body(null, 204);
   });
 
   // 해지: 본문 { endpoint } → 그 행 삭제, 없어도 204(여러 번 같아도 됨)

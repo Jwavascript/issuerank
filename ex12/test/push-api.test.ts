@@ -36,8 +36,8 @@ beforeEach(() => { vi.stubEnv('BETTER_AUTH_URL', ''); });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe('POST /api/push/subscriptions (AC-14-1)', () => {
-  it('알려진 푸시 서비스 4종 → 204 · 본문 없음 · no-store · Set-Cookie 0 · 세션 없이 · 행 4 · last_sent_on null', async () => {
-    for (const e of HOSTS) expect(await call('POST', sub(e))).toEqual({ status: 204, body: null, cache: 'no-store', cookie: null });
+  it('알려진 푸시 서비스 4종 → 201 · { created: true } · no-store · Set-Cookie 0 · 세션 없이 · 행 4 · last_sent_on null', async () => {
+    for (const e of HOSTS) expect(await call('POST', sub(e))).toEqual({ status: 201, body: { created: true }, cache: 'no-store', cookie: null });
     const saved = await rows();
     expect(saved.map(r => r.endpoint)).toEqual(HOSTS);
     expect(saved.every(r => r.lastSentOn === null && /^[0-9a-f-]{36}$/.test(r.id))).toBe(true);
@@ -45,7 +45,7 @@ describe('POST /api/push/subscriptions (AC-14-1)', () => {
 
   it('같은 endpoint 다시(키 바꿈) → 204 · 행 1 · 키만 갱신(id 그대로) · 다른 칸 · expirationTime 무시', async () => {
     const first = sub(HOSTS[0]), second = sub(HOSTS[0], { expirationTime: 1790000000000, extra: 'x', keys: { p256dh: key(), auth: auth(), more: 1 } });
-    expect((await call('POST', first)).status).toBe(204);
+    expect((await call('POST', first)).status).toBe(201);
     const [before] = await rows();
     expect((await call('POST', second)).status).toBe(204);
     const after = await rows();
@@ -96,7 +96,7 @@ describe('POST /api/push/subscriptions (AC-14-1)', () => {
     for (const [label, body] of bodies) expect(await call('POST', body), label).toEqual({ status: 400, body: BAD, cache: 'no-store', cookie: null });
     for (const raw of ['{', 'not json', '', '{"endpoint":']) expect(await call('POST', raw, { raw: true }), raw).toEqual({ status: 400, body: BAD, cache: 'no-store', cookie: null });
     // 2,048자는 받음(경계)
-    expect((await call('POST', sub(long.slice(0, 2048)))).status).toBe(204);
+    expect((await call('POST', sub(long.slice(0, 2048)))).status).toBe(201);
     expect((await rows()).map(r => r.endpoint.length)).toEqual([2048]);
   });
 
@@ -107,7 +107,7 @@ describe('POST /api/push/subscriptions (AC-14-1)', () => {
     expect(await rows()).toEqual([]);
     vi.stubEnv('BETTER_AUTH_URL', DEPLOY);
     expect((await call('POST', sub(HOSTS[0]), { origin: LOCAL })).status).toBe(403);
-    expect((await call('POST', sub(HOSTS[0]), { origin: DEPLOY })).status).toBe(204);
+    expect((await call('POST', sub(HOSTS[0]), { origin: DEPLOY })).status).toBe(201);
     vi.stubEnv('BETTER_AUTH_URL', 'not a url');
     expect((await call('POST', sub(HOSTS[1]), { origin: LOCAL })).status).toBe(403);
     expect(await rows()).toHaveLength(1);
@@ -119,7 +119,7 @@ describe('POST /api/push/subscriptions (AC-14-1)', () => {
     expect(await call('POST', sized(4097), { raw: true })).toEqual({ status: 413, body: BAD, cache: 'no-store', cookie: null });
     expect((await call('POST', sized(4097), { raw: true, origin: 'https://evil.example' })).status).toBe(403);
     expect(await rows()).toEqual([]);
-    expect((await call('POST', sized(4096), { raw: true })).status).toBe(204);
+    expect((await call('POST', sized(4096), { raw: true })).status).toBe(201);
     expect(await call('DELETE', JSON.stringify({ endpoint: HOSTS[0], pad: 'x'.repeat(4097) }), { raw: true })).toEqual({ status: 413, body: BAD, cache: 'no-store', cookie: null });
     expect(await rows()).toHaveLength(1);
   });
@@ -146,8 +146,8 @@ describe('POST /api/push/subscriptions (AC-14-1)', () => {
 describe('DELETE /api/push/subscriptions (AC-14-4) · 그 밖 메서드 · BFF', () => {
   it('있음 → 204 · 행 0 / 없음 → 204 / 두 번 → 204 · 400(깨진 JSON · endpoint 없음 · 받지 않는 호스트) · 403', async () => {
     const s = sub(HOSTS[2]);
-    expect((await call('POST', s)).status).toBe(204);
-    expect((await call('POST', sub(HOSTS[3]))).status).toBe(204);
+    expect((await call('POST', s)).status).toBe(201);
+    expect((await call('POST', sub(HOSTS[3]))).status).toBe(201);
     expect(await call('DELETE', { endpoint: HOSTS[2] })).toEqual({ status: 204, body: null, cache: 'no-store', cookie: null });
     expect((await rows()).map(r => r.endpoint)).toEqual([HOSTS[3]]);
     for (let i = 0; i < 2; i++) expect(await call('DELETE', { endpoint: HOSTS[2] })).toEqual({ status: 204, body: null, cache: 'no-store', cookie: null });
@@ -170,7 +170,7 @@ describe('DELETE /api/push/subscriptions (AC-14-4) · 그 밖 메서드 · BFF',
   it('createBff를 지난 POST · DELETE · 403 · 400 = 앱과 같은 상태 · 본문 · no-store · Set-Cookie 0', async () => {
     const handle = createBff(() => createApp(memoryStore));
     const via = { handle: (r: Request) => handle(r) };
-    expect(await call('POST', sub(HOSTS[0]), via)).toEqual({ status: 204, body: null, cache: 'no-store', cookie: null });
+    expect(await call('POST', sub(HOSTS[0]), via)).toEqual({ status: 201, body: { created: true }, cache: 'no-store', cookie: null });
     expect(await call('POST', sub('https://evil.example/x'), via)).toEqual({ status: 400, body: BAD, cache: 'no-store', cookie: null });
     expect(await call('POST', sub(HOSTS[1]), { ...via, origin: null })).toEqual({ status: 403, body: BAD, cache: 'no-store', cookie: null });
     expect(await call('DELETE', { endpoint: HOSTS[0] }, via)).toEqual({ status: 204, body: null, cache: 'no-store', cookie: null });

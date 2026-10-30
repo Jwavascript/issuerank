@@ -106,15 +106,19 @@ export function dbStore(db: Db): Store {
       return true;
     }),
 
-    // 아침 알림 구독(O5): endpoint unique — 있으면 키만 갱신(created_at · last_sent_on 그대로), 없으면 allowNew일 때만 새 행(id UUID)
+    // 아침 알림 구독(O5 · O7): endpoint unique — 있으면 키만 갱신(created_at · last_sent_on 그대로) = 'updated', 없으면 allowNew일 때만 새 행(id UUID) = 'created'.
+    // UPDATE … RETURNING 1행 = 'updated' → 0행이면 INSERT … ON CONFLICT (endpoint) DO NOTHING RETURNING 1행 = 'created' · 0행(그사이 다른 요청이 넣음) = UPDATE 한 번 더 → 'updated'
+    // (같은 새 endpoint 두 요청이 겹쳐도 행 1 · 'created' 하나) / allowNew 거짓 = null
     savePushSubscription: async (sub, allowNew) => {
-      if (allowNew) {
-        await db.insert(pushSubscriptions).values({ id: randomUUID(), ...sub })
-          .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { p256dh: sub.p256dh, auth: sub.auth } });
-        return true;
-      }
-      return (await db.update(pushSubscriptions).set({ p256dh: sub.p256dh, auth: sub.auth })
-        .where(eq(pushSubscriptions.endpoint, sub.endpoint)).returning({ id: pushSubscriptions.id })).length > 0;
+      const update = () => db.update(pushSubscriptions).set({ p256dh: sub.p256dh, auth: sub.auth })
+        .where(eq(pushSubscriptions.endpoint, sub.endpoint)).returning({ id: pushSubscriptions.id });
+      if ((await update()).length > 0) return 'updated';
+      if (!allowNew) return null;
+      const inserted = await db.insert(pushSubscriptions).values({ id: randomUUID(), ...sub })
+        .onConflictDoNothing({ target: pushSubscriptions.endpoint }).returning({ id: pushSubscriptions.id });
+      if (inserted.length > 0) return 'created';
+      await update();
+      return 'updated';
     },
 
     deletePushSubscription: async endpoint => {
