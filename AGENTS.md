@@ -7,7 +7,7 @@
 - 캡스톤 단계 ex01~ex12는 모두 PASS했고(2026-10-16) 지금은 **운영 단계**다(PLAN.md D21). 운영 기획과 로드맵은 `plan/PRODUCT_PLAN.md`, 기능별 계획은 `plan/PLAN_ops_<순서>_<주제>.md`. 과거 테스트 결과는 현재 환경에서 재검증한 결과와 구분한다.
 - 작업 전 `git status --short`로 사용자 변경을 확인하고 보존한다. 커밋·푸시는 사용자가 요청할 때만 한다.
 - `web/`와 `plan/PLAN_web.md`는 사용자의 별도 작업이다. 별도 요청 없이 읽거나 수정하지 않는다.
-- 운영 단계에서는 **`ex12/`가 운영 폴더**다(Vercel Root Directory · 하루 실행 워크플로 작업 폴더). 새 exXX를 복사하지 않고 ex12에서 고치며, 변경 이력은 git과 계획·보고 문서로 남긴다. ex01~ex11·frontend는 기록으로 보존하고 고치지 않는다. (캡스톤 단계 규칙: 출발점은 `ex(XX-1)/`, ex01은 `frontend/`였다.)
+- 운영 단계에서는 **`ex12/`가 운영 폴더**다(Vercel Root Directory · 하루 실행 워크플로 작업 폴더). 새 exXX를 복사하지 않고 ex12에서 고치며, 변경 이력은 git과 계획·보고 문서로 남긴다. ex01~ex11·frontend는 기록으로 보존하고 고치지 않는다. (캡스톤 단계 규칙: 출발점은 `ex(XX-1)/`, ex01은 `frontend/`였다.) Android 네이티브 앱은 새 최상위 `android/`다(O8 — 아래 "Android 앱" 절).
 
 ## 읽기와 구현 기준
 
@@ -45,5 +45,14 @@
 - 현재 Termux 기기의 ex08은 저장소 루트에서 `bash scripts/ex08-ubuntu.sh npm test`처럼 Ubuntu 래퍼로 실행한다. Next.js와 TypeScript 7의 네이티브 모듈 때문에 Termux Node 직접 빌드는 지원되지 않는다. 상세 준비와 명령은 HANDOFF.md 참고.
 - 일반 검증: `npm test`, `npm run build`(ex01 빌드 제외). API는 `npm run api`(8787), 화면은 `npm run dev`(3000). 한글 요청은 Node fetch를 사용한다.
 - 자신이 띄운 서버만 종료하고 사용자 서버는 끄지 않는다. 실행 환경 실패와 제품 실패를 구분하여 보고하며 권한 설정을 임의로 완화하지 않는다.
+
+## Android 앱 (`android/`, O8 — PLAN.md D33~D36)
+
+- `android/`(O8)는 Android 네이티브 앱(Kotlin + Compose · 위젯)이다. Vercel · 하루 실행과 무관하다. 빌드 · 시험은 **PC**에서 한다(이 Termux 태블릿에는 설치 · 빌드하지 않는다). 명령은 `android/`에서 `./gradlew testDebugUnitTest lintDebug assembleDebug connectedDebugAndroidTest`(Windows `gradlew.bat`), 기기는 `ANDROID_SERIAL`로 정한다. 처음 이어 받을 때는 `plan/PLAN_ops_O8_android_app.md` 8절 "다른 PC에서 이어 하기"를 따른다.
+- 의존성 · 플러그인 · 판 · 저장소(`google()` · `mavenCentral()`)는 계획서와 `gradle/libs.versions.toml` 글자 그대로 쓰고, Gradle 래퍼는 sha256 고정 판을 바꾸지 않는다. 앱 문구는 웹(`ex12/public/index.html`) 글자 그대로다.
+- 서명 키(`*.jks`) · 키 비밀번호 · 앱 세션 값 · Google 클라이언트 보안 비밀번호는 저장소 · 채팅 · 로그에 두지 않는다. 키는 저장소 밖 + 백업 2곳, Actions Secret은 `ANDROID_KEYSTORE_B64` · `ANDROID_KEYSTORE_PASSWORD`이며 release 서명은 Actions만 한다.
+- adb는 우리 패키지만 다룬다(설치 · 실행 · 계측 시험 · `adb reverse`로 가짜 서버 · 우리 화면 캡처 · 우리 태그 logcat). 다른 앱 · 기기 설정 · 권한 · 입력은 금지하고, 끝나면 reverse를 지우고 연결을 끊는다.
+- 실제 Google 로그인 · 운영 계정 · 운영 DB는 사용자 줄에서만 한다. O8 제작 · 심사에는 `ex12/.env`가 필요 없다(다른 단계에서 옮길 때는 사용자가 직접, 값 출력 · 커밋 금지).
+- PC OS별 명령: npm/npx(Windows `npm.cmd` · `npx.cmd`) · `gradlew`/`gradlew.bat` · 해시 `sha256sum` / `shasum -a 256` / `Get-FileHash`. 이 태블릿의 Ubuntu 래퍼(`scripts/ex12-ubuntu.sh`)는 PC에서 쓰지 않는다.
 
 Codex 지침 형식 참고: https://developers.openai.com/codex/guides/agents-md
