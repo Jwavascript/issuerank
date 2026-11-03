@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  위젯 뼈대(글자 없음 — 지난 제목을 미리보기에 박지 않음): Android 12+ 위젯 고르기 창 미리보기(previewLayout) · 놓은 뒤 첫 갱신 전 그림(initialLayout).
+  모양 = layout/widget.xml과 같은 바탕 · 안쪽 · 칸(제목 3줄 + 남는 칸 + 하단 — 기본 4×2 = 117dp의 줄 수).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/widget_padding_horizontal"
+    android:paddingTop="@dimen/widget_padding_vertical"
+    android:paddingEnd="@dimen/widget_padding_horizontal"
+    android:paddingBottom="@dimen/widget_padding_vertical">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/widget_preview_bar" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="72dp"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/widget_preview_bar" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="44dp"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/widget_preview_bar" />
+
+    <!-- 남는 칸(widget.xml과 같음 — 빈 FrameLayout은 의도) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:ignore="UselessLeaf" />
+
+    <FrameLayout
+        android:layout_width="88dp"
+        android:layout_height="6dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/widget_preview_bar" />
+</LinearLayout>

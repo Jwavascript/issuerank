@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 앱에만 있는 문구(웹에 없는 글). 새로 넣으면 제작 보고서의 '앱에만 있는 문구' 표에도 적음 -->
+<resources>
+    <!-- 달력 창 확인 단추(웹은 브라우저 기본 날짜 고르기라 글이 없음, 취소는 웹 문구 cancel) -->
+    <string name="date_pick_ok">확인</string>
+    <!-- 위젯 고르기 창의 위젯 설명(appwidget-provider description · Android 12+ — 계획 4절, 웹 파일에 없는 글 C9) -->
+    <string name="widget_description">어제 가장 많이 보도된 이슈 헤드라인</string>
+</resources>

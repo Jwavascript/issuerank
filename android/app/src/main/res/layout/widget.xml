@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  홈 화면 위젯(RemoteViews · widget.js 그대로 — 계획 4절 · D22): 위에서부터 제목 줄(한 줄 · 끝 "…"), 남는 칸, 하단 updatedLabel. 숫자 · 섹션 이름 0 · 스크롤 0.
+  줄은 처음에 모두 숨김 — widget/WidgetViews가 보일 줄(= 높이별 묶음의 줄 수, 항목 수까지)만 글 · 누르기 · 보임을 정함.
+  실패(받지 못했고 캐시도 없음) = 제목 자리에 "불러오지 못했습니다"(widget.js 97) · 하단 숨김.
+  뿌리 id = @android:id/background(Android 12+ 위젯 바탕 · 여는 움직임) · 누르기 = 줄 밖(morePath, 실패면 첫 화면).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/widget_padding_horizontal"
+    android:paddingTop="@dimen/widget_padding_vertical"
+    android:paddingEnd="@dimen/widget_padding_horizontal"
+    android:paddingBottom="@dimen/widget_padding_vertical">
+
+    <TextView android:id="@+id/widget_row_1" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_2" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_3" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_4" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_5" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_6" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_7" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_8" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_9" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+    <TextView android:id="@+id/widget_row_10" style="@style/IssueRankWidgetRow" android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_fail"
+        style="@style/IssueRankWidgetRow"
+        android:text="@string/widget_fail"
+        android:visibility="gone" />
+
+    <!-- 남는 칸(widget.js addSpacer(null)) — 하단을 맨 아래로. RemoteViews는 View · Space를 부풀리지 않아 빈 FrameLayout(UselessLeaf는 의도) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:ignore="UselessLeaf" />
+
+    <TextView
+        android:id="@+id/widget_foot"
+        style="@style/IssueRankWidgetFoot" />
+</LinearLayout>

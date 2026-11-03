@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google 웹 클라이언트 ID(공개 식별자, 서버 GOOGLE_CLIENT_ID와 같은 값 — 비밀번호 아님). 사용자가 2026-11-03에 알려 준 실제 값(계획 8절 6 · C3 자리표시자 끝) -->
+<resources>
+    <string name="google_web_client_id" translatable="false">233544760606-7cov17el2s1ljluql6f0ge30esrm1spm.apps.googleusercontent.com</string>
+</resources>

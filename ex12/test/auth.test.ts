@@ -364,11 +364,13 @@ describe('Google 로그인(O2, D26) — 실제 Better Auth + 메모리 어댑터
     const evil = await request('sign-in/social', SOCIAL, s.cookie, 'https://evil.example');
     expect(evil.status).toBe(403);
     expect(evil.headers.getSetCookie()).toEqual([]);
-    // ⑧ 본문 idToken 로그인: 404 ID_TOKEN_NOT_SUPPORTED · Google JWKS fetch 0
+    // ⑧ 본문 idToken 로그인(O8 · D35에서 엶 — 서명 · 계정 경우는 native-client.test): 서명 없는 토큰은 401 INVALID_TOKEN · 쿠키 · 행 0.
+    // 라이브러리가 Google 공개 키를 1번 부르지만 가짜 fetch가 막음(실제 Google 0)
     const withIdToken = await request('sign-in/social', { provider: 'google', idToken: { token: idToken({ sub: '9', email: 'id@example.invalid', email_verified: true }) } });
-    expect(withIdToken.status).toBe(404);
-    expect((await withIdToken.json()).code).toBe('ID_TOKEN_NOT_SUPPORTED');
-    expect(calls).toEqual([]);
+    expect(withIdToken.status).toBe(401);
+    expect((await withIdToken.json()).code).toBe('INVALID_TOKEN');
+    expect(withIdToken.headers.getSetCookie()).toEqual([]);
+    expect(calls.map(c => `${c.method} ${c.url}`)).toEqual(['GET https://www.googleapis.com/oauth2/v3/certs']);
     expect(counts(db)).toEqual([0, 0, 0, 0]);
     // ⑨ 세션 쿠키를 들고 닫은 경로 5개: 모두 404(라이브러리 disabledPaths 응답 "Not Found"). 대조: 닫지 않은 list-accounts는 200
     const signedIn = await googleLogin(request, { sub: '6000', email: 'closed@example.invalid', email_verified: true, name: 'C' });

@@ -1,0 +1,87 @@
+# Android 앱(O8 · D33~D36 · AC-15-6): android/ 또는 이 파일이 바뀐 푸시마다 JVM 단위 시험 · lint · debug APK · 계측 시험 APK를 만듦(기기 실행 0 — connectedDebugAndroidTest는 PC + 태블릿에서)
+# 수동 실행(Run workflow)에서 release를 켜면 main에서만 release APK를 만들어 서명 → 산출물 30일(gh run download → PC adb로 태블릿에 설치, 계획 9절)
+# 서명 키는 Secret(ANDROID_KEYSTORE_B64 · ANDROID_KEYSTORE_PASSWORD)으로만 받아 $RUNNER_TEMP에 풀고 빌드 뒤 늘 지움. 키 · 비밀번호는 저장소 · 로그 · 산출물에 0
+# 실행 요약은 공개(저장소가 공개) — APK sha256 · 서명 인증서 SHA-256 지문(공개 값)만 씀(setup-gradle 요약은 끔)
+# 액션은 전체 커밋 SHA로 고정(주석 = 그 SHA의 태그, 2026-11-03 api.github.com으로 확인) — 판을 올릴 때 SHA도 함께 바꿈
+name: android
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'release APK도 만들어 서명(main에서만 · Secret 2개 필요)'
+        required: false
+        default: false
+        type: boolean
+
+# 같은 브랜치 실행은 하나씩 차례로(release 실행이 뒤 푸시로 끊기지 않게 — 취소 0), 다른 브랜치는 따로
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: JDK 17 · Android SDK(러너 것)
+        run: |
+          test -d "$JAVA_HOME_17_X64" || { echo "::error::러너에 JDK 17(JAVA_HOME_17_X64)이 없음"; exit 1; }
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          test -d "$ANDROID_HOME/platforms/android-37.0" || { echo "::error::러너 SDK에 platforms;android-37.0이 없음"; exit 1; }
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          add-job-summary: never
+      - name: 단위 시험 · lint · debug APK · 계측 시험 APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      - name: release APK 서명
+        if: github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main'
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ISSUERANK_KEYSTORE_FILE: ${{ runner.temp }}/issuerank-release.jks
+          ISSUERANK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        # Secret은 env로만 받음(run 줄에 직접 넣지 않음 · 값 출력 0 · set -x 0). app/build.gradle.kts는 ISSUERANK_KEYSTORE_FILE · PASSWORD가 둘 다 있을 때만 서명
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_B64" ] || [ -z "$ISSUERANK_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_B64 · ANDROID_KEYSTORE_PASSWORD가 필요함"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > "$ISSUERANK_KEYSTORE_FILE"
+          unset ANDROID_KEYSTORE_B64 # 키 원문이 Gradle 환경에 남지 않게
+          ./gradlew assembleRelease
+      - name: 서명 키 지우기
+        if: always()
+        working-directory: ${{ runner.temp }}
+        run: rm -f "$RUNNER_TEMP/issuerank-release.jks"
+      - name: 실행 요약(APK sha256 · 서명 인증서 SHA-256)
+        if: github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main'
+        # 서명 확인이 실패하면(서명 안 됨 · 깨짐) 여기서 멈춰 산출물을 올리지 않음. 인증서 DN 등 다른 줄은 쓰지 않음
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          apk_sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          cert_sha=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          test -n "$cert_sha"
+          printf 'release APK sha256: `%s`\n\n서명 인증서 SHA-256: `%s`\n' "$apk_sha" "$cert_sha" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main'
+        with:
+          name: issuerank-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+          if-no-files-found: error

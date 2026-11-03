@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 화면은 Compose가 그림. 창 바탕만 웹 bg 토큰(어둡게는 values-night 색이 따라감) -->
+    <style name="Theme.IssueRank" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+    </style>
+</resources>

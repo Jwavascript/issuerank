@@ -1,0 +1,29 @@
+{
+ "date": "2026-10-07",
+ "updatedAt": "2026-10-07T06:00:00+09:00",
+ "sections": [
+  { "key": "pol", "name": "정치", "issues": [
+   { "id": "2026-10-07-pol-0", "date": "2026-10-07", "section": "pol", "rank": 1, "title": "내년도 예산안 국회 상임위 심사 본격화",
+     "summary": ["상임위별 예비심사가 시작돼 증액·감액 쟁점이 드러나고 있다.", "여야는 지역 SOC와 복지 예산 규모를 두고 이견을 보였다.", "예결위는 다음 달 중순까지 수정안을 마련할 계획이다."],
+     "articleCount": 184, "url": "https://news.naver.com/" } ] },
+  { "key": "eco", "name": "경제", "issues": [
+   { "id": "2026-10-07-eco-0", "date": "2026-10-07", "section": "eco", "rank": 1, "title": "기준금리 동결, 연내 인하 가능성 시사",
+     "summary": ["한국은행이 기준금리를 현 수준에서 동결했다.", "물가 둔화 흐름이 이어지면 인하를 검토할 수 있다고 밝혔다.", "시장은 연말 인하 가능성을 높게 반영하기 시작했다."],
+     "articleCount": 152, "url": "https://news.naver.com/" } ] },
+  { "key": "soc", "name": "사회", "issues": [
+   { "id": "2026-10-07-soc-6", "date": "2026-10-07", "section": "soc", "rank": 1, "title": "저출생 대책, 육아휴직 급여 상한 인상",
+     "summary": null, "articleCount": 97, "url": "https://news.naver.com/" } ] },
+  { "key": "cul", "name": "생활·문화", "issues": [
+   { "id": "2026-10-07-cul-1", "date": "2026-10-07", "section": "cul", "rank": 1, "title": "국내 영화 관객 수 회복세",
+     "summary": ["추석 연휴 개봉작 흥행으로 관객 수가 반등했다.", "중예산 영화들이 입소문을 타며 장기 상영 중이다.", "업계는 연말까지 회복세가 이어질지 주목한다."],
+     "articleCount": 76, "url": "https://news.naver.com/" } ] },
+  { "key": "wor", "name": "세계", "issues": [
+   { "id": "2026-10-07-wor-4", "date": "2026-10-07", "section": "wor", "rank": 1, "title": "기후총회 앞두고 감축 목표 상향 압박",
+     "summary": ["주요국에 2035년 감축 목표 제출이 요구되고 있다.", "개도국은 재원 지원 확대를 조건으로 내걸었다.", "총회는 다음 달 개막한다."],
+     "articleCount": 63, "url": "https://news.naver.com/" } ] },
+  { "key": "it", "name": "IT·과학", "issues": [
+   { "id": "2026-10-07-it-1", "date": "2026-10-07", "section": "it", "rank": 1, "title": "차세대 HBM 양산 경쟁 본격화",
+     "summary": ["국내 업체들이 차세대 고대역폭 메모리 샘플 공급을 시작했다.", "주요 GPU 업체의 인증 일정이 관건이다.", "내년 상반기 양산 체제 전환이 목표다."],
+     "articleCount": 141, "url": "https://news.naver.com/" } ] }
+ ]
+}

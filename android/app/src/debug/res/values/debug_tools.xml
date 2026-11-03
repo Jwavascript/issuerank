@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- debug 도구 화면 글(debug APK에만 — release 0, 제품 문구 표 밖). 위젯 미리보기 안 글은 위젯 그대로(strings_web) -->
+<resources>
+    <string name="debug_tools_title">이슈랭크 시험 도구</string>
+
+    <string name="debug_server_title">서버 주소</string>
+    <string name="debug_server_now">지금: %1$s</string>
+    <string name="debug_server_fake">가짜 서버</string>
+    <string name="debug_server_prod">운영</string>
+    <string name="debug_server_default">기본</string>
+    <string name="debug_server_custom">직접 입력(http · https 주소)</string>
+    <string name="debug_server_invalid">http · https 주소가 아닙니다</string>
+    <string name="debug_apply">적용</string>
+
+    <string name="debug_widget_title">위젯 미리보기</string>
+    <string name="debug_state">상태</string>
+    <string name="debug_height">높이(dp)</string>
+    <string name="debug_height_custom">높이 직접(40~600)</string>
+    <string name="debug_theme">색</string>
+    <string name="debug_theme_device">기기</string>
+    <string name="debug_theme_light">밝게</string>
+    <string name="debug_theme_dark">어둡게</string>
+    <string name="debug_scale">글자 배율</string>
+    <string name="debug_scale_device">기기(%1$s)</string>
+    <string name="debug_rows">줄 %1$d개(식 %2$d) · %3$d × %4$ddp · 배율 %5$s · %6$s</string>
+    <string name="debug_live_loading">live: 받는 중</string>
+    <string name="debug_live_ok">live: 받음 · %1$d줄</string>
+    <string name="debug_live_fail">live: 실패(%1$s)</string>
+    <string name="debug_live_again">다시 받기</string>
+    <string name="debug_clicked">누름: %1$d번째 줄 → %2$s</string>
+    <string name="debug_ignored">무시함: %1$s</string>
+    <string name="debug_ignored_unknown">%1$s(모르는 이름)</string>
+    <string name="debug_ignored_type">%1$s(형이 다름)</string>
+    <string name="debug_ignored_value">%1$s(허용 목록 밖)</string>
+    <string name="debug_ignored_range">%1$s(범위 밖)</string>
+
+    <!-- 미리보기 틀(계측 시험이 찾음) -->
+    <item name="debug_widget_frame" type="id" />
+</resources>

@@ -1,0 +1,6 @@
+# Gradle 공식 꼴: Windows autocrlf로 받아도 Linux 러너의 gradlew가 LF로 돌게
+/gradlew        text eol=lf
+*.bat           text eol=crlf
+*.jar           binary
+# 웹 기대값(JVM 시험): 생성 스크립트가 LF로 쓰므로 체크아웃도 LF(다시 만들면 같은 바이트)
+app/src/test/resources/web/*.json text eol=lf

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 웹 CSS 토큰 어둡게(index.html @media (prefers-color-scheme: dark)) — 기기 다크를 따름 -->
+<resources>
+    <color name="bg">#121211</color>
+    <color name="surface">#1a1a19</color>
+    <color name="text">#ecebe8</color>
+    <color name="muted">#9b978f</color>
+    <color name="faint">#6a675f</color>
+    <color name="line">#2b2a27</color>
+    <color name="hover">#222220</color>
+    <color name="ink">#ecebe8</color>
+    <color name="ink_text">#121211</color>
+    <color name="tile_text">#ffffff</color>
+    <!-- shadow 토큰(0 12px 32px rgba(0, 0, 0, .5))의 색만(알파 .5 → 0x80) -->
+    <color name="shadow">#80000000</color>
+
+    <color name="s_pol">#5566b3</color>
+    <color name="s_eco">#34855f</color>
+    <color name="s_soc">#ab6f2f</color>
+    <color name="s_cul">#9c5378</color>
+    <color name="s_wor">#357d93</color>
+    <color name="s_it">#6f56a8</color>
+</resources>

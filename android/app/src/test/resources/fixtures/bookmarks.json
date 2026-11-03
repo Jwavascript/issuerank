@@ -1,0 +1,46 @@
+[
+ {
+  "id": "2026-11-03-it-1",
+  "date": "2026-11-03",
+  "section": "it",
+  "rank": 2,
+  "title": "차세대 HBM 양산 경쟁 본격화",
+  "summary": [
+   "국내 업체들이 차세대 고대역폭 메모리 샘플 공급을 시작했다.",
+   "주요 GPU 업체의 인증 일정이 관건이다.",
+   "내년 상반기 양산 체제 전환이 목표다."
+  ],
+  "articleCount": 113,
+  "url": "https://news.naver.com/",
+  "folderId": "f52bfc5e7-6572-463d-8695-ad6b48737215",
+  "savedAt": "2026-11-03T00:12:33.120Z"
+ },
+ {
+  "id": "2026-11-02-cul-5",
+  "date": "2026-11-02",
+  "section": "cul",
+  "rank": 1,
+  "title": "한글날 앞두고 우리말 바로 쓰기 캠페인",
+  "summary": [
+   "공공기관 보도자료의 외국어 남용 실태가 공개됐다.",
+   "대체어 목록이 새로 배포됐다.",
+   "시민 참여형 공모전도 함께 열린다."
+  ],
+  "articleCount": 112,
+  "url": "https://news.naver.com/",
+  "folderId": "f52bfc5e7-6572-463d-8695-ad6b48737215",
+  "savedAt": "2026-11-02T21:40:00+09:00"
+ },
+ {
+  "id": "2026-11-03-pol-22",
+  "date": "2026-11-03",
+  "section": "pol",
+  "rank": 2,
+  "title": "국회 상임위, 민생법안 30여 건 일괄 상정",
+  "summary": null,
+  "articleCount": 120,
+  "url": "https://news.naver.com/",
+  "folderId": "f1",
+  "savedAt": "2026-11-02T03:05:00.000Z"
+ }
+]

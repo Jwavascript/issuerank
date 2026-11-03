@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  홈 화면 위젯 꼴(layout/widget.xml · widget_preview.xml). 색 = 웹 widget.js dynamicColor 3쌍 = 웹 토큰 surface · text · muted(@color — 런처가 values-night을 풂, C11 ⑥은 시험).
+  글자 = widget.js medium 크기: 제목 semibold 13(Android = sans-serif-medium) · 하단 regular 10.
+  칸 = 줄 수 식 min(10, max(1, ⌊(h − 24 − 20f) ÷ 22f⌋))의 숫자(widget/WidgetSizes): 위아래 안쪽 12dp씩 · 줄 칸 22sp · 하단 칸 20sp.
+  Android 12+는 코드가 같은 칸을 22f · 20f dp로 다시 정함(Android 14+ 글자 비선형 확대에서도 칸 = 식).
+-->
+<resources>
+    <!-- 둥근 모서리(Android 12+는 시스템 값 — values-v31) -->
+    <dimen name="widget_radius">16dp</dimen>
+    <dimen name="widget_padding_horizontal">16dp</dimen>
+    <dimen name="widget_padding_vertical">12dp</dimen>
+
+    <!-- 제목 줄 · 실패 안내(widget.js titleFont · titleColor · lineLimit 1 — 끝 "…") -->
+    <style name="IssueRankWidgetRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">22sp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- 하단 updatedLabel(widget.js foot: regular 10 · muted) -->
+    <style name="IssueRankWidgetFoot">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">20sp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/muted</item>
+    </style>
+</resources>

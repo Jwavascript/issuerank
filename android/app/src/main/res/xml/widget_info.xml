@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  위젯 정보(계획 4절): 4×2(minWidth 276dp · minHeight 117dp) · 줄일 수 있는 크기 130×66dp · 가로 · 세로 · 홈 화면.
+  updatePeriodMillis 1800000 = 30분마다 깨움(공식 하한) — 실제로 받을지는 widget.js 규칙(WidgetRules.dueForRefresh · refreshAfter).
+  설명 = strings_app "어제 가장 많이 보도된 이슈 헤드라인"(C9) · 미리보기 = 뼈대(widget_preview — 글자 없음).
+  description · previewLayout · targetCellWidth/Height는 Android 12+만 읽고 그 아래 판은 무시(의도 — UnusedAttribute):
+  Android 11 이하 고르기 창은 앱 아이콘(previewImage 없음 — 새 그림 파일 0), 놓은 뒤 첫 그림은 모든 판에서 initialLayout(같은 뼈대).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_preview"
+    android:minWidth="276dp"
+    android:minHeight="117dp"
+    android:minResizeWidth="130dp"
+    android:minResizeHeight="66dp"
+    android:previewLayout="@layout/widget_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    tools:ignore="UnusedAttribute" />

@@ -6,14 +6,14 @@ import * as schema from './db/auth-schema';
 
 // Google 로그인(O2, D26). 두 값이 다 있을 때만 켜고 하나라도 비면 끈다 → POST /sign-in/social 404 PROVIDER_NOT_FOUND
 // (앱 준비 실패로 만들지 않음: 이메일 로그인 · 랭킹 · 위젯은 그대로). 범위는 openid · email · profile 3개로 고정(추가 없음),
-// 본문 idToken 로그인은 닫음. 이름 = 앞뒤 공백을 뺀 Google name, 비면 이메일 @ 앞부분. 사진 주소는 저장하지 않음(image 칸 비움)
+// 본문 idToken 로그인은 Android 앱용으로 엶(O8, D35). 이름 = 앞뒤 공백을 뺀 Google name, 비면 이메일 @ 앞부분. 사진 주소는 저장하지 않음(image 칸 비움)
 function googleProvider(env: Record<string, string | undefined>): BetterAuthOptions['socialProviders'] {
   const clientId = env.GOOGLE_CLIENT_ID, clientSecret = env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) return {};
   return { google: {
     clientId, clientSecret,
     disableDefaultScope: true, scope: ['openid', 'email', 'profile'],
-    disableIdTokenSignIn: true,
+    disableIdTokenSignIn: false,
     mapProfileToUser: profile => ({
       name: (typeof profile.name === 'string' ? profile.name.trim() : '') || String(profile.email ?? '').split('@')[0],
       image: undefined,

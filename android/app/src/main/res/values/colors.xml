@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 웹 CSS 토큰(ex12/public/index.html :root) 밝게. 이름 = 토큰 이름에서 앞 하이픈 둘을 빼고 하이픈은 밑줄로(s-pol → s_pol). XML 주석에는 하이픈 둘을 못 씀 -->
+<resources>
+    <color name="bg">#f7f7f5</color>
+    <color name="surface">#ffffff</color>
+    <color name="text">#161616</color>
+    <color name="muted">#6f6b65</color>
+    <color name="faint">#a29e97</color>
+    <color name="line">#e7e4df</color>
+    <color name="hover">#efede9</color>
+    <color name="ink">#161616</color>
+    <color name="ink_text">#ffffff</color>
+    <color name="tile_text">#ffffff</color>
+    <!-- shadow 토큰(0 12px 32px rgba(20, 18, 15, .12))의 색만(알파 .12 → 0x1f) -->
+    <color name="shadow">#1f14120f</color>
+
+    <color name="s_pol">#6476c9</color>
+    <color name="s_eco">#3d9a74</color>
+    <color name="s_soc">#c8843a</color>
+    <color name="s_cul">#b8638f</color>
+    <color name="s_wor">#3f93ad</color>
+    <color name="s_it">#8467c4</color>
+
+    <!-- 적응형 아이콘 바탕(계획 9절) — 밝게/어둡게 같음 -->
+    <color name="ic_launcher_background">#161616</color>
+</resources>

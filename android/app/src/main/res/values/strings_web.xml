@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  웹과 같은 문구만. 값마다 자리 표시(%1$s · %1$d)를 뺀 글자 조각이 ex12/public/index.html · offline.html · widget.js · widget.html(C9 — 위젯 문구) 중 한 곳에 그대로 있어야 함
+  (JVM 시험 WebStringsTest가 대조). 이름 = data/Texts.kt Str 항목의 소문자(같은 목록 — 시험이 양쪽을 맞춤).
+  웹이 글자를 이어 붙이는 곳은 자리 표시로. 알림 · 설치 · /card · /widget 안내 · Analytics 문구는 넣지 않음.
+  app_name은 앱 이름(debug는 src/debug의 "이슈랭크 시험"이 덮음) — 화면 · 공유 제목의 "이슈랭크"는 brand.
+-->
+<resources>
+    <string name="app_name">이슈랭크</string>
+
+    <!-- 머리(index.html 436~466 · renderUser 1386) -->
+    <string name="brand">이슈랭크</string>
+    <string name="cd_home">이슈랭크 홈</string>
+    <string name="cd_view_switch">보기 전환</string>
+    <string name="tab_map">이슈맵</string>
+    <string name="tab_list">랭킹</string>
+    <string name="bookmarks">북마크</string>
+    <string name="login">로그인</string>
+    <string name="user_logout">%1$s · 로그아웃</string>
+
+    <!-- 날짜 줄(472~497 · renderContext 698~711 · fmtDate 608 · fmtShort 609 · fmtUpdated 611) -->
+    <string name="rank_title_today">오늘 가장 많이 보도된 이슈</string>
+    <string name="rank_title_past">%1$s의 주요 이슈</string>
+    <string name="rank_desc_map">6개 섹션 Top 5 이슈를 한 화면에 펼쳤습니다. 연관기사가 많을수록 넓게 보입니다.</string>
+    <string name="rank_desc_list">섹션마다 연관기사가 많은 순으로 상위 5개 이슈를 AI가 3줄로 요약했습니다.</string>
+    <string name="cd_prev_day">이전 날짜</string>
+    <string name="cd_pick_date">날짜 선택</string>
+    <string name="cd_next_day">다음 날짜</string>
+    <string name="today">오늘</string>
+    <string name="date_text_today">%1$s · 오늘</string>
+    <string name="date_full">%1$d월 %2$d일 (%3$s)</string>
+    <string name="date_short">%1$d.%2$d</string>
+    <string name="weekday_0">일</string>
+    <string name="weekday_1">월</string>
+    <string name="weekday_2">화</string>
+    <string name="weekday_3">수</string>
+    <string name="weekday_4">목</string>
+    <string name="weekday_5">금</string>
+    <string name="weekday_6">토</string>
+    <string name="am">오전</string>
+    <string name="pm">오후</string>
+    <string name="time_updated">%1$s %2$s %3$d:%4$02d</string>
+    <string name="updated_line">%1$s 수집 · 이슈 %2$d개</string>
+
+    <!-- 이슈맵(500~510 · renderMap 757~768 · drawMap 770~828, 작은 타일 "n위 · m건" = CSS 284) -->
+    <string name="map_all_sections">전체 섹션</string>
+    <string name="crumb_separator">/</string>
+    <string name="map_section_total">연관기사 %1$d건</string>
+    <string name="map_total">연관기사 합계 %1$s건</string>
+    <string name="map_zoom_in">확대 →</string>
+    <string name="map_zoom_out">← 전체</string>
+    <string name="rank_n">%1$d위</string>
+    <string name="count_n">%1$d건</string>
+    <string name="tile_xs">%1$s · %2$s</string>
+    <string name="cd_tile">%1$s %2$d위 %3$s, 연관기사 %4$d건</string>
+    <string name="map_footer">섹션 영역은 모두 같은 넓이이고, 각 타일은 연관기사가 많을수록 넓습니다. 타일을 누르면 요약을 볼 수 있습니다.</string>
+    <string name="empty_no_data_title">해당 날짜의 랭킹 데이터가 없습니다</string>
+    <string name="empty_no_data_body">다른 날짜를 선택하거나 오늘 랭킹으로 돌아가세요.</string>
+    <string name="empty_no_data_action">오늘 랭킹 보기</string>
+
+    <!-- 랭킹 목록 · 카드(512~522 · itemHTML 677~694 · summaryHTML 672~674 · renderList 837~847 · timeAgo 662) -->
+    <string name="cd_list">랭킹 목록</string>
+    <string name="cd_sections">섹션</string>
+    <string name="all">전체</string>
+    <string name="section_pol">정치</string>
+    <string name="section_eco">경제</string>
+    <string name="section_soc">사회</string>
+    <string name="section_cul">생활·문화</string>
+    <string name="section_wor">세계</string>
+    <string name="section_it">IT·과학</string>
+    <string name="summary_toggle">요약 펼치기</string>
+    <string name="top5">Top 5</string>
+    <string name="list_footer">요약은 AI가 생성했으며 원문은 각 언론사 사이트에서 확인할 수 있습니다.</string>
+    <string name="related_articles">연관기사</string>
+    <string name="section_rank">%1$s %2$d위</string>
+    <string name="meta_separator">·</string>
+    <string name="saved_ago">%1$s 저장</string>
+    <string name="summary_none">요약 없음 · 원문을 확인해 주세요</string>
+    <string name="original_article">기사 원문</string>
+    <string name="share">공유</string>
+    <string name="cd_share_issue">이 이슈 공유</string>
+    <string name="cd_unbookmark">북마크 해제</string>
+    <string name="ago_now">방금</string>
+    <string name="ago_minutes">%1$d분 전</string>
+    <string name="ago_hours">%1$d시간 전</string>
+    <string name="ago_days">%1$d일 전</string>
+
+    <!-- 북마크 화면(524~536 · renderBookmarks 850~892) -->
+    <string name="bm_sub">저장한 기사 %1$d개 · 최근 저장 순</string>
+    <string name="cd_folders">폴더</string>
+    <string name="folder_delete">폴더 삭제</string>
+    <string name="cd_folder_delete">‘%1$s’ 폴더 삭제</string>
+    <string name="login_required">로그인이 필요합니다</string>
+    <string name="bm_login_body">로그인하면 북마크한 기사를 모아 볼 수 있습니다.</string>
+    <string name="bm_empty_title">북마크한 기사가 없습니다</string>
+    <string name="bm_empty_body">이슈맵이나 랭킹에서 관심 있는 이슈를 북마크해 보세요.</string>
+    <string name="bm_empty_action">이슈맵 보러 가기</string>
+    <string name="ranking_of_date">%1$s 랭킹</string>
+    <string name="bm_footer">북마크는 계정에 저장되어 어느 기기에서든 같은 목록이 보입니다.</string>
+
+    <!-- 맨 아래(538) -->
+    <string name="share_site">이슈랭크 공유</string>
+    <string name="privacy">개인정보처리방침</string>
+    <string name="terms">이용약관</string>
+    <string name="contact">문의</string>
+
+    <!-- 상세(542 · openDrawer 915~942) -->
+    <string name="cd_issue_detail">이슈 상세</string>
+    <string name="close">닫기</string>
+    <string name="detail_rank_label">섹션 순위</string>
+    <string name="detail_rank_value">%1$s %2$d위 / 5</string>
+    <string name="detail_collected">수집</string>
+    <string name="bookmarked">북마크됨</string>
+
+    <!-- 폴더 고르기(543 · openPop 953~963) -->
+    <string name="folder_save_title">폴더에 저장</string>
+    <string name="folder_new_hint">새 폴더 이름</string>
+    <string name="folder_create">만들기</string>
+
+    <!-- 폴더 삭제 확인 창(565~569 · openFolderDelete 1035~1045) -->
+    <string name="folder_delete_title">‘%1$s’ 폴더를 삭제할까요?</string>
+    <string name="folder_delete_note">폴더 안의 북마크 %1$d개도 함께 삭제됩니다. 삭제하면 되돌릴 수 없습니다.</string>
+    <string name="folder_delete_note_empty">이 폴더는 비어 있습니다. 삭제하면 되돌릴 수 없습니다.</string>
+    <string name="cancel">취소</string>
+    <string name="delete">삭제</string>
+
+    <!-- 로그인 창(546~558 · setAuthMode 1398~1410 · authMessage 1420~1427 · googleStartMessage 1495~1499 · googleReturn 1597~1604) -->
+    <string name="signup">회원가입</string>
+    <string name="auth_switch_to_login">로그인으로 전환</string>
+    <string name="google_continue">Google로 계속하기</string>
+    <string name="auth_or_email">또는 이메일로</string>
+    <string name="auth_name">이름</string>
+    <string name="auth_email">이메일</string>
+    <string name="auth_password">비밀번호</string>
+    <string name="auth_err_name">이름을 입력해 주세요</string>
+    <string name="auth_err_credentials">이메일 또는 비밀번호를 확인해 주세요</string>
+    <string name="auth_err_exists">이미 가입된 이메일입니다</string>
+    <string name="auth_err_password_length">비밀번호는 8~128자로 입력해 주세요</string>
+    <string name="auth_err_invalid">이름, 이메일과 비밀번호를 확인해 주세요</string>
+    <string name="try_later">잠시 후 다시 시도해 주세요</string>
+    <string name="auth_err_generic">인증 요청을 처리하지 못했습니다. 다시 시도해 주세요</string>
+    <string name="google_unavailable">지금은 Google 로그인을 사용할 수 없습니다</string>
+    <string name="google_cancelled">Google 로그인을 취소했습니다</string>
+    <string name="google_not_linked">이미 가입된 이메일입니다. 처음 가입한 방법으로 로그인해 주세요</string>
+    <string name="google_failed">Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요</string>
+
+    <!-- 토스트 · 단추(save 979 · unsave 995 · deleteFolder 1084 · start 1616 · restoreSession 1446 · signOut 1452~1453 · 1472 · 1537) -->
+    <string name="toast_bm_login">북마크하려면 로그인이 필요합니다</string>
+    <string name="toast_saved">‘%1$s’에 저장했습니다</string>
+    <string name="toast_view_bookmarks">북마크 보기</string>
+    <string name="toast_unsaved">북마크를 해제했습니다</string>
+    <string name="toast_undo">되돌리기</string>
+    <string name="toast_folder_deleted">‘%1$s’ 폴더를 삭제했습니다</string>
+    <string name="toast_issue_not_found">이슈를 찾을 수 없습니다</string>
+    <string name="toast_session_failed">로그인 상태를 확인하지 못했습니다</string>
+    <string name="toast_signed_in">로그인했습니다</string>
+    <string name="toast_signed_out">로그아웃했습니다</string>
+    <string name="toast_sign_out_failed">로그아웃하지 못했습니다. 다시 시도해 주세요</string>
+
+    <!-- 공유(issueShare 1286~1289 · SITE_SHARE 1284). 제목 = brand -->
+    <string name="share_issue_text">[%1$s] %2$s</string>
+    <string name="share_site_text">어제 가장 많이 보도된 뉴스 — 섹션별 순위 · 3줄 요약</string>
+
+    <!-- 오프라인 안내(offline.html 40~42) -->
+    <string name="offline_title">인터넷에 연결되어 있지 않습니다</string>
+    <string name="offline_note">연결되면 다시 시도해 주세요. 랭킹은 매일 새벽 갱신됩니다.</string>
+    <string name="retry">다시 시도</string>
+
+    <!-- 홈 화면 위젯 실패 안내(widget.js 97 — 받지 못했고 캐시도 없을 때, C9) -->
+    <string name="widget_fail">불러오지 못했습니다</string>
+</resources>

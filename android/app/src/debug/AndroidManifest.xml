@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- debug만: 가짜 서버 127.0.0.1 평문 허용(release는 평문 0) -->
+    <application android:networkSecurityConfig="@xml/network_security_config">
+
+        <!--
+          debug 도구(서버 주소 · 위젯 미리보기 — 검증 11 · 12): `adb shell am start -n <패키지>/io.github.jwavascript.issuerank.DebugToolsActivity`로만 엶.
+          exported true = 셸(adb)이 열 수 있게 · intent-filter 0 = 앱 아이콘 0 · 암시적 Intent로 찾을 수 없음 · 받는 Extra는 허용 목록만(DebugExtras).
+          release APK에는 이 화면이 없음(debug 소스셋).
+        -->
+        <activity
+            android:name=".DebugToolsActivity"
+            android:exported="true"
+            android:label="@string/debug_tools_title"
+            android:launchMode="singleTop" />
+    </application>
+
+</manifest>
