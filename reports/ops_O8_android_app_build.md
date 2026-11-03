@@ -295,3 +295,41 @@ keytool -genkeypair -v -keystore <저장소 밖 경로>/issuerank-release.jks -s
 - `./gradlew --stop`(데몬 1개 멈춤) · java 0 · node 0 · adb 0(adb 서버를 띄운 적 0 → reverse 0) · aapt2 0 · 3100 닫힘. 내가 띄운 것: Gradle(마지막 빌드 · 의존성 4번 — 한 번에 하나) · 가짜 서버 2번(PID 30472 · 37884 — 그 PID만 끔, `server.pid`는 README대로 남음) · node 스크립트 · sdkmanager(1단계) · apkanalyzer · javap · java 단일 파일 · android.exe `--help` 1번(13절 14). 사용자 프로그램(StreamDock `node20.exe` 3개 · PID 13796 · Code.exe · claude · firefox · steam) 손대지 않음(스냅숏 `a6-ps-*.txt`).
 - 쓴 곳: `.github/workflows/android.yml` · 이 보고 · `android/.data/o8-build-20261103/`(`a6-*` · `A6ParseProd.java` · `device-run.sh` · `notes/07-verify.md`) · scratchpad(LF 사본 — 저장소 밖). 저장소 그 밖 파일 변경 0: `git status --short` = 시작 5줄 + `?? .github/workflows/android.yml` + `?? reports/ops_O8_android_app_build.md`.
 - 운영: GET 2(1단계) · 쓰기 · 로그인 · DB 0. 바깥: api.github.com(GET 23 — 1단계 resolve 13 · action.yml 3 · recheck 7 + 2단계 0) · registry.npmjs.org(npx redocly · Next 빌드 안내) · 운영 배포 주소 2 · (가능성) play.google.com(13절 14).
+
+## 16. 배포 줄 14(코디네이터 — 사용자 승인 뒤, 2026-11-03 KST 20:10~20:50)
+
+사용자(11-03): Google 웹 클라이언트 ID 알려 줌 · Android OAuth 클라이언트 2개 등록 · 배포 키 생성 + Secret 2개 등록 · "그 다음 과정을 자동으로 진행". 기기 시험은 아직 못 함(무선 디버깅 준비 전 — C2 그대로).
+
+### ① Google 웹 클라이언트 ID 넣음(C3 자리표시자 끝)
+- `android/app/src/main/res/values/google.xml` = `233544760606-7cov17el2s1ljluql6f0ge30esrm1spm.apps.googleusercontent.com`(공개 식별자 · 비밀번호 아님).
+- 깨지는 시험 1개를 함께 고침: `GoogleSignInTest.placeholderClientIdIsUnavailable_withoutRequests`의 XML 단정을 "자리표시자임" → **"자리표시자 아님 + 실제 ID 꼴(`[0-9]{6,}-[a-z0-9]{10,}\.apps\.googleusercontent\.com`)"** 으로. `isPlaceholder` 함수 단정(글자 2개)은 그대로 남겨 규칙을 계속 고정. 동작 단정(Unavailable → `GOOGLE_UNAVAILABLE` · 요청 0)은 손대지 않음.
+- 계측 `GoogleLoginTest.placeholderClientId_defaultHookIsUnavailable…`은 `assumeTrue`로 스스로 건너뜀(A4 설계 — 실제 계정 창을 띄우지 않게).
+- 제품 코드 변경 0(걸이 · 매니페스트 · 권한 · 문구 그대로).
+
+### ② 다시 돌린 검증(`c0-google-id-build.txt`)
+- `clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest assembleRelease --offline -Pandroid.builder.sdkDownload=false`(-x 0): **BUILD SUCCESSFUL 1분 53초 · 136 작업**.
+- **단위 168/168**(실패 · 건너뜀 0) · **Kotlin 경고 0** · **lint 오류 0 / 경고 8**(`UseKtx` 4 · `UnusedResources` 1 = `R.drawable.badge`(v1.2) · `OldTargetApi` · `NotShrinkingResources` · `DataExtractionRules` — A5 때와 같은 묶음).
+- APK 확인: debug · release 둘 다 `resources.arsc`에 실제 ID 1개 · **자리표시자 글자 0**. 패키지 · 판 · 이름 그대로(`…issuerank.debug` 1.0.0-debug · `…issuerank` 1.0.0). **release 권한 = A5 덤프와 바이트까지 같음**(새 권한 0).
+
+### ③ 커밋 · 푸시
+- 커밋 **`9b4e63f`**(160파일 · +16,888 −28): `android/` 151 + ex12 4 + `android.yml` + 보고 2 + HANDOFF · PLAN.
+- `git add --chmod=+x android/gradlew` 함 → 색인 모드 **100755**, blob은 **LF**(`android/.gitattributes` `/gradlew text eol=lf`). `android.yml`도 LF.
+- 커밋 전 검사: 저장소 안 `*.jks` · `*.keystore` · `local.properties` · `.env` **0** · 무시 대상 파일 **0** · 비밀 꼴 글자 **0**(걸린 2건 = `ex12/test/auth.test.ts`의 HEAD부터 있던 가짜 시험 값 — 우리 diff가 더한 줄 아님).
+- `git push origin main` → `9e3a100..9b4e63f`.
+
+### ④ Actions `android.yml` 첫 실행(run `41627696408`, push 이벤트)
+- **conclusion = success · 3분 36초**(20:27:42 → 20:31:18 KST). job `android` 성공.
+- 단계: checkout OK · **JDK 17 · Android SDK(android-37.0) 확인 OK** · setup-gradle OK · **`testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest` OK** · release 서명 · 요약 · 산출물 올리기 = **skipped**(수동 + release=true + main 조건대로) · 서명 키 지우기 = success(`always()`).
+- 러너 lint는 온라인이라 로컬 오프라인 lint에 없던 경고가 날 수 있었는데(C7 ③), **오류 0으로 지남**. 경고 수는 토큰 없이 로그를 못 받아(HTTP 403) 확인 못 함 — 브라우저에서 볼 수 있음.
+- 러너 이미지 미리 확인(api.github.com `actions/runner-images`): Ubuntu 24.04 · 26.04 모두 `JAVA_HOME_17_X64`(17.0.21) · `ANDROID_HOME=/usr/local/lib/android/sdk` · `build-tools 36.0.0` · `platforms;android-37.0` 있음 → release 단계의 `apksigner` 길도 맞음.
+
+### ⑤ Vercel 배포 · 운영 확인(`c0-line14-prod-check.*` · `c0-line14-rankings-recheck.*`)
+- **가짜 ID 토큰 1번**(`POST /api/auth/sign-in/social`, 앱 꼴 `{provider, idToken:{token}}` · Origin = 사이트): **401 `INVALID_TOKEN` "Invalid token" · Set-Cookie 0** = `native-client.test.ts` 거절 기대값과 같음 → **`auth.ts` 1줄(idToken 로그인 엶)이 운영에 반영됨**(그 전이면 다른 응답). 실제 Google 0 · 계정 생성 0.
+- **운영 `GET /api/rankings`**: 200 · Set-Cookie 0 · `date` = 오늘(2026-11-03) · `updatedAt` 10:34:17 KST · sections 배열 6개 · 이슈 30개(섹션마다 5) · rank 1..n 차례 · 이슈 칸(id · date · section · title · articleCount ≥ 0) 30/30 · summary 30개 모두 3줄 배열 · 기사 본문 · 세션 칸 0 → **앱 `ApiJson` 엄격 규칙과 맞음**.
+- 요청 수: 운영 **GET 2 · 인증 POST 1**(계획 한도 = GET ≤ 20 · 인증은 가짜 토큰 1번) · 쓰기 · 운영 DB 0. 첫 랭킹 검사의 FAIL 1은 내 스크립트가 `sections`를 배열이 아니라 객체로 읽은 버그여서, fixture로 꼴을 다시 보고 스크립트를 고쳐 GET 1번으로 다시 확인함(운영 문제 아님).
+
+### ⑥ 줄 14 판정과 남은 것
+- **줄 14 = 부분 OK**: Secret 2 · 커밋 · 푸시 · Vercel 배포 · 가짜 ID 토큰 1번 · `/api/rankings` 1번 · `android.yml` 기본 실행 = **OK**. 남은 것 = **release APK 만들기 · 내려받기**(`gh workflow run android.yml -f release=true`).
+  - 이 PC에 `gh`가 없고(C13 ④) 토큰도 없어 코디네이터가 수동 실행을 띄울 수 없음. 사용자가 **Actions › android › Run workflow › release 체크**로 1번 누르면 됨(main에서만 돈다). 끝나면 요약에 APK sha256 · 인증서 SHA-256만 찍히고 산출물은 30일 보관.
+- **줄 15 · 16**(release 기기 설치 · 사용자 확인)과 **줄 8~12**(기기)는 그대로 남음 — 태블릿 무선 디버깅 준비 뒤.
+- 정리: Gradle 데몬 멈춤 · java · node · adb 0 · 3100 닫힘 · 절전 막기 끔. 이 절에서 쓴 곳 = `google.xml` · `GoogleSignInTest.kt` · 이 보고 · HANDOFF · PLAN · `android/.data/o8-build-20261103/c0-*`.
