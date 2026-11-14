@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { and, asc, count, desc, eq, inArray, isNull, lt, lte, max, ne, notInArray, or, sql } from 'drizzle-orm';
 import type { Store } from '../app';
 import type { GroupStore } from '../grouping';
+import type { HealthIssue, HealthRun } from '../health-check';
 import type { CollectStore } from '../newsdata';
 import type { PushStore } from '../push-run';
 import type { SummaryStore } from '../summary';
@@ -151,6 +152,24 @@ export function pushStore(db: Db): PushStore {
     remove: async id => {
       await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, id));
     },
+  };
+}
+
+// 운영 확인(O9): today.ts는 그날 이슈 행 수, health.ts는 그날 이슈 · 수집 실행 행(읽기만)
+export function healthStore(db: Db) {
+  return {
+    issueCount: async (date: string) => {
+      const [r] = await db.select({ n: count() }).from(issues).where(eq(issues.date, date));
+      return Number(r?.n ?? 0);
+    },
+    day: async (date: string): Promise<{ issues: HealthIssue[]; runs: HealthRun[] }> => ({
+      issues: (await db.select({
+        id: issues.id, section: issues.section, articleCount: issues.articleCount, importance: issues.importance,
+        latestPublishedAt: issues.latestPublishedAt, summary: issues.summary,
+      }).from(issues).where(eq(issues.date, date))).map(r => ({ ...r, latestPublishedAt: r.latestPublishedAt.toISOString() })),
+      runs: (await db.select({ section: collectRuns.section, status: collectRuns.status, finishedAt: collectRuns.finishedAt })
+        .from(collectRuns).where(eq(collectRuns.date, date))).map(r => ({ ...r, finishedAt: r.finishedAt.toISOString() })),
+    }),
   };
 }
 

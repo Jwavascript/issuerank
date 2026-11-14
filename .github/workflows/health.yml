@@ -1,0 +1,104 @@
+# 운영 경보(O9 · D37 · AC-01-4): daily가 끝나면(after) + Vercel Cron(/api/cron/health, 08시대 KST → workflow_dispatch mode=morning)
+# npm run health로 그날(KST) 상태를 검사하고, 문제가 있으면 그날 이슈 "운영 경보 YYYY-MM-DD"를 열거나 댓글(경보 = GitHub 이슈, 사용자 결정 2026-11-14)
+# 같은 내용이 그 이슈에 이미 있으면 댓글을 다시 달지 않음. 이슈 닫기는 사용자
+# 출력은 숫자 · 코드 · 섹션 키 · 시각뿐(저장소 · 이슈가 공개). 이 워크플로는 경보를 냈어도 성공으로 끝남(빨간 표시는 daily 몫)
+# 수동 실행 test=true = DB를 보지 않고 "운영 경보 시험 YYYY-MM-DD" 이슈 하나(휴대폰 알림 확인용)
+name: health
+
+on:
+  workflow_run:
+    workflows: [daily]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'after = 실행 뒤 전체 검사 · morning = 랭킹 없음만(08시대 cron)'
+        required: false
+        default: after
+        type: choice
+        options: [after, morning]
+      test:
+        description: '시험 이슈 하나만 만듦(DB를 보지 않음)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: health
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ex12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ex12/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        if: inputs.test != true
+      - name: npm run health
+        shell: bash
+        # 입력 · 이벤트 값은 env로만 받아 따옴표로 넘김(run 줄에 직접 넣지 않음)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DAILY_URL: ${{ github.event.workflow_run.html_url }}
+          MODE: ${{ inputs.mode }}
+          TEST: ${{ inputs.test }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          date=$(TZ=Asia/Seoul date +%F)
+          body="$RUNNER_TEMP/body.md"
+          if [ "$TEST" = "true" ]; then
+            printf '시험 이슈입니다(DB를 보지 않음). 이 알림이 휴대폰에 오면 경보 경로 OK.\n\n검사 실행: %s\n\n@Jwavascript\n' "$RUN_URL" > "$body"
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "운영 경보 시험 $date" --body-file "$body"
+            exit $?
+          fi
+          if [ "$EVENT" = "workflow_run" ]; then
+            args=(--mode after --run "$CONCLUSION")
+          else
+            args=(--mode "${MODE:-after}")
+          fi
+          # 이슈 · 실행 요약에는 표준 출력만(Node의 .env 안내 · 오류 스택 같은 stderr는 작업 로그에만)
+          npm run --silent health -- "${args[@]}" > "$RUNNER_TEMP/health.log" 2> "$RUNNER_TEMP/health.err"
+          code=$?
+          cat "$RUNNER_TEMP/health.err" >&2
+          cat "$RUNNER_TEMP/health.log"
+          { printf '```\n'; cat "$RUNNER_TEMP/health.log"; printf '```\n'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 0 ]; then exit 0; fi
+          title="운영 경보 $date"
+          {
+            printf '```\n'; cat "$RUNNER_TEMP/health.log"; printf '```\n\n'
+            printf '검사 실행: %s\n' "$RUN_URL"
+            if [ -n "$DAILY_URL" ]; then printf '하루 실행: %s\n' "$DAILY_URL"; fi
+            printf '\n@Jwavascript\n'
+          } > "$body"
+          # 검색 색인을 쓰지 않고 열린 이슈 목록에서 제목이 정확히 같은 것(방금 만든 이슈도 찾음)
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -z "$number" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$body"
+            exit $?
+          fi
+          # 같은 검사 출력이 이미 본문 · 댓글에 있으면 다시 달지 않음
+          existing=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body,comments --jq '.body, .comments[].body' | tr -d '\r')
+          log=$(cat "$RUNNER_TEMP/health.log")
+          if [[ "$existing" == *"$log"* ]]; then
+            echo "같은 경보가 이미 있어 댓글 생략"
+            exit 0
+          fi
+          gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file "$body"

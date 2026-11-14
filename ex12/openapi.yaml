@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 이슈랭크 API
-  version: 0.8.0
+  version: 0.9.0
   description: 화면(index.html)과 홈 화면 위젯 · 인스타 카드 페이지(card.html)가 서버에 바라는 랭킹 · 위젯 · 카드 · 북마크 · 폴더 · 아침 알림 구독 API 계약.
 
 servers:
@@ -359,6 +359,28 @@ paths:
               example:
                 message: 해당 날짜의 랭킹 데이터가 없습니다
 
+  /api/cron/{job}:
+    get:
+      operationId: runCron
+      summary: 내부용 — Vercel Cron이 GitHub 워크플로를 실행(O9)
+      description: >-
+        Vercel Cron만 부른다(daily = 04시대 KST, health = 08시대 KST). Authorization이 Bearer CRON_SECRET과 같을 때만
+        GitHub API로 daily.yml(trigger=cron) · health.yml(mode=morning)의 workflow_dispatch를 한 번 보낸다. DB · 쿠키 없음, 모든 응답 no-store.
+      parameters:
+        - name: job
+          in: path
+          required: true
+          schema: { type: string, enum: [daily, health] }
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        '202': { description: '실행 요청 보냄 { dispatched: job }' }
+        '401': { description: 'Authorization 틀림 { message: UNAUTHORIZED }' }
+        '404': { description: '없는 job { message: NOT_FOUND }' }
+        '502': { description: 'GitHub 호출 실패 { message: DISPATCH_FAILED, status }' }
+        '503': { description: 'CRON_SECRET 또는 GITHUB_DISPATCH_TOKEN 없음 { message: CRON_NOT_CONFIGURED }' }
   /api/widget:
     get:
       operationId: getWidget

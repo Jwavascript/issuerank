@@ -1,12 +1,20 @@
 # 하루 1회 자동 실행(ex09에서 시작, 2026-10-16 ex12 PASS 뒤 ex12로 이동 · D3 · D5 · D10): 매일 04:17 KST에 collect → group → summarize(npm run daily)
 # 실패해도 자동 재시도하지 않음. 같은 날 수동 재실행(Run workflow · Re-run)은 최대 2회(운영 규칙, 코드로 막지 않음)
 # 이후 단계마다 working-directory · cache-dependency-path를 최신 exXX로 바꿈
+# 정시 시작(O9 · D37 · AC-01-3): Vercel Cron(/api/cron/daily, 04시대 KST)이 workflow_dispatch(trigger=cron)로 부름. schedule은 05:17 안전망.
+# 예약 · 정시 실행은 오늘 랭킹이 이미 있으면 daily를 건너뜀(같은 날 두 번 돌지 않음). 사람이 누른 수동 실행(trigger=manual)은 확인 없이 그대로
 name: daily
 
 on:
   schedule:
-    - cron: '17 19 * * *' # UTC 19:17 = KST 04:17 (2026-10-17 변경: 예약 지연 136~144분 관찰, 7시 전 갱신 목표)
+    - cron: '17 20 * * *' # UTC 20:17 = KST 05:17 안전망(2026-11-14 O9: 주 경로는 Vercel Cron 04시대. 예약은 중앙값 약 3시간 30분 늦음)
   workflow_dispatch:
+    inputs:
+      trigger:
+        description: 'manual = 사람이 누름(오늘 확인 없이 실행) · cron = Vercel Cron(오늘 랭킹이 있으면 건너뜀)'
+        required: false
+        default: manual
+        type: string
 
 concurrency:
   group: daily
@@ -30,7 +38,26 @@ jobs:
           cache: npm
           cache-dependency-path: ex12/package-lock.json
       - run: npm ci --no-audit --no-fund
+      # 예약 · 정시 실행의 첫 시도만(Re-run은 사람이 누른 것이라 확인 없이 — D5): npm run today 종료 0(오늘 랭킹 있음)이면 daily 건너뜀, 1(없음) · 2(확인 오류)면 그대로 실행
+      - name: 오늘 확인
+        id: guard
+        if: (github.event_name == 'schedule' || inputs.trigger == 'cron') && github.run_attempt == 1
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          out=$(npm run --silent today 2>"$RUNNER_TEMP/today.err")
+          code=$?
+          cat "$RUNNER_TEMP/today.err" >&2
+          printf '%s\n' "$out"
+          if [ "$code" -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            printf '오늘 랭킹이 이미 있어 건너뜀 · %s\n' "$out" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0
       - name: npm run daily
+        if: steps.guard.outputs.skip != 'true'
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
