@@ -41,6 +41,11 @@
 - 그대로 둔 참고: concurrency 3겹 cancelled · 랭킹 없는 날 morning/after 출력 차이로 댓글 1개 더 · PRODUCT_PLAN O13 줄의 Next · zod 문구(O13 계획 때 정리).
 - 다시 확인: LF 사본 35파일 356/356(테스트 수는 그대로 — 기존 시험에 단정 추가) · 빌드 exit 0 · 보안 멈춤 0. 새 시험 수는 처음 보고의 "30"이 아니라 **29**(심사 지적, 전체 356은 맞음).
 
+### 3.2 커밋 · 푸시 · 배포 줄 10 (2026-11-14 23:0x KST, 사용자 "이어서 진행" — 토큰 · Vercel env 2개 넣었다고 함)
+- 커밋 `c78b02b`(O9 22파일, HANDOFF는 O9 줄만 — O8 미커밋 `android/` 8 · O8 보고 · HANDOFF O8 기록은 작업 트리에 그대로) · main 푸시.
+- 줄 10 **OK**: 배포 반영 23:05:54 KST(`/api/cron/nope` → 새 404 JSON). `/api/cron/daily` · `/api/cron/health` 머리 없음 401 · 틀린 값 401(503 아님 = 배포에 `CRON_SECRET` 있음) · no-store · 쿠키 0. 그 뒤 Actions 실행 목록에 새 daily · health 실행 0(잘못 시작 안 됨) · 워크플로 `health` active. 운영 요청 7(GET만).
+- `GITHUB_DISPATCH_TOKEN`이 맞는지는 맞는 비밀값 호출 = Vercel cron만 할 수 있어 줄 11(다음 날 04시대)에서 드러남.
+
 ## 4. 실행 환경 메모 (다음 세션용)
 - **vitest는 드라이브 문자가 대문자인 경로에서 돌려야 함**: VS Code 터미널의 `c:\Users\...`(소문자)에서 `npm test`를 돌리면 모든 파일이 `Vitest failed to find the runner`로 실패(모듈이 두 번 잡힘). PowerShell `Set-Location 'C:\Users\phoria\issuerank\ex12'` 뒤 실행하면 정상.
 - npm 11이 esbuild postinstall을 승인 대기로 둠(`npm warn install-scripts`) — 이번 빌드 · 테스트에는 영향 없음, 잠금 파일 esbuild 판 변화 0.
