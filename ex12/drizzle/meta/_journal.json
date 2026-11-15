@@ -57,6 +57,13 @@
       "when": 1792464369403,
       "tag": "0007_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794700800000,
+      "tag": "0008_keyword_timeline",
+      "breakpoints": true
     }
   ]
 }

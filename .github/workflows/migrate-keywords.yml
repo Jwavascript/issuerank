@@ -1,0 +1,53 @@
+name: migrate-keywords
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = 0007 이력·미적용 확인, apply = 기존 자료 보존 확인 후0008만 적용'
+        type: choice
+        options: [check, apply]
+        default: check
+        required: true
+concurrency:
+  group: daily
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: ex12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ex12/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: 안전 출력으로0008 확인·적용
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          set +e
+          node --import tsx tools/migrate-keywords.ts --"$MODE" > "$RUNNER_TEMP/keyword-migration.log" 2>&1
+          result=$?
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const text = fs.readFileSync(process.env.RUNNER_TEMP + '/keyword-migration.log', 'utf8');
+          const lines = text.trim().split(/\r?\n/);
+          const secret = process.env.DATABASE_URL || '';
+          if (!text.trim() || (secret && text.includes(secret)) || lines.some(line => !/^KEYWORD_MIGRATION_[A-Z0-9_]+(?:=(?:true|false|[0-9]+))?$/.test(line))) {
+            console.error('KEYWORD_MIGRATION_OUTPUT_BLOCKED'); process.exit(2);
+          }
+          process.stdout.write(text);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '```\n' + text + '```\n');
+          NODE
+          safe=$?
+          if [ "$safe" -ne 0 ]; then exit "$safe"; fi
+          exit "$result"
