@@ -276,7 +276,7 @@ API (ex01에서 확정)
 
 ## 10. 단계 메모 (다음 PLAN에 넘길 것)
 
-- ops O14(2026-11-16 운영 적용): 사용자 푸시·배포 승인. 전용 workflow·0008 적용 도구965b53e 푸시, Actions에서0007까지 이력8 확인→0008 적용 성공(새2표/RLS/FK/기존 내용 보존). 로컬 Secret 복원·실제 뉴스/AI·수동 푸시0. 이후 기능 배포와 다음 아침 자동 실행 확인은 reports/ops_O14_keyword_timeline_deploy.md에 이어 기록.
+- ops O14(2026-11-16 운영 적용): 사용자 승인으로 도구965b53e→Actions0008 적용·기존 내용 보존·무변경 재실행(이력9)→기능39f32fb main 푸시·Vercel Production ready. 실제 배포 대상389/389·빌드, 운영 HTML/JS/CSS/랭킹/DB검색/다중키워드/400/401 확인. 로컬 Secret 복원·뉴스/AI·수동 푸시0. 다음은 본인 웹 설정 후 아침 자동 daily/push·실수신 확인, 최종 심사 보류. reports/ops_O14_keyword_timeline_deploy.md.
 
 - ops O14(2026-11-15): D40·US16의 웹 관심 키워드 검색/타임라인/저장/아침 알림 로컬 구현. 테스트391/391·빌드·가짜 API 브라우저OK, 실제 DB/배포·실기기 푸시SKIP으로 PASS 보류(OK9/FAIL0/SKIP2). DB0008은 기존 표 보존·새2표/RLS/FK 생성 SQL까지 검증, 미적용. 기존 push 명령도 새 기기 표를 읽으므로0008 선적용 후 배포. Windows .data 사본 수집/CRLF/tsx os.userInfo 문제를 분리 기록. 첫 심사 색상 재사용 경계는 제작 보완 후 재심사. 의미 기반 사건 연결은 후속. 상세 reports/ops_O14_keyword_timeline_judge.md.
 
