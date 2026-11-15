@@ -5,6 +5,8 @@ import { widgetRoute } from './routes/widget';
 import { bookmarksRoute } from './routes/bookmarks';
 import { foldersRoute } from './routes/folders';
 import { pushRoute } from './routes/push';
+import { keywordsRoute, timelineRoute } from './routes/keywords';
+import type { KeywordStore } from './keyword-store';
 import { BAD_REQUEST } from './schemas';
 import type { Issue, Ranking, Widget } from './ranking';
 
@@ -30,13 +32,13 @@ export type Store = {
 };
 
 // Hono 앱(라우트 5개 · onError). 서버는 index.ts가 띄우고, 테스트는 app.request로 바로 부름
-export type SessionEnv = { Variables: { userId: string } };
+export type SessionEnv = { Variables: { userId: string; sessionId?: string } };
 type Auth = {
   handler: (request: Request) => Promise<Response>;
-  api?: { getSession: (input: { headers: Headers }) => Promise<{ user: { id: string } } | null> };
+  api?: { getSession: (input: { headers: Headers }) => Promise<{ user: { id: string }; session?: { id: string } } | null> };
 };
 
-export function createApp(store: Store, auth?: Auth) {
+export function createApp(store: Store, auth?: Auth, keywordStore?: KeywordStore) {
   const app = new Hono<SessionEnv>();
   if (auth) app.on(['GET', 'POST'], '/api/auth/*', async c => {
     c.header('Cache-Control', 'no-store');
@@ -47,17 +49,20 @@ export function createApp(store: Store, auth?: Auth) {
   app.route('/api/rankings', rankings(store));
   app.route('/api/widget', widgetRoute(store));
   app.route('/api/push/subscriptions', pushRoute(store)); // 아침 알림 구독(O5): 로그인 없이 기기 단위
+  if (keywordStore) app.route('/api/timeline', timelineRoute(keywordStore));
   // JSON 검사와 저장소 접근보다 먼저 서버 세션을 검증한다.
   app.use('/api/*', async (c, next) => {
-    if (!/^\/api\/(bookmarks|folders)(\/|$)/.test(c.req.path)) return next();
+    if (!/^\/api\/(bookmarks|folders|keywords)(\/|$)/.test(c.req.path)) return next();
     c.header('Cache-Control', 'no-store');
     const session = await auth?.api?.getSession({ headers: c.req.raw.headers });
     if (!session?.user.id) return c.json({ message: '로그인이 필요합니다' }, 401);
     c.set('userId', session.user.id);
+    c.set('sessionId', session.session?.id);
     await next();
   });
   app.route('/api/bookmarks', bookmarksRoute(store));
   app.route('/api/folders', foldersRoute(store));
+  if (keywordStore) app.route('/api/keywords', keywordsRoute(keywordStore));
 
   // 깨진 JSON 본문(검사기가 던지는 400)은 { message }로. 그 밖은 Hono 기본 처리와 같음
   app.onError((err, c) => {

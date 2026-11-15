@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>이슈랭크</title>
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/keywords.css">
 <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
@@ -449,6 +450,7 @@ main { overflow-x: clip; }
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         랭킹 <kbd>2</kbd>
       </button>
+      <button role="tab" data-view="keywords" aria-selected="false">키워드</button>
     </nav>
     <div class="header-right">
       <button type="button" class="pill-btn" id="installBtn" aria-label="이슈랭크 앱 설치" hidden>
@@ -521,6 +523,7 @@ main { overflow-x: clip; }
     </div>
   </section>
 
+  <section class="view" id="view-keywords" aria-label="키워드 타임라인"></section>
   <!-- ═════ View 3: 북마크 ═════ -->
   <section class="view" id="view-bookmarks" aria-label="북마크">
     <div class="wrap">
@@ -584,7 +587,7 @@ const secIssues = k => ranking?.sections.find(s => s.key === k)?.issues ?? [];
 
 /* ─────────────── API (같은 주소의 /api만 부름) ─────────────── */
 async function api(path, opts = {}) {
-  const personal = /^\/(bookmarks|folders)(\/|$)/.test(path);
+  const personal = /^\/(bookmarks|folders|keywords)(\/|$)/.test(path);
   const version = state.authVersion;
   const res = await fetch('/api' + path, { ...opts, cache: 'no-store', ...(opts.body ? { headers: { 'Content-Type': 'application/json' } } : {}) });
   const data = res.status === 204 ? null : await res.json().catch(() => null);
@@ -1349,7 +1352,7 @@ function registerServiceWorker() {
 }
 
 /* ─────────────── Navigation ─────────────── */
-const ORDER = ['map', 'list', 'bookmarks'];
+const ORDER = ['map', 'list', 'bookmarks', 'keywords'];
 function placePill() {
   const sw = document.querySelector('.switch');
   const btn = sw.querySelector(`[data-view="${state.view}"]`);
@@ -1366,7 +1369,7 @@ function go(view, push = true) {
   document.getElementById('bmNav').toggleAttribute('aria-current', view === 'bookmarks');
   if (view === 'bookmarks') document.getElementById('bmNav').setAttribute('aria-current', 'page');
   placePill();
-  document.getElementById('contextWrap').hidden = view === 'bookmarks';
+  document.getElementById('contextWrap').hidden = view === 'bookmarks' || view === 'keywords';
   document.querySelectorAll('.view').forEach(v => {
     const on = v.id === `view-${view}`;
     if (on && prev !== view) { v.classList.remove('active'); void v.offsetWidth; v.dataset.from = ORDER.indexOf(view) > ORDER.indexOf(prev) ? 'right' : 'left'; }
@@ -1376,6 +1379,7 @@ function go(view, push = true) {
   renderContext();
   if (view === 'map') renderMap();
   if (view === 'bookmarks') renderBookmarks();
+  if (view === 'keywords') globalThis.keywordUI?.entered();
   if (push && location.hash !== `#${view}`) history.pushState(null, '', `#${view}`);
   if (prev !== view) scrollTo({ top: 0 });
 }
@@ -1438,6 +1442,7 @@ async function applyUser(user) {
   state.bookmarks = []; state.folders = []; state.folderFilter = 'all';
   closePop(); closeDrawer();
   renderUser(); syncBookmarkUI(); renderBookmarks();
+  void globalThis.keywordUI?.refreshUser();
   if (user) { await loadBookmarks(); syncBookmarkUI(); renderBookmarks(); }
 }
 async function restoreSession() {
@@ -1570,8 +1575,8 @@ document.addEventListener('keydown', e => {
   if (e.key === '1') go('map');
   if (e.key === '2') go('list');
   if (e.key === '3') go('bookmarks');
-  if (e.key === 'ArrowLeft' && state.view !== 'bookmarks') setDate(addDays(state.date, -1));
-  if (e.key === 'ArrowRight' && state.view !== 'bookmarks' && state.date < TODAY) setDate(addDays(state.date, 1));
+  if (e.key === 'ArrowLeft' && ['map', 'list'].includes(state.view)) setDate(addDays(state.date, -1));
+  if (e.key === 'ArrowRight' && ['map', 'list'].includes(state.view) && state.date < TODAY) setDate(addDays(state.date, 1));
 });
 let raf;
 new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { placePill(); if (state.view === 'map') drawMap(); }); }).observe(document.body);
@@ -1622,6 +1627,7 @@ start();
 registerServiceWorker();
 </script>
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script src="/keywords.js"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

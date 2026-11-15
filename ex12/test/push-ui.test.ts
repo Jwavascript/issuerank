@@ -6,7 +6,7 @@ import { inflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
 import { deviceCode, validKeys, VAPID_PUBLIC_KEY } from '../server/push-config';
 
-const html = readFileSync('public/index.html', 'utf8');
+const html = readFileSync('public/index.html', 'utf8').replace(/\r\n/g, '\n');
 const between = (source: string, start: string, end: string) => {
   const i = source.indexOf(start), j = source.indexOf(end, i);
   if (i < 0 || j < 0) throw new Error(`없음: ${start}`);
@@ -236,7 +236,7 @@ describe('index.html 헤더 · 코드 위치 · 공개 키', () => {
 });
 
 describe('widget.html #push 절 · 상태 한 줄', () => {
-  const widget = readFileSync('public/widget.html', 'utf8');
+  const widget = readFileSync('public/widget.html', 'utf8').replace(/\r\n/g, '\n');
   it('#push = 앱 절 뒤 · iPhone 절 앞 · 문구 = 계획 표 · 상태 칸', () => {
     const app = widget.indexOf('<h2 id="app">'), push = widget.indexOf('<h2 id="push">아침 알림</h2>'), iphone = widget.indexOf('<h2>iPhone</h2>');
     expect(app).toBeGreaterThan(0);
@@ -273,19 +273,20 @@ describe('widget.html #push 절 · 상태 한 줄', () => {
   });
 });
 
-describe('privacy.html 아침 알림 문장(초안 그대로)', () => {
+describe('privacy.html 아침 알림 · 선택적 키워드 연결 안내', () => {
   const privacy = readFileSync('public/privacy.html', 'utf8');
   const section = (n: number) => text(between(privacy, `<h2>${n}. `, n === 6 ? '<h2>7. ' : `<h2>${n + 1}. `));
   it('1 · 2 · 3 · 5 · 6항 새 문장 · 7항 그대로 · 시행일 · 변경 줄 · 이메일 꼴은 문의처 안에만', () => {
-    expect(section(1)).toContain('아침 알림을 켠 기기: 그 기기 브라우저가 만든 알림 받는 주소(푸시 서비스 endpoint)와 알림 암호화용 공개 값 2개, 켠 시각, 마지막으로 알림을 보낸 날짜. 계정 · 이름 · 이메일 · IP 주소와 연결하지 않습니다.');
+    expect(section(1)).toContain('일반 아침 알림만 쓰면 계정 · 이름 · 이메일 · IP 주소와 연결하지 않습니다.');
+    expect(section(1)).toContain('사용자가 별도로 연결할 때만 해당 아침 알림 주소를 계정·로그인 세션과 연결');
     expect(section(2)).toContain('아침 알림(하루 한 번 "오늘의 뉴스가 도착했어요") 보내기 — 알림을 켠 기기에만');
     expect(section(3)).toContain('아침 알림 정보는 알림을 끄면 바로 지웁니다. 브라우저 알림 권한을 끄거나 앱 · 사이트 데이터를 지워 푸시 서비스가 그 주소를 더 쓸 수 없다고 알려 오면 다음 발송 때 지웁니다.');
     expect(section(5)).toContain('GitHub Inc. — 매일 자동 실행(뉴스 수집 · 아침 알림 발송 작업)');
     expect(section(5)).toContain('아침 알림은 기기 브라우저 회사의 푸시 서비스(Google · Apple · Mozilla · Microsoft)를 거쳐 전달됩니다. 알림 내용은 국제 표준(RFC 8291)에 따라 암호화되어 푸시 서비스가 읽을 수 없고, 푸시 서비스는 전달에 필요한 주소만 처리합니다.');
-    expect(section(6)).toContain('아침 알림 정보는 계정과 연결되어 있지 않아, 그 기기에서 종 아이콘으로 아침 알림을 끄면 지워집니다.');
+    expect(section(6)).toContain('일반 아침 알림 정보는 그 기기에서 종 아이콘으로 아침 알림을 끄면 지워집니다.');
     expect(text(between(privacy, '<h2>7. ', '<h2>8. '))).toBe('7. 쿠키 로그인 세션 쿠키와, Google 로그인을 진행하는 동안에만 쓰는 10분짜리 상태 쿠키만 사용합니다. 광고 · 추적 쿠키는 쓰지 않습니다. 브라우저에서 쿠키를 막으면 로그인할 수 없습니다.');
-    expect(privacy).toContain('<p class="note">시행일 2026년 10월 20일</p>');
-    expect(text(between(privacy, '<h2>12. ', '<p class="foot">'))).toBe('12. 시행일과 변경 이 방침은 2026년 10월 20일부터 적용합니다. 내용을 바꾸면 이 페이지에 바뀐 내용과 시행일을 먼저 알립니다. 변경: 2026년 10월 20일 — 아침 알림(웹 푸시) 구독 정보 추가');
+    expect(privacy).toContain('<p class="note">개정안 2026년 11월 15일 · 키워드 기능 배포 시 적용</p>');
+    expect(text(between(privacy, '<h2>12. ', '<p class="foot">'))).toContain('관심 키워드 저장·선택적 기기 연결·발송 식별값 추가');
     const contact = between(privacy, '<section id="contact"', '</section>');
     const emails = privacy.match(/[\w.+-]+@[\w-]+\.[\w.]+/g)!;
     expect(emails.every(e => e === 'jwavascript@gmail.com')).toBe(true);

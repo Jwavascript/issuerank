@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-const html = readFileSync('public/index.html', 'utf8');
-const openapi = readFileSync('openapi.yaml', 'utf8');
+const html = readFileSync('public/index.html', 'utf8').replace(/\r\n/g, '\n');
+const openapi = readFileSync('openapi.yaml', 'utf8').replace(/\r\n/g, '\n');
 const between = (source: string, start: string, end: string) => {
   const i = source.indexOf(start), j = source.indexOf(end, i);
   if (i < 0 || j < 0) throw new Error(`없음: ${start}`);

@@ -1,7 +1,8 @@
 // 테이블 6개(Drizzle). summary · articles.description · articles.issue_id · collect_runs.message · push_subscriptions.last_sent_on 말고 모두 NOT NULL. RLS는 켜기만 함(정책 없음):
 // 서버는 테이블 주인으로 접속해 영향 없고, Supabase Data API(anon 키)로는 못 읽음
-import { date, foreignKey, integer, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
-import { user } from './auth-schema';
+import { boolean, check, date, foreignKey, integer, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { session, user } from './auth-schema';
 import type { SectionKey } from '../ranking';
 
 // 날짜 · 섹션마다 랭킹 후보 행. id {date}-{section}-{번호}, rank는 저장하지 않음
@@ -73,4 +74,18 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
 }).enableRLS();
 
 // ex10 인증 테이블은 공식 Better Auth CLI로 별도 생성한다.
+// O14: 관심 키워드와 기기 연결은 추가 표에만 저장. 기존 기사/이슈 ID 및 익명 아침 구독 보존.
+export const savedKeywords = pgTable('saved_keywords', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(), normalized: text('normalized').notNull(), color: integer('color').notNull(),
+  alerts: boolean('alerts').notNull().default(false), baseline: text('baseline').array().notNull().default([]),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  enabledAt: timestamp('enabled_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [unique('saved_keywords_owner_name').on(t.userId, t.normalized), unique('saved_keywords_owner_color').on(t.userId, t.color), check('saved_keywords_color_range', sql`${t.color} BETWEEN 0 AND 4`)]).enableRLS();
+export const keywordDevices = pgTable('keyword_devices', {
+  subscriptionId: text('subscription_id').primaryKey().references(() => pushSubscriptions.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  sessionId: text('session_id').references(() => session.id, { onDelete: 'set null' }),
+  morning: boolean('morning').notNull().default(true), seen: text('seen').array().notNull().default([]),
+}).enableRLS();
 export * from './auth-schema';

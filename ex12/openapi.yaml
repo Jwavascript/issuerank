@@ -820,6 +820,149 @@ paths:
         '403': { $ref: '#/components/responses/PushForbidden' }
         '413': { $ref: '#/components/responses/PushTooLarge' }
 
+  /api/timeline:
+    get:
+      operationId: searchTimeline
+      summary: 저장된 뉴스의 관심 키워드 타임라인
+      description: NFKC 구절 일치. 최대90일, 한 페이지20개. source와 동일 보도 근거만 병합하며 실제 사건 발생일이 아닌 대표 기사 보도일(KST) 기준. 추가 뉴스/AI 호출 없음.
+      parameters:
+        - { name: q, in: query, required: true, style: form, explode: true, schema: { type: array, minItems: 1, maxItems: 3, items: { type: string, minLength: 2, maxLength: 40 } } }
+        - { name: from, in: query, schema: { type: string, format: date }, description: 기본 최근30일 시작일 }
+        - { name: to, in: query, schema: { type: string, format: date }, description: 기본 KST 오늘·미래 금지 }
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: mode, in: query, schema: { type: string, enum: [major, all], default: major } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 89 }, description: 직전 응답 nextCursor. 같은 검색 조건으로 이어 읽기 }
+      responses:
+        '200':
+          description: Cache-Control no-store. 빈 결과도200이며 저장 범위·수집 실패는 별도 칸.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TimelineResult' }
+        '400': { description: 키워드·기간·커서·정렬 오류 }
+  /api/keywords:
+    get:
+      operationId: listKeywords
+      summary: 본인 관심 키워드 목록
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200':
+          description: Cache-Control no-store. 색상 슬롯 순서. baseline·세션ID 비공개.
+          content:
+            application/json:
+              schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/SavedKeyword' } }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+    post:
+      operationId: saveKeyword
+      summary: 관심 키워드 저장
+      description: 동일 Origin·본문4KB 이하. 저장 시 기존 결과 baseline 기록. 알림은 처음에 꺼짐.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string, minLength: 2, maxLength: 40 } } }
+      responses:
+        '201':
+          description: 저장 성공·no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedKeyword' }
+        '400': { description: 잘못된 JSON·이름 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '409': { description: 정규화한 이름 중복 또는5개 상한 }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+  /api/keywords/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: setKeywordAlert
+      summary: 본인 키워드 알림 켜기·끄기
+      description: 동일 Origin·4KB. 새로 켜면 현재 결과 baseline을 기록하고 같은 값 재요청은 기준을 바꾸지 않음.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [alerts], properties: { alerts: { type: boolean } } }
+      responses:
+        '200':
+          description: 변경한 키워드·no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedKeyword' }
+        '400': { description: 입력 형식 오류 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '404': { description: 없음·다른 사용자 동일 }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+    delete:
+      operationId: deleteKeyword
+      summary: 본인 관심 키워드 삭제
+      security: [{ sessionCookie: [] }]
+      responses:
+        '204': { description: 삭제 성공·본문 없음·no-store }
+        '400': { description: ID 형식 오류 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '404': { description: 없음·다른 사용자 동일 }
+  /api/keywords/device:
+    post:
+      operationId: connectKeywordDevice
+      summary: 현재 로그인 세션과 기존 푸시 기기 연결
+      description: 동일 Origin·4KB. endpoint와 구독 auth 값으로 소유 증명. 실제 활성 세션 필요. 로그아웃·만료 후 개인 알림 중단. 응답은 no-store.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [endpoint, auth, morning], properties: { endpoint: { type: string, format: uri }, auth: { type: string, maxLength: 128, writeOnly: true }, morning: { type: boolean, description: 일반 아침 뉴스도 함께 받기 } } }
+      responses:
+        '204': { description: 연결 성공 }
+        '400': { description: 입력 형식 오류 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '404': { description: 기존 구독 없음·소유 증명 실패·활성 세션 없음 }
+        '409': { description: 다른 활성 계정에 연결된 기기 }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+    delete:
+      operationId: disconnectKeywordDevice
+      summary: 본인 계정의 키워드 기기 연결 해제
+      description: 동일 Origin·4KB. 연결 없음·다른 사용자도204. 일반 아침 구독은 유지. no-store.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushSubscriptionRef' }
+      responses:
+        '204': { description: 해제 완료 }
+        '400': { description: 입력 형식 오류 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+  /api/keywords/device/status:
+    post:
+      operationId: keywordDeviceStatus
+      summary: 본인 기기의 키워드 연결 상태
+      description: endpoint를 주소·접근 로그에 넣지 않도록 POST 본문으로 받음. 동일 Origin·4KB·no-store.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushSubscriptionRef' }
+      responses:
+        '200':
+          description: 없음·다른 사용자면 null. active는 현재 세션과의 연결 여부.
+          content:
+            application/json:
+              schema: { type: [object, 'null'], properties: { endpoint: { type: string }, morning: { type: boolean }, active: { type: boolean } } }
+        '400': { description: 입력 형식 오류 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/PushForbidden' }
+        '413': { $ref: '#/components/responses/PushTooLarge' }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -907,6 +1050,46 @@ components:
       schema: { type: string }
       example: '2026-10-07-pol-0,2026-10-07-eco-1'
   schemas:
+    SavedKeyword:
+      type: object
+      required: [id, name, color, alerts, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: integer, minimum: 0, maximum: 4 }
+        alerts: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    TimelineResult:
+      type: object
+      required: [items, nextCursor, total, relatedCount, firstDate, lastDate, updatedAt, failedCollections]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [id, key, title, summary, publishedAt, date, collectedOn, keywords, reasons, sources, fingerprints]
+            properties:
+              id: { type: string }
+              key: { type: string }
+              title: { type: string }
+              summary: { type: [array, 'null'], items: { type: string } }
+              publishedAt: { type: string, format: date-time }
+              date: { type: string, format: date, description: 대표 기사 KST 보도일 }
+              collectedOn: { type: string, format: date }
+              keywords: { type: array, items: { type: string } }
+              reasons: { type: array, items: { type: string } }
+              fingerprints: { type: array, items: { type: string }, description: 공개 보도의 중복 판정용 해시·개인 정보 아님 }
+              sources:
+                type: array
+                items: { type: object, required: [name, title, url], properties: { name: { type: string }, title: { type: string }, url: { type: string, format: uri } } }
+        nextCursor: { type: [string, 'null'] }
+        total: { type: integer, minimum: 0 }
+        relatedCount: { type: integer, minimum: 0 }
+        firstDate: { type: [string, 'null'], format: date }
+        lastDate: { type: [string, 'null'], format: date }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        failedCollections: { type: array, items: { type: string, format: date } }
     AuthError:
       type: object
       properties:

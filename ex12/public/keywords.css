@@ -1,0 +1,56 @@
+.kw-page { padding-top: 28px; padding-bottom: 48px; }
+.kw-page .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.kw-page h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.04em; }
+.kw-note { color: var(--muted); font-size: 13px; margin: 8px 0; }
+.kw-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 18px 0; }
+.kw-search, .kw-options, .kw-chips, .kw-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kw-search input { flex: 1; min-width: 120px; }
+.kw-page input, .kw-page select { max-width: 100%; min-height: 38px; padding: 7px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.kw-page input[type=checkbox] { min-height: auto; width: 17px; height: 17px; accent-color: var(--ink); }
+.kw-options { margin: 14px 0; font-size: 13px; }
+.kw-filters { margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13px; }
+.kw-filters > summary { cursor: pointer; color: var(--muted); overflow-wrap: anywhere; }
+.kw-options label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.kw-page button { min-height: 36px; }
+.kw-primary { padding: 7px 14px; background: var(--ink); color: var(--ink-text); border-radius: 6px; font-weight: 600; }
+.kw-chips { margin: 12px 0; }
+.kw-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 20px; font-size: 13px; max-width: 100%; overflow-wrap: anywhere; }
+.kw-chip::before { content: ''; width: 9px; height: 9px; flex: none; background: var(--kw-color); border-radius: 50%; }
+.kw-chip[aria-pressed=false] { opacity: .55; }
+.kw-color-0 { --kw-color: #5377d5; } .kw-color-1 { --kw-color: #c57620; } .kw-color-2 { --kw-color: #30846c; }
+.kw-color-3 { --kw-color: #a15cb6; } .kw-color-4 { --kw-color: #ba526d; } .kw-color-5 { --kw-color: #238caa; }
+.kw-color-6 { --kw-color: #807130; } .kw-color-7 { --kw-color: #6d68b6; }
+.kw-saved { border-top: 1px solid var(--line); padding: 10px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.kw-saved .kw-chip { margin-right: auto; }
+.kw-saved label { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.kw-danger { font-size: 13px; padding: 6px 8px; color: var(--muted); text-decoration: underline; }
+.kw-status { min-height: 24px; overflow-wrap: anywhere; }
+.kw-error { color: #b42318; }
+.kw-timeline { position: relative; padding-left: 100px; }
+.kw-timeline::before { content: ''; position: absolute; left: 78px; top: 12px; bottom: 15px; width: 1px; background: var(--line); }
+.kw-event { position: relative; margin: 0 0 18px; padding: 18px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; overflow-wrap: anywhere; }
+.kw-event::before { content: ''; position: absolute; width: 9px; height: 9px; left: -27px; top: 25px; border: 2px solid var(--bg); box-sizing: content-box; background: var(--muted); border-radius: 50%; }
+.kw-event time { position: absolute; left: -100px; width: 66px; top: 19px; font-size: 12px; color: var(--muted); }
+.kw-event h2 { font-size: 18px; line-height: 1.5; margin: 8px 0; letter-spacing: -.02em; }
+.kw-event p { margin: 5px 0; font-size: 14px; }
+.kw-reason { color: var(--muted); font-size: 12px; }
+.kw-event details { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; font-size: 13px; }
+.kw-event summary { cursor: pointer; }
+.kw-event ul { padding-left: 18px; }
+.kw-empty { text-align: center; padding: 32px 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; }
+.kw-more { display: block; margin: 22px auto; padding: 8px 24px; border: 1px solid var(--line); border-radius: 8px; }
+.kw-page button:disabled { opacity: .5; cursor: wait; }
+.kw-page :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .kw-panel { padding: 14px; }
+  .kw-page h1 { font-size: 23px; }
+  .kw-timeline { padding-left: 20px; }
+  .kw-timeline::before { left: 4px; }
+  .kw-event { padding: 14px; }
+  .kw-event::before { left: -23px; top: 21px; }
+  .kw-event time { position: static; display: block; width: auto; margin-bottom: 8px; }
+  .kw-event h2 { font-size: 17px; }
+  .kw-options input[type=date] { width: 143px; min-width: 0; font-size: 13px; }
+  .header-inner .switch button { padding-left: 8px; padding-right: 8px; gap: 4px; font-size: 13px; }
+  .header-inner .switch button svg { display: none; }
+}

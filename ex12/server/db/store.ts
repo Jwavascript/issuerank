@@ -15,6 +15,8 @@ import { buildRanking, buildWidget, findCard, SECTIONS, type IssueRow } from '..
 import { kstToday } from '../sample';
 import type { Db } from './client';
 import { articles, bookmarks, collectRuns, folders, issues, pushSubscriptions } from './schema';
+import { keywordDevices } from './schema';
+import { prepareKeywordPush } from './keywords';
 
 // DB 행 → 랭킹 후보 행(발행 시각은 ISO 문자열로)
 const toRow = (r: typeof issues.$inferSelect): IssueRow => ({ ...r, latestPublishedAt: r.latestPublishedAt.toISOString() });
@@ -133,6 +135,11 @@ export function dbStore(db: Db): Store {
 // 발송 명령(push.ts)용: 구독 전부(상한 5,000이라 한 번에) · 그날 표시(보내기 전) · 되돌림 · 삭제. 무엇을 언제 할지는 push-run.ts가 정함
 export function pushStore(db: Db): PushStore {
   return {
+    prepare: (row, day) => prepareKeywordPush(db, row, day),
+    acknowledged: async (row, prepared) => {
+      if (prepared.seen && prepared.sessionId) await db.update(keywordDevices).set({ seen: prepared.seen })
+        .where(and(eq(keywordDevices.subscriptionId, row.id), eq(keywordDevices.sessionId, prepared.sessionId)));
+    },
     list: async () => db.select({
       id: pushSubscriptions.id, endpoint: pushSubscriptions.endpoint, p256dh: pushSubscriptions.p256dh,
       auth: pushSubscriptions.auth, lastSentOn: pushSubscriptions.lastSentOn,

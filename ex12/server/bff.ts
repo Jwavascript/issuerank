@@ -4,11 +4,12 @@ import { createApp } from './app';
 import { authOptions, createAuth } from './auth';
 import { connectDb } from './db/client';
 import { dbStore } from './db/store';
+import { dbKeywordStore } from './db/keywords';
 
 type App = { fetch: (request: Request) => Response | Promise<Response> };
 
 const UNAVAILABLE = 'API 서버에 연결할 수 없습니다';
-const isPrivate = (pathname: string) => pathname.startsWith('/api/auth/') || /^\/api\/(bookmarks|folders)(\/|$)/.test(pathname);
+const isPrivate = (pathname: string) => pathname.startsWith('/api/auth/') || /^\/api\/(bookmarks|folders|keywords)(\/|$)/.test(pathname);
 
 // 서버리스 함수 하나가 연결 1개만 쓰도록 max: 1. 빌드 중에는 불리지 않는다(첫 요청 때만).
 export async function loadApp(): Promise<App> {
@@ -17,7 +18,7 @@ export async function loadApp(): Promise<App> {
     if (!process.env.DATABASE_URL) throw new Error('DB_CONFIG_MISSING');
     authOptions(process.env);
     connection = connectDb({ max: 1 });
-    return createApp(dbStore(connection.db), createAuth(connection.db, process.env));
+    return createApp(dbStore(connection.db), createAuth(connection.db, process.env), dbKeywordStore(connection.db));
   } catch (err) {
     void connection?.client.end();
     throw err;

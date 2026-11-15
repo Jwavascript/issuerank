@@ -5,7 +5,7 @@ import { createContext, runInContext } from 'node:vm';
 import { inflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
 
-const read = (path: string) => readFileSync(path, 'utf8');
+const read = (path: string) => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 const BASE = 'https://issuerank-kappa.vercel.app';
 
 // PNG → 폭 · 높이 · RGBA(8비트 · 비월 없음 · 색 형식 2/6만)

@@ -7,6 +7,8 @@ import { encrypt, sendPush, vapidAuthorization, vapidKey, type SendResult } from
 
 export type PushRow = { id: string; endpoint: string; p256dh: string; auth: string; lastSentOn: string | null };
 export type PushStore = {
+  prepare?(row: PushRow, day: string): Promise<{ payload: PushPayload | null | undefined; seen?: string[]; sessionId?: string | null }>;
+  acknowledged?(row: PushRow, prepared: { seen?: string[]; sessionId?: string | null }): Promise<void>;
   list(): Promise<PushRow[]>;                                          // 구독 전부
   mark(id: string, day: string): Promise<boolean>;                     // 그날 표시(보내기 전) — 이미 그날이면 false
   revert(id: string, day: string, previous: string | null): Promise<void>; // 그날 표시를 전 값으로(실패 → 같은 날 다시 실행하면 그 기기만 다시)
@@ -98,20 +100,22 @@ const bump = <K,>(map: Map<K, number>, k: K) => map.set(k, (map.get(k) ?? 0) + 1
 // 2xx 그대로 · 404/410 삭제 · 응답 없음 그대로(이미 받았을 수 있음) · 그 밖 전 값으로 되돌림. JWT는 푸시 서비스 origin마다 한 번
 async function sendAll(targets: PushRow[], payload: PushPayload, day: string | null, key: NonNullable<ReturnType<typeof vapidKey>>, deps: PushDeps): Promise<Tally> {
   const tally: Tally = { sent: 0, gone: 0, failed: 0, timeout: 0, invalid: 0, skipped: 0, status: new Map(), service: new Map() };
-  const plaintext = Buffer.from(JSON.stringify(payload));
   const jwt = new Map<string, string>();
   const now = deps.now();
   const one = async (row: PushRow) => {
     const service = pushService(row.endpoint);
     if (!service || !validKeys(row.p256dh, row.auth)) { await deps.store.remove(row.id); tally.invalid++; return; }
+    const prepared = day && deps.store.prepare ? await deps.store.prepare(row, day) : null;
+    if (prepared?.payload === null) { tally.skipped++; return; }
     if (day && !(await deps.store.mark(row.id, day))) { tally.skipped++; return; }
+    const plaintext = Buffer.from(JSON.stringify(prepared?.payload ?? payload));
     const origin = new URL(row.endpoint).origin;
     if (!jwt.has(origin)) jwt.set(origin, vapidAuthorization(key, origin, now));
     const result: SendResult = await sendPush(deps.fetch, row.endpoint, encrypt(plaintext, row.p256dh, row.auth), jwt.get(origin)!);
     bump(tally.status, result.label);
     bump(tally.service, service);
-    if (result.kind === 'ok') tally.sent++;
-    else if (result.kind === 'timeout') tally.timeout++;
+    if (result.kind === 'ok') { tally.sent++; if (prepared) await deps.store.acknowledged?.(row, prepared); }
+    else if (result.kind === 'timeout') { tally.timeout++; if (prepared) await deps.store.acknowledged?.(row, prepared); }
     else if (result.kind === 'gone') { tally.gone++; await deps.store.remove(row.id); }
     else { tally.failed++; if (day) await deps.store.revert(row.id, day, row.lastSentOn); }
   };

@@ -189,6 +189,8 @@ capstone/
 
 - D15 4차 보강(2026-10-15 KST, 사용자 승인): 배정 지시문에 사진 기사 판별 단서(제목이 인물의 동작·자세, 설명문이 장면 묘사뿐이고 새 사실·결정·발언 내용이 없음, 같은 행사 연속 사진도 모두 제외)를 추가. 스키마·모델·2단계 구조 유지. 재검증은 OpenAI만 최대8회·newsdata0·DB 쓰기0(단계 PLAN 마지막 절).
 
+운영 D40(2026-11-15 사용자 초안 기반 계획→빌드→검증 요청): 웹 관심 키워드 타임라인 O14를 `plan/PLAN_ops_O14_keyword_timeline.md`대로 진행. 저장5·비교3·최대90일·아침 통합 알림·기존 데이터 검색. 추가 뉴스/AI 호출0·Android 후속. 의미가 모호한 사건은 연결 보류하고 URL/동일 보도 근거만 중복 정리. 기존 D37~D39 작업 보존. SPEC US-16/AC16-1~7.
+
 ## 6. AC 커버리지
 
 | US | AC | 처음 동작 | 완성 |
@@ -273,6 +275,10 @@ API (ex01에서 확정)
 - [ ] 발표일 확인 → 2절 M2 날짜 적기
 
 ## 10. 단계 메모 (다음 PLAN에 넘길 것)
+
+- ops O14(2026-11-16 운영 적용): 사용자 푸시·배포 승인. 전용 workflow·0008 적용 도구965b53e 푸시, Actions에서0007까지 이력8 확인→0008 적용 성공(새2표/RLS/FK/기존 내용 보존). 로컬 Secret 복원·실제 뉴스/AI·수동 푸시0. 이후 기능 배포와 다음 아침 자동 실행 확인은 reports/ops_O14_keyword_timeline_deploy.md에 이어 기록.
+
+- ops O14(2026-11-15): D40·US16의 웹 관심 키워드 검색/타임라인/저장/아침 알림 로컬 구현. 테스트391/391·빌드·가짜 API 브라우저OK, 실제 DB/배포·실기기 푸시SKIP으로 PASS 보류(OK9/FAIL0/SKIP2). DB0008은 기존 표 보존·새2표/RLS/FK 생성 SQL까지 검증, 미적용. 기존 push 명령도 새 기기 표를 읽으므로0008 선적용 후 배포. Windows .data 사본 수집/CRLF/tsx os.userInfo 문제를 분리 기록. 첫 심사 색상 재사용 경계는 제작 보완 후 재심사. 의미 기반 사건 연결은 후속. 상세 reports/ops_O14_keyword_timeline_judge.md.
 
 - ops O8(2026-11-03 제작 · 심사, PC Windows): 새 `android/`(Kotlin + Compose · RemoteViews 위젯 · debug 도구) + ex12 4개 + `android.yml`. 단위 168 · 계측 70(컴파일만 — 기기 SKIP) · 판정 보류 OK8/FAIL0/SKIP8. 다음 계획에 넘길 것: ① 대비 — 앱은 계획 5절 4.5:1을 앞세워, 웹이 섞어 만드는 칠만 그 칸에서 최소 보정(타일 · 숫자 칸 글자 4.5, 요약 끈 끔 · 입력 칸 경계 3:1 — C11 · C12). 웹 PWA에는 같은 문제가 그대로(사용자 결정 거리) ② 두 벌 유지: 앱 문구 `strings_web.xml` 134키를 웹 파일과 글자 대조하는 시험이 있어, 웹 문구를 바꾸면 앱 시험이 깨짐(의도) — 웹 변경 계획에 앱 반영 줄을 넣을 것 ③ 오프라인 release 빌드는 Compose mapping jar 4개(C10)까지 캐시돼야 됨 ④ Android CLI `android.exe`(sdkmanager가 거침)는 사용 통계를 올리려 할 수 있음(C15 ①) — 다음에는 쓰기 전에 끄는 법 확인 ⑤ 데스크톱 JDK `HttpURLConnection`은 Origin을 빼고 POST 401 본문을 버림 → 실제 전송 시험은 기기에서만 의미(심사 8절 1) ⑥ Windows CRLF로 ex12 시험 3파일 실패(LF 사본 통과) — `.gitattributes`나 줄바꿈 무관 시험은 다음 후보 ⑦ daily 예약 지연이 3~6시간으로 늘어남(11-03 = 10:33 시작).
 - ops O8(2026-11-02 기획 확정, 문서만 — 코드 · 서버 · 설치 0): Android 네이티브 앱 v1(D33~D36 · SPEC US-15). TWA 초안 → 사용자 Q1=C로 네이티브 재계획 → 2차 답(Compose · Google v1 · 기획까지). 이 태블릿(Termux)에는 설치 · 빌드하지 않음 → 제작은 다른 PC에서 계획서 '다른 PC에서 이어 하기' 순서대로. 넘길 것: ① Better Auth는 쿠키가 있는 POST에 trusted Origin을 요구 → 앱은 POST · DELETE에 Origin = 사이트 ② compileSdk 37 SDK 패키지 이름이 `android-37.0`이라 AGP가 못 찾으면 `release(37) { minorApiLevel = 0 }` ③ 운영 DB · 실제 Google 로그인은 사용자 줄만(O8에는 `ex12/.env` 불필요) ④ 서명 키는 다른 PC keytool(사용자 답 "Termux에서"는 태블릿 설치 0으로 바뀜 — 코디네이터가 알림).

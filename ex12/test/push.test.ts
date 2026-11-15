@@ -428,3 +428,36 @@ it('메모리 구독 저장소: 같은 endpoint = 키만 갱신 · 그날 표시
   await memoryPushStore.revert(row.id, '2026-10-07', null);
   expect((await rows())[0].lastSentOn).toBe(null);
 });
+
+describe('키워드 payload와 기존 발송 규칙 통합(O14)', () => {
+  const personalPayload = { title: '관심 키워드에 새로운 주요 소식이 있어요', body: '주요 소식 1건', tag: 'issuerank-daily', url: '/?timeline=1#keywords' };
+  it('개인 payload를 암호화해 한 통만 보내고 성공 후에 이력을 저장한다', async () => {
+    const endpoint = 'https://fcm.googleapis.com/fcm/send/personal';
+    await addSub(endpoint, RFC.uaPublic, RFC.auth);
+    const service = fakeService(), run = deps({ fetch: service.fetch });
+    const acknowledged = vi.fn(async () => {});
+    run.d.store = { ...run.d.store, prepare: async () => ({ payload: personalPayload, seen: ['event'], sessionId: 'session' }), acknowledged };
+    expect(await runPush([], run.d)).toBe(0);
+    expect(acknowledged).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((await decryptWeb(service.requests[0].body, await uaFromRfc())).text)).toEqual(personalPayload);
+    await runPush([], run.d); expect(service.requests).toHaveLength(1);
+  });
+  it('확정 실패는 이력 저장 없이 표시를 되돌리고, 응답불명은 중복을 막는다', async () => {
+    for (const behavior of [500, 'timeout'] as const) {
+      const endpoint = 'https://fcm.googleapis.com/fcm/send/' + behavior;
+      await addSub(endpoint, RFC.uaPublic, RFC.auth);
+      const own = { ...memoryPushStore, list: async () => (await memoryPushStore.list()).filter(r => r.endpoint === endpoint) };
+      const run = deps({ fetch: fakeService(() => behavior).fetch }); const acknowledged = vi.fn(async () => {});
+      run.d.store = { ...own, prepare: async () => ({ payload: personalPayload, seen: ['event'], sessionId: 'session' }), acknowledged };
+      expect(await runPush([], run.d)).toBe(1);
+      expect(acknowledged).toHaveBeenCalledTimes(behavior === 500 ? 0 : 1);
+      expect((await own.list())[0].lastSentOn).toBe(behavior === 500 ? null : '2026-10-07');
+    }
+  });
+  it('개인 소식 없고 일반 아침 알림도 끈 기기는 보내거나 표시하지 않는다', async () => {
+    await addSub('https://fcm.googleapis.com/fcm/send/quiet', RFC.uaPublic, RFC.auth);
+    const service = fakeService(), run = deps({ fetch: service.fetch });
+    run.d.store = { ...run.d.store, prepare: async () => ({ payload: null }) };
+    expect(await runPush([], run.d)).toBe(0); expect(service.requests).toHaveLength(0); expect(run.store.mark).not.toHaveBeenCalled();
+  });
+});
