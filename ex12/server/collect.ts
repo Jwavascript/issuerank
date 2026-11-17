@@ -5,14 +5,15 @@ import { connectDb } from './db/client';
 import { collectStore } from './db/store';
 import { hide } from './hide';
 import { collect } from './newsdata';
+import { newsFetch } from './news-rate';
 
 async function main(): Promise<number> {
-  // --pages N(0~2, 기본 2) = 섹션당 전체 출처 페이지(top 1페이지는 늘 받음, D12)
+  // --pages N(0~4, 기본 4) = 섹션당 전체 출처 페이지(top 1페이지는 늘 받음, D41)
   const args = process.argv.slice(2);
   const at = args.indexOf('--pages');
-  const pages = at < 0 ? 2 : Number(args[at + 1]);
-  if (![0, 1, 2].includes(pages)) {
-    console.log('--pages는 0~2입니다');
+  const pages = at < 0 ? 4 : Number(args[at + 1]);
+  if (![0, 1, 2, 3, 4].includes(pages)) {
+    console.log('--pages는 0~4입니다');
     return 2;
   }
   const key = process.env.NEWSDATA_API_KEY;
@@ -24,11 +25,14 @@ async function main(): Promise<number> {
   let conn: ReturnType<typeof connectDb> | undefined;
   try {
     conn = connectDb();
-    const { date, runs, requests, remaining, code } =
-      await collect({ fetch, store: collectStore(conn.db), key, pages, waitMs: 1000 });
+    const { date, runs, requests, remaining, filtered, code } =
+      await collect({ fetch: newsFetch(fetch), store: collectStore(conn.db), key, pages, waitMs: 0 });
     const ok = runs.filter(r => r.status === 'ok');
     console.log(`수집 ${date} · 섹션당 top 1페이지 + 전체 최대 ${pages}페이지`);
-    for (const r of runs) console.log(r.status === 'ok' ? `${r.section} ok ${r.articleCount}건` : `${r.section} failed ${r.message}`);
+    for (const r of runs) {
+      const excluded = filtered[r.section] ? ` · 매매 알림 제외 응답 ${filtered[r.section]}건` : '';
+      console.log((r.status === 'ok' ? `${r.section} ok ${r.articleCount}건` : `${r.section} failed ${r.message}`) + excluded);
+    }
     console.log(`ok ${ok.length} · failed ${runs.length - ok.length} · 기사 ${ok.reduce((n, r) => n + r.articleCount, 0)}건`
       + ` · 요청 ${requests}번 · 남은 크레딧 ${remaining ?? '?'}`);
     return code;

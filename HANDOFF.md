@@ -1,5 +1,7 @@
 # HANDOFF — 이슈랭크 캡스톤
 
+**최근 작업(2026-11-17, O11·O12 랭킹 품질 개선 1차): 사용자 승인으로 ex12 후보 수집 top1+전체4(기본·최대), 뉴스31초 간격·daily60분, 검색 첫쪽 AI 같은사건 검증(기존 모델·Responses, 실패시낱말대체/종료1), 검색 근거 JSON/Actions14일 보관 구현. 최종42파일405시험통과·build재실행통과·tsc통과. 기존 Next16.4.1 보안 경고는 미해결(업그레이드 별도 권고). 같은세션심사 OK6/FAIL0/SKIP1→PASS보류: 배포 후 첫daily 실효·비용·오판 확인 필요. 뉴스최대66회/실행, 추가AI최대36회, 하루총3회 이내(자동2면수동1·잔액우선). 실제 뉴스/AI/DB쓰기·커밋·푸시·배포0. 기존Android/O9a/O14변경보존. 다음=요청시 변경검토·커밋/배포 후 첫자동daily 진단검토. O11 기사목록·요약재사용/O12 낮·저녁실행은 후속. 계획 `plan/PLAN_ops_O11_O12_ranking_quality.md`, 보고 `reports/ops_O11_O12_ranking_quality_build.md`·`reports/ops_O11_O12_ranking_quality_judge.md`.**
+
 **운영 반영 완료(2026-11-16, O14): 도구 `965b53e` → 운영 DB0008 적용·무변경 재실행 성공(새2표·RLS/FK·기존 public 자료 해시 보존) → 기능 `39f32fb` main 푸시·Vercel Production ready. 운영 HTML/JS/CSS·랭킹·실제 DB 키워드 검색/공통 카드200·잘못된 입력400·비로그인401 확인. 배포 대상389/389·빌드 통과. 다음 = 본인 웹 키워드 저장/알림 켜기/기기 연결 후 아침 자동 daily→push와 실수신 확인. 로컬 비밀값 복원·뉴스/AI/수동 푸시0. 아래11-15는 배포 전 로컬 기록. 상세 reports/ops_O14_keyword_timeline_deploy.md.**
 
 **최근 인계(2026-11-15, O14): 관심 키워드 검색·비교 타임라인·관심 저장·아침 웹 푸시 연동을 ex12에 구현. 최종 로컬 테스트391/391·빌드 통과·브라우저320~1280/다크 확인. 심사 PASS 보류(OK9/FAIL0/SKIP2): 실제 DB0008 적용·운영 검색/실기기 푸시 미검증. 커밋·푸시·배포·실제 뉴스/AI/푸시0. 다음은 `plan/PLAN_ops_O14_keyword_timeline.md`와 `reports/ops_O14_keyword_timeline_judge.md` 6절. 아래 긴 과거 기록과 다른 진행 중 변경은 보존했다.**

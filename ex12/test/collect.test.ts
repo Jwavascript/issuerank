@@ -88,8 +88,112 @@ const OLD = [
   oldRow(YESTERDAY, 'pol', 'https://example.com/old-yesterday'),
 ];
 
+// 2026-11-15 사용자 DB 조회 표본. 실제 본문·키·네트워크 없이 제목 판정만 재현한다.
+const INSIDER_TITLES = [
+  'Paylocity 이사 Steven Sarowitz, 보통주 7만 2,016달러어치 매도',
+  'Texas Instruments 이사 Jean Hobby, 주식 271만 달러어치 매도',
+  'Talen Energy 수석부사장 Casulli, 보통주 126만 달러어치 매도',
+  'Kodiak Gas 이사 Darden Newsom, 주식 44만9900달러어치 매입',
+  'Cavco Industries 제조주택 부문 사장 Cira, 주식 159만 달러어치 매도',
+  'ePlus 최고운영책임자, 자사주 41만9,379달러어치 매도',
+  'Aldeyra 이사 Richard Douglas, 자사주 약 $128,899 매입',
+  'Altimmune 이사 Wayne Pisano, 자사주 1만 주 1만6,350달러에 매입',
+];
+const sampleItem = (title: string, no: number, source_id = 'investing_kr') => ({
+  title, source_id, link: `https://example.com/o9a-${no}`, pubDate: '2026-10-06 20:49:42',
+  description: null,
+});
+const success = (results: unknown[], nextPage: string | null = null): Reply => ({
+  status: 200, body: { status: 'success', results, nextPage },
+});
+
 describe('collect (AC-01-1 · AC-01-2)', () => {
-  it('① 요청: pages 1 → 11번(섹션마다 top → 전체, wor 1) · top 쿼리 5개 · 전체 쿼리 4개(prioritydomain 없음) · 헤더 키, 첫 요청엔 page 없음, URL에 키 없음', async () => {
+  it('O9a: 실제 매매 알림 8건만 제외하고 실적·일반경제·자사주 정책·타출처 보도는 남긴다', async () => {
+    const keep = [
+      sampleItem('Viyash Scientific, 2027회계연도 2분기 매출 16.2% 증가', 100),
+      sampleItem('미국 금리 전망과 한국 경제 성장률', 101),
+      sampleItem('외국인 주식 매도에 증시 하락', 102),
+      sampleItem('A사, 자사주 100만 주 매입 결정', 103),
+      sampleItem('A사 이사회, 주식 100만 주 매입', 104),
+      sampleItem('A사 CEO, 자사주 매입 정책 발표', 105),
+      sampleItem(INSIDER_TITLES[0], 106, 'newsis'),
+    ];
+    const net = fakeNet((s, k) => s === 'eco'
+      ? success(k === 'top' ? [] : [...INSIDER_TITLES.map((t, i) => sampleItem(t, i)), ...keep])
+      : standard(s, k));
+    const mem = memoryStore();
+    const result = await run(net, mem.store, 1);
+    expect(mem.articles.filter(a => a.section === 'eco').map(a => a.title)).toEqual(keep.map(a => a.title));
+    expect(result.filtered).toEqual({ pol: 0, eco: 8, soc: 0, cul: 0, wor: 0, it: 0 });
+    expect(mem.runs.find(r => r.section === 'eco')).toMatchObject({ status: 'ok', articleCount: 7 });
+  });
+
+  it('O9a: 모든 섹션에서 동일 매매알림을 거르며 수량만 있는 개인 매매도 제외한다', async () => {
+    const net = fakeNet((s) => success([
+      sampleItem('A사 CEO Kim, 주식 1,000주 매도', 0),
+      sampleItem('A사 이사회, 자사주 1,000주 매입', 1),
+    ].map(a => ({ ...a, link: `${a.link}-${s}` }))));
+    const mem = memoryStore();
+    const result = await run(net, mem.store, 0);
+    expect(result.requests).toBe(6);
+    expect(Object.values(result.filtered)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(mem.articles).toHaveLength(6);
+    expect(mem.articles.every(a => a.title.includes('이사회'))).toBe(true);
+  });
+
+  it.each([2, 4])('O9a·O12: pages%i 전체 페이지 연결·경제top 출처 제외·유효 Investing 보존', async pages => {
+    const calls: string[] = [];
+    const send: Fetch = async (url, init) => {
+      calls.push(url);
+      expect(new Headers(init.headers).get('X-ACCESS-KEY')).toBe(KEY);
+      expect(url).not.toContain(KEY);
+      const page = new URL(url).searchParams.get('page');
+      const item = kindOf(url) === 'top'
+        ? sampleItem('국내 물가 상승률 둔화', calls.length, 'newsis')
+        : sampleItem('Viyash Scientific, 분기 매출 16.2% 증가', calls.length);
+      const next = page ? Number(page.slice(4)) + 1 : 2;
+      return new Response(JSON.stringify({ status: 'success', results: [item], nextPage: `NEXT${next}` }));
+    };
+    const mem = memoryStore();
+    const result = await collect({ fetch: send, store: mem.store, key: KEY, pages, waitMs: 0 });
+    expect(result.code).toBe(0);
+    expect(result.requests).toBe(6 * (1 + pages));
+    expect(calls.filter(u => new URL(u).searchParams.has('excludedomainurl'))).toHaveLength(1);
+    const eco = calls.filter(u => sectionOf(u) === 'eco').map(u => new URL(u).searchParams);
+    expect(eco.map(p => p.get('excludedomainurl'))).toEqual(['kr.investing.com', ...Array(pages).fill(null)]);
+    expect(eco.map(p => p.get('page'))).toEqual([null, null, ...Array.from({ length: pages - 1 }, (_, i) => `NEXT${i + 2}`)]);
+    expect(mem.articles.filter(a => a.section === 'eco')).toHaveLength(1 + pages);
+    expect(mem.articles.filter(a => a.section === 'eco' && a.sourceId === 'investing_kr')).toHaveLength(pages);
+  });
+
+  it('O9a: 경제 모든 응답이 매매 알림뿐이면 failed로 이전 기사 보존, 보충 호출 없음', async () => {
+    const oldEco = oldRow(TODAY, 'eco', 'https://example.com/old-eco');
+    const mem = memoryStore([...OLD, oldEco]);
+    const net = fakeNet((s, k) => s === 'eco'
+      ? success([sampleItem(INSIDER_TITLES[0], 0)]) : standard(s, k));
+    const result = await run(net, mem.store, 2);
+    expect(mem.articles.filter(a => a.section === 'eco')).toEqual([oldEco]);
+    expect(mem.runs.find(r => r.section === 'eco')).toMatchObject({
+      status: 'failed', articleCount: 0, message: '매매 알림 제외 후 기사 0건',
+    });
+    expect(result.filtered.eco).toBe(2); // 같은 알림이 top/전체 응답 각각에 나타난 횟수
+    expect(net.calls.filter(c => sectionOf(c.url) === 'eco')).toHaveLength(2);
+  });
+
+  it('O9a: 경제top 성공 뒤 전체페이지 실패도 부분 저장하지 않고 이전 기사 보존', async () => {
+    const oldEco = oldRow(TODAY, 'eco', 'https://example.com/old-eco');
+    const mem = memoryStore([oldEco]);
+    const net = fakeNet((s, k) => s === 'eco'
+      ? k === 'top' ? success([sampleItem('국내 물가 상승률 둔화', 0, 'newsis')])
+        : { status: 500, body: { status: 'error' } }
+      : standard(s, k));
+    await run(net, mem.store, 2);
+    expect(mem.articles.filter(a => a.section === 'eco')).toEqual([oldEco]);
+    expect(mem.runs.find(r => r.section === 'eco')?.status).toBe('failed');
+    expect(net.calls.filter(c => sectionOf(c.url) === 'eco')).toHaveLength(2);
+  });
+
+  it('① 요청: pages 1 → 11번 · 경제 top만 출처 제외 · 전체 출처는 그대로 · 헤더 키, 첫 요청엔 page 없음, URL에 키 없음', async () => {
     const net = fakeNet(standard);
     await run(net, memoryStore().store, 1);
 
@@ -102,7 +206,10 @@ describe('collect (AC-01-1 · AC-01-2)', () => {
       const url = new URL(c.url);
       expect(url.origin + url.pathname).toBe('https://newsdata.io/api/1/latest');
       if (kindOf(c.url) === 'top') {
-        expect([...url.searchParams.keys()].sort()).toEqual(['category', 'country', 'language', 'prioritydomain', 'removeduplicate']);
+        const keys = ['category', 'country', 'language', 'prioritydomain', 'removeduplicate'];
+        if (sectionOf(c.url) === 'eco') keys.push('excludedomainurl');
+        expect([...url.searchParams.keys()].sort()).toEqual(keys.sort());
+        expect(url.searchParams.get('excludedomainurl')).toBe(sectionOf(c.url) === 'eco' ? 'kr.investing.com' : null);
         expect(Object.fromEntries(url.searchParams)).toMatchObject({ country: 'kr', language: 'ko', prioritydomain: 'top', removeduplicate: '1' });
       } else {
         expect([...url.searchParams.keys()].sort()).toEqual(['category', 'country', 'language', 'removeduplicate']);

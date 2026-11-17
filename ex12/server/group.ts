@@ -7,6 +7,8 @@ import { connectDb } from './db/client';
 import { groupStore } from './db/store';
 import { group } from './grouping';
 import { hide } from './hide';
+import { newsFetch } from './news-rate';
+import { saveEvidence } from './search-evidence';
 
 async function main(): Promise<number> {
   // --search N(0~6, 기본 6) = 섹션마다 앞 N개 후보만 검색
@@ -38,20 +40,27 @@ async function main(): Promise<number> {
   let conn: ReturnType<typeof connectDb> | undefined;
   try {
     conn = connectDb();
-    const organize = useAi === 1 ? aiClient(aiKey).organize : null;
-    const result = await group({ fetch, store: groupStore(conn.db), key, search, waitMs: 1000, organize, aiKey });
+    const ai = useAi === 1 ? aiClient(aiKey) : null;
+    const result = await group({ fetch: newsFetch(fetch), store: groupStore(conn.db), key, search, waitMs: 0,
+      organize: ai?.organize ?? null, verifyRelated: ai?.verifyRelated ?? null, aiKey });
     if (result.empty) {
       console.log(`${result.date} 기사가 없습니다`);
       return 2;
     }
     console.log(`묶기 ${result.date} · 섹션당 검색 최대 ${search}개`);
-    const ai = result.ai;
+    try {
+      await saveEvidence(result.date, result.evidence);
+    } catch {
+      console.log('검색 근거 저장 실패: EVIDENCE_WRITE_FAILED');
+      return 2;
+    }
+    const aiStatus = result.ai;
     // 고친 수는 모두 0이면 생략
-    const fixed = ai.status === 'ok' && Object.values(ai.fixes).some(n => n > 0)
-      ? ` · 고침 중복 ${ai.fixes.duplicate} · 없는 번호 ${ai.fixes.unknown} · 빈 묶음 ${ai.fixes.empty} · 검색어 ${ai.fixes.query}`
-      + ` · terms ${ai.fixes.terms} · importance ${ai.fixes.importance}` : '';
-    console.log(ai.status === 'ok' ? `AI 정리 · 묶음 ${ai.bundles} · 제외 ${ai.excluded} · 빠진 기사 ${ai.missing}${fixed}`
-      : ai.status === 'failed' ? `AI 정리 실패: ${hide(ai.reason)} → 규칙으로 묶음` : 'AI 정리 안 함(--ai 0)');
+    const fixed = aiStatus.status === 'ok' && Object.values(aiStatus.fixes).some(n => n > 0)
+      ? ` · 고침 중복 ${aiStatus.fixes.duplicate} · 없는 번호 ${aiStatus.fixes.unknown} · 빈 묶음 ${aiStatus.fixes.empty} · 검색어 ${aiStatus.fixes.query}`
+      + ` · terms ${aiStatus.fixes.terms} · importance ${aiStatus.fixes.importance}` : '';
+    console.log(aiStatus.status === 'ok' ? `AI 정리 · 묶음 ${aiStatus.bundles} · 제외 ${aiStatus.excluded} · 빠진 기사 ${aiStatus.missing}${fixed}`
+      : aiStatus.status === 'failed' ? `AI 정리 실패: ${hide(aiStatus.reason)} → 규칙으로 묶음` : 'AI 정리 안 함(--ai 0)');
     for (const s of result.sections) {
       if ('skipped' in s) {
         console.log(`${s.section} 건너뜀: ${s.skipped}`);
@@ -63,6 +72,10 @@ async function main(): Promise<number> {
       }
     }
     console.log(`이슈 ${result.issues} · 검색 ${result.requests}번 · 실패 ${result.failed} · 남은 크레딧 ${result.remaining ?? '?'}`);
+    for (const e of result.evidence) {
+      console.log(`  ${e.id} 검색전체 ${e.totalResults} · 첫쪽 ${e.results.length} · 낱말 ${e.ruleRelated} · AI ${e.aiRelated ?? '-'} · 적용 ${e.method} · 추정 ${e.articleCount}`);
+    }
+    console.log(`AI 관련성 검증 실패 ${result.verificationFailed} · 근거 .data/ranking-quality/${result.date}.json`);
     return result.code;
   } catch (err) {
     // Drizzle은 드라이버 오류를 감싸 문구를 "Failed query: …(줄바꿈)params: …"로 바꾸므로, 감싼 원래 오류(cause)가 있으면 그 문구(한 줄)

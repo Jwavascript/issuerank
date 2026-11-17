@@ -1,5 +1,5 @@
 # 하루 1회 자동 실행(ex09에서 시작, 2026-10-16 ex12 PASS 뒤 ex12로 이동 · D3 · D5 · D10): 매일 04:17 KST에 collect → group → summarize(npm run daily)
-# 실패해도 자동 재시도하지 않음. 같은 날 수동 재실행(Run workflow · Re-run)은 최대 2회(운영 규칙, 코드로 막지 않음)
+# 실패해도 자동 재시도하지 않음. 하루 총 최대3회(자동·수동 합계198요청 이내, 다른 확인 호출 사용 시 잔액 우선). 자동2회면 수동1회까지(D41)
 # 이후 단계마다 working-directory · cache-dependency-path를 최신 exXX로 바꿈
 # 정시 시작(O9 · D37 · AC-01-3): Vercel Cron(/api/cron/daily, 04시대 KST)이 workflow_dispatch(trigger=cron)로 부름. schedule은 05:17 안전망.
 # 예약 · 정시 실행은 오늘 랭킹이 이미 있으면 daily를 건너뜀(같은 날 두 번 돌지 않음). 사람이 누른 수동 실행(trigger=manual)은 확인 없이 그대로
@@ -26,7 +26,7 @@ permissions:
 jobs:
   daily:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: ex12
@@ -70,3 +70,13 @@ jobs:
           code=$?
           { printf '```\n'; cat "$RUNNER_TEMP/daily.log"; printf '```\n'; } >> "$GITHUB_STEP_SUMMARY"
           exit "$code"
+
+      - name: 랭킹 검색 근거 보관
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ranking-quality-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ex12/.data/ranking-quality/*.json
+          include-hidden-files: true # 위 경로의 허용 필드 JSON만. .env·다른 .data 파일은 포함하지 않음
+          if-no-files-found: ignore
+          retention-days: 14

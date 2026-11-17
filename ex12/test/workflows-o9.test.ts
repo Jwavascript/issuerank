@@ -29,11 +29,15 @@ describe('daily.yml', () => {
     expect(step).toContain('DATABASE_URL: ${{ secrets.DATABASE_URL }}');
     expect(step).not.toMatch(/NEWSDATA|OPENAI/);
   });
-  it('daily 실행 단계 · 동시 실행 · 권한 · 시간 제한은 그대로', () => {
+  it('daily 실행 단계 · 동시 실행 · 권한 유지, O11·O12 대기 시간과 근거 보관', () => {
     expect(daily).toContain('  group: daily\n  cancel-in-progress: false\n');
     expect(daily).toContain('permissions:\n  contents: read\n');
-    expect(daily).toContain('timeout-minutes: 30\n');
+    expect(daily).toContain('timeout-minutes: 60\n'); // O11·O12: 뉴스 간격 최대34.1분 + AI 여유
     expect(daily).toContain('npm run daily 2>&1 | tee "$RUNNER_TEMP/daily.log"');
+    expect(daily).toContain('uses: actions/upload-artifact@v7');
+    expect(daily).toContain('path: ex12/.data/ranking-quality/*.json');
+    expect(daily).toContain('include-hidden-files: true');
+    expect(daily).toContain('retention-days: 14');
   });
 });
 

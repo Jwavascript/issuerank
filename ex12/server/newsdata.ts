@@ -38,6 +38,14 @@ export type Fetch = (url: string, init: { headers: Record<string, string> }) => 
 // 응답의 기사 한 건(쓰는 칸만)
 type Item = { title?: string | null; description?: string | null; link?: string | null; source_id?: string | null; pubDate?: string | null };
 
+// O9a: Investing의 임원 개인 매매 알림만 제외. 회사의 자사주 정책·실적·타출처 보도는 유지한다.
+function isInsiderTrade(item: Item): boolean {
+  if (item.source_id !== 'investing_kr' || typeof item.title !== 'string') return false;
+  const role = /(?:^|\s)(?:이사|수석부사장|부사장|사장|최고운영책임자|최고경영자|최고재무책임자|회장|CEO|CFO|COO)(?=[\s,，])/i;
+  const trade = /(?:주식|보통주|자사주).*?(?:\d[\d,]*(?:\.\d+)?\s*(?:만|천)?\s*(?:주|달러)|\$\s*\d).*?(?:매도|매입|매수)[.!]?\s*$/;
+  return role.test(item.title) && trade.test(item.title);
+}
+
 // 기사 → 행. 제목 · 링크 · source_id · pubDate 중 하나라도 없으면 null(건너뜀)
 // description: 앞뒤 공백을 지우고, 없거나 빈 문자열이면 null, 300자(코드 포인트)를 넘으면 앞 300자만
 // pubDate는 UTC로 읽음: "2026-10-06 20:49:42" → "2026-10-06T20:49:42.000Z"
@@ -63,6 +71,7 @@ export async function collect({ fetch, store, key, pages, waitMs }: {
   let requests = 0;
   let remaining: string | null = null;
   const hide = (text: string) => text.replaceAll(key, '***'); // 실패 문구에 키 값이 섞이면 ***
+  const filtered: Record<SectionKey, number> = { pol: 0, eco: 0, soc: 0, cul: 0, wor: 0, it: 0 };
 
   // 섹션 하나(D12 출처 섞기): ① top 1페이지 → ② 전체 출처(prioritydomain 없음) 최대 pages페이지. 섹션 안 순서는 top → 전체
   // 전체 출처 2페이지부터 앞 전체 출처 응답의 nextPage를 page로(top의 nextPage는 안 씀), nextPage가 없거나 results가 비면 멈춤
@@ -71,7 +80,9 @@ export async function collect({ fetch, store, key, pages, waitMs }: {
   async function fetchSection(section: SectionKey): Promise<{ articles: ArticleRow[] } | { message: string }> {
     const articles: ArticleRow[] = [];
     const all = `${LATEST}?country=kr&language=ko&removeduplicate=1&category=${CATEGORIES[section]}`;
-    const top = `${LATEST}?country=kr&language=ko&prioritydomain=top&removeduplicate=1&category=${CATEGORIES[section]}`;
+    // 경제 top 한 칸은 다른 출처로 채운다. 전체 출처 페이지는 Investing의 유효 경제 기사도 계속 받는다.
+    const top = `${LATEST}?country=kr&language=ko&prioritydomain=top&removeduplicate=1&category=${CATEGORIES[section]}`
+      + (section === 'eco' ? '&excludedomainurl=kr.investing.com' : '');
     let n = 0;
 
     // 한 페이지: 기사를 articles에 더하고 응답의 nextPage(없으면 null) · 받은 건수를 돌려줌, 실패면 문구
@@ -92,6 +103,7 @@ export async function collect({ fetch, store, key, pages, waitMs }: {
       }
       const items: Item[] = Array.isArray(body.results) ? body.results : [];
       for (const item of items) {
+        if (isInsiderTrade(item)) { filtered[section]++; continue; }
         const row = toRow(item, date, section);
         if (row) articles.push(row);
       }
@@ -107,7 +119,7 @@ export async function collect({ fetch, store, key, pages, waitMs }: {
       if (!got.nextPage || got.count === 0) break;
       page = got.nextPage;
     }
-    return articles.length ? { articles } : { message: '기사 0건' };
+    return articles.length ? { articles } : { message: filtered[section] > 0 ? '매매 알림 제외 후 기사 0건' : '기사 0건' };
   }
 
   const results: { section: SectionKey; got: { articles: ArticleRow[] } | { message: string } }[] = [];
@@ -133,5 +145,5 @@ export async function collect({ fetch, store, key, pages, waitMs }: {
   await store.save(date, results.filter(r => !failed.has(r.section)).map(r => r.section), rows, runs);
 
   const ok = runs.filter(r => r.status === 'ok').length;
-  return { date, runs, requests, remaining, code: ok === runs.length ? 0 : ok === 0 ? 2 : 1 };
+  return { date, runs, requests, remaining, filtered, code: ok === runs.length ? 0 : ok === 0 ? 2 : 1 };
 }

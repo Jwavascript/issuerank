@@ -4,6 +4,7 @@
 import { LATEST, type Fetch } from './newsdata';
 import { SECTIONS, type SectionKey } from './ranking';
 import { kstToday } from './sample';
+import { searchArticles, type SearchEvidence, type VerifyRelated } from './search-evidence';
 
 // 묶기에 쓰는 그날 기사(규칙은 제목만, AI 정리는 제목 · 설명문 앞 120자). section = 수집 섹션, publishedAt은 ISO 문자열
 export type GroupArticle = { section: SectionKey; title: string; description: string | null; link: string; publishedAt: string };
@@ -299,8 +300,9 @@ async function organizeDay(input: GroupArticle[], organize: Organize, hide: (tex
 // search = 섹션마다 앞 몇 개 후보만 검색(0~6). 북마크가 가리키는 이슈가 있는 섹션은 건너뜀(그 섹션 이슈 · 묶인 기사 그대로 · 검색 안 함)
 // 묶기 입력 = 그날 기사 중 건너뛴 섹션 이슈에 묶인 기사를 뺀 것. aiKey는 AI 실패 문구에서 ***로 가림
 // 반환: 그날 기사가 하나도 없으면 empty, 아니면 AI 결과 · 섹션 결과 · 저장한 이슈 수 · 요청 수 · 실패 수 · 마지막 x-api-limit-remaining · 종료 코드(0 · 1)
-export async function group({ fetch, store, key, search, waitMs, organize = null, aiKey = '' }: {
+export async function group({ fetch, store, key, search, waitMs, organize = null, aiKey = '', verifyRelated = null }: {
   fetch: Fetch; store: GroupStore; key: string; search: number; waitMs: number; organize?: Organize | null; aiKey?: string;
+  verifyRelated?: VerifyRelated | null;
 }) {
   const date = kstToday();
   const day = await store.load(date);
@@ -354,6 +356,8 @@ export async function group({ fetch, store, key, search, waitMs, organize = null
   let creditOut = false;
   let shortage = false;
   let remaining: string | null = null;
+  const evidence: SearchEvidence[] = [];
+  let verificationFailed = 0;
   for (const plan of plans) {
     if (!('bundles' in plan)) continue;
     for (const [i, b] of plan.bundles.slice(0, CANDIDATES).entries()) {
@@ -372,7 +376,34 @@ export async function group({ fetch, store, key, search, waitMs, organize = null
       if (res.status === 429 || res.headers.get('x-api-limit-remaining') === '0') creditOut = true;
       const body = await res.json().catch(() => null);
       if (res.status === 200 && body?.status === 'success' && Number.isInteger(body.totalResults) && body.totalResults >= 0) {
-        b.articleCount = relatedCount(b.members.map(a => a.title), b.checkWords, body, b.members.length);
+        const results = searchArticles(body.results);
+        const titles = b.members.map(a => a.title);
+        const ruleRelated = relatedCount(titles, b.checkWords, { totalResults: results.length, results }, 0);
+        const record: SearchEvidence = { id: b.id, keyword: b.query, totalResults: body.totalResults, results,
+          members: b.members.map(a => ({ title: a.title, description: a.description?.slice(0, 120) ?? null })), size: b.members.length,
+          ruleRelated, aiRelated: null, matched: null, method: results.length ? 'rule' : 'empty', failure: null, articleCount: 0 };
+        let related = ruleRelated;
+        if (verifyRelated && results.length) {
+          try {
+            const reply = await verifyRelated(b.members, results);
+            if (reply.refusal || !reply.output || !Array.isArray(reply.output.matches)
+              || reply.output.matches.length !== results.length || !reply.output.matches.every(v => typeof v === 'boolean')) {
+              throw new Error('INVALID_VERIFICATION');
+            }
+            record.matched = reply.output.matches.map((match, index) => match && Boolean(results[index].title.trim()));
+            related = record.matched.filter(Boolean).length;
+            record.aiRelated = related;
+            record.method = 'ai';
+          } catch {
+            // 외부 오류 원문·키를 저장하지 않는다. 규칙 대체는 운영 로그와 종료 코드로 알린다.
+            record.failure = 'AI_VERIFICATION_FAILED';
+            b.note = 'AI 관련성 검증 실패 → 낱말 규칙';
+            verificationFailed++;
+          }
+        }
+        b.articleCount = Math.max(Math.round(body.totalResults * (results.length ? related / results.length : 0)), b.members.length);
+        record.articleCount = b.articleCount;
+        evidence.push(record);
       } else {
         const detail = typeof body?.results?.message === 'string' ? ` ${body.results.message}` : '';
         b.note = `검색 실패: ${hide(`HTTP ${res.status}${detail}`)}`;
@@ -397,7 +428,7 @@ export async function group({ fetch, store, key, search, waitMs, organize = null
       candidates: p.bundles.slice(0, CANDIDATES).map(b => ({ id: b.id, keyword: b.label, articleCount: b.articleCount, size: b.members.length, note: b.note })),
     }
     : p));
-  const code = failed > 0 || shortage || ai.status === 'failed' ? 1 : 0;
-  return { date, empty: false as const, ai, sections, issues: issues.length, requests, failed, remaining, code };
+  const code = failed > 0 || shortage || ai.status === 'failed' || verificationFailed > 0 ? 1 : 0;
+  return { date, empty: false as const, ai, sections, issues: issues.length, requests, failed, remaining, code, evidence, verificationFailed };
 }
 

@@ -22,6 +22,16 @@ const mockHttp = (body: unknown, status = 200) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('OpenAI Responses 어댑터', () => {
+  it('검색 관련성 판정은 같은 모델·Responses·JSON schema·토큰 한도를 사용한다', async () => {
+    const net = mockHttp(response(JSON.stringify({ matches: [true, false] })));
+    const items = ['한국형 발사체 성공', '다른 발사 일정'].map(title => ({ title, description: null, link: '', sourceId: '', publishedAt: '' }));
+    expect(await aiClient(KEY).verifyRelated([{ title: '누리호 발사', description: '가'.repeat(200) }], items))
+      .toEqual({ refusal: false, output: { matches: [true, false] } });
+    const request = JSON.parse(String(net.mock.calls[0][1]?.body));
+    expect(request).toMatchObject({ model: MODEL, max_output_tokens: 1500, store: false, text: { format: { name: 'related_articles', strict: true } } });
+    expect(JSON.parse(request.input).members[0].description).toHaveLength(120);
+    expect(request.instructions).toContain('별도 발표');
+  });
   it('정리·요약의 endpoint·인증·strict schema·한도·저장 설정과 정상 응답', async () => {
     const net = mockHttp(response(JSON.stringify(assigned)));
     net.mockImplementationOnce(async () => new Response(JSON.stringify(response(JSON.stringify(assigned))), { headers: { 'content-type': 'application/json' } }));
