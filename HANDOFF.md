@@ -1,5 +1,7 @@
 # HANDOFF — 이슈랭크 캡스톤
 
+**배포 완료(2026-11-18, O11·O12 1차+O9a): 기능 `570ed58` main 커밋·푸시, Vercel Production7857470875 success. 커밋대상159파일 사본에서405/405·build재실행통과, 운영 GET5항목(홈/JS/SW커밋일치·랭킹11-17/30카드·잘못된날짜400) 확인. daily/push/health active. 다음=다음 정규daily의31초간격·4페이지·검색AI판정·ranking-quality artifact와 실효/오판/토큰비용 확인(심사줄7 SKIP 유지). 수동daily/뉴스/AI/DB쓰기0. 기존Next보안경고·무작위푸시시험 간헐실패는 후속. Android 등 별도작업은 미커밋보존. 상세 `reports/ops_O11_O12_ranking_quality_deploy.md`.**
+
 **최근 작업(2026-11-17, O11·O12 랭킹 품질 개선 1차): 사용자 승인으로 ex12 후보 수집 top1+전체4(기본·최대), 뉴스31초 간격·daily60분, 검색 첫쪽 AI 같은사건 검증(기존 모델·Responses, 실패시낱말대체/종료1), 검색 근거 JSON/Actions14일 보관 구현. 최종42파일405시험통과·build재실행통과·tsc통과. 기존 Next16.4.1 보안 경고는 미해결(업그레이드 별도 권고). 같은세션심사 OK6/FAIL0/SKIP1→PASS보류: 배포 후 첫daily 실효·비용·오판 확인 필요. 뉴스최대66회/실행, 추가AI최대36회, 하루총3회 이내(자동2면수동1·잔액우선). 실제 뉴스/AI/DB쓰기·커밋·푸시·배포0. 기존Android/O9a/O14변경보존. 다음=요청시 변경검토·커밋/배포 후 첫자동daily 진단검토. O11 기사목록·요약재사용/O12 낮·저녁실행은 후속. 계획 `plan/PLAN_ops_O11_O12_ranking_quality.md`, 보고 `reports/ops_O11_O12_ranking_quality_build.md`·`reports/ops_O11_O12_ranking_quality_judge.md`.**
 
 **운영 반영 완료(2026-11-16, O14): 도구 `965b53e` → 운영 DB0008 적용·무변경 재실행 성공(새2표·RLS/FK·기존 public 자료 해시 보존) → 기능 `39f32fb` main 푸시·Vercel Production ready. 운영 HTML/JS/CSS·랭킹·실제 DB 키워드 검색/공통 카드200·잘못된 입력400·비로그인401 확인. 배포 대상389/389·빌드 통과. 다음 = 본인 웹 키워드 저장/알림 켜기/기기 연결 후 아침 자동 daily→push와 실수신 확인. 로컬 비밀값 복원·뉴스/AI/수동 푸시0. 아래11-15는 배포 전 로컬 기록. 상세 reports/ops_O14_keyword_timeline_deploy.md.**

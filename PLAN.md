@@ -279,6 +279,8 @@ API (ex01에서 확정)
 
 ## 10. 단계 메모 (다음 PLAN에 넘길 것)
 
+- ops O11·O12 배포(2026-11-18): 기능570ed58 main푸시·VercelProduction7857470875 success, 인덱스사본405/405·build재실행0·운영GET5통과. 기존Next보안경고와 무작위base64 푸시시험의 간헐실패 기록. 다음정규daily의 품질·비용 관찰은 미검증. 수동수집/AI/DB쓰기0. `reports/ops_O11_O12_ranking_quality_deploy.md`.
+
 - ops O11·O12 1차(2026-11-17): 수집4페이지·31초 간격·AI 검색 관련성·근거 파일 구현. 실운영 효과/비용은 배포 후 첫 daily에서 검증하며 제작 중 외부 호출·DB쓰기0. 기존 Next16.4.1 빌드의 보안 취약점 경고 확인(첫 실행중단·재실행성공), 버전 변경은 이번 범위 밖으로 보존. 상세 `reports/ops_O11_O12_ranking_quality_build.md`·`reports/ops_O11_O12_ranking_quality_judge.md`.
 
 - ops O14(2026-11-16 운영 적용): 사용자 승인으로 도구965b53e→Actions0008 적용·기존 내용 보존·무변경 재실행(이력9)→기능39f32fb main 푸시·Vercel Production ready. 실제 배포 대상389/389·빌드, 운영 HTML/JS/CSS/랭킹/DB검색/다중키워드/400/401 확인. 로컬 Secret 복원·뉴스/AI·수동 푸시0. 다음은 본인 웹 설정 후 아침 자동 daily/push·실수신 확인, 최종 심사 보류. reports/ops_O14_keyword_timeline_deploy.md.
